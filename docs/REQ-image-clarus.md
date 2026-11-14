@@ -177,7 +177,7 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 
 ## Delivery approach and scope
 
-Implementation planning follows requirements acceptance. This document records **end-state requirements**, not a commitment to deliver all features in the first slice.
+The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice.
 
 - **First buildable slice:** single-image, single-stage invocation, with model/provider configuration and correct output handling; choice of first stage and concrete implementation details are for design.
 - **Further buildable slices:** structured output; XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Ordering and dependencies are to be settled in the implementation plan rather than locked into this REQ.
