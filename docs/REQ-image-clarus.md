@@ -19,6 +19,13 @@ The tool will use configurable vision and language models to produce descriptive
 - The source images remain unchanged. Generated artifacts are sidecar files in the same directory as their images.
 - Build in small, independently usable slices, starting with one operation on one image. Preserve the end-state requirements without implementing every feature in the first slice.
 
+## Runtime and external dependencies
+
+- Implement in Python, support Python 3.12 or newer, and use Python 3.13 as the development baseline.
+- Define project metadata and dependencies in `pyproject.toml`; use `uv` for dependency management, commit `uv.lock`, and use an isolated Python environment for development.
+- Description and structured JSON generation must not require external executables beyond Python.
+- ExifTool is the recommended external executable for XMP processing. If used, it must be required only when the XMP stage is selected.
+
 ## Processing stages and artifacts
 
 Given `2023_04_23_15_05_42.jpg`:
@@ -60,11 +67,13 @@ Given `2023_04_23_15_05_42.jpg`:
 
 - Support named providers, named models, and independent selection of a model for each model-driven stage.
 - Model selection must be configurable and overridable from the CLI; no particular model or parameter size is required.
-- Support OpenAI-compatible API endpoints, including locally hosted services. Provider configuration should include endpoint URL, model identifier, and optional credentials; other providers may be added through adapters as needed.
+- Model communication uses an HTTP client with provider adapters. Support OpenAI-compatible API endpoints, including locally hosted services. Provider configuration should include endpoint URL, model identifier, and optional credentials; other providers may be added through adapters as needed.
 - An API key may be configured directly or through an explicitly named environment variable, such as `api_key_env`.
 - Provide built-in default prompts for description and structured generation.
+- The built-in default description prompt is `prompts/image-description.txt`, with the exact text: `Fully describe and explain everything about this image.` No additional instructions are part of this default prompt.
 - Support overriding each prompt independently through configuration, an external text file, or CLI parameters; external prompt files should be version-control friendly.
-- Provide a built-in default JSON schema, replaceable in full by a user-supplied schema file. The actual schema and prompt wording are design deliverables, not prescriptive REQ content.
+- Support a reasoning-effort setting independently for each model-driven stage, including disabling reasoning where the provider supports it. When unspecified, preserve the provider's default behavior.
+- Provide a built-in default JSON schema, replaceable in full by a user-supplied schema file. The actual schema and structured-generation prompt wording are design deliverables, not prescriptive REQ content.
 - Validate model-produced JSON against the selected schema. When configured, a validation retry may send validation errors back to the model.
 - Include model and prompt provenance in generated JSON, sufficient to identify what produced the result. Determine the exact provenance fields during design.
 
@@ -78,7 +87,7 @@ The default schema must support information useful for deterministic photo disco
 - Searchable keywords/tags
 - Model and prompt provenance
 
-The exact field names, types, controlled vocabularies, schema and prompt implementation are design work. A replacement schema must be supported without modifying application source.
+The exact field names, types, controlled vocabularies, schema and structured-generation prompt are design work. A replacement schema must be supported without modifying application source.
 
 ## XMP metadata integration
 
@@ -110,14 +119,23 @@ The exact field names, types, controlled vocabularies, schema and prompt impleme
 Configuration precedence, highest first:
 
 1. Explicit CLI parameters
-2. Configuration files
+2. The selected configuration file
 3. Built-in defaults
 
-- If no configuration path is specified on Linux, look under a default directory in `/etc/<tool-name>/`.
-- Provide a main configuration file plus optional separate prompt and schema files under that directory. Every optional file also has a built-in fallback.
+- If an explicit configuration path is provided, load only that file and do not search for or merge another configuration file.
+- Otherwise, detect the operating system and select at most one configuration file: search the user-level directory first, then the system-level directory. If neither contains a configuration file, use built-in defaults. Do not implicitly merge user and system configuration files.
+- Configuration directories:
+
+  | OS | User-level | System-level |
+  | --- | --- | --- |
+  | Linux | `~/.config/image-clarus/` | `/etc/image-clarus/` |
+  | macOS | `~/Library/Application Support/image-clarus/` | `/Library/Application Support/image-clarus/` |
+  | Windows | `%APPDATA%\image-clarus\` | `%PROGRAMDATA%\image-clarus\` |
+
+- Installation must not require administrator privileges or create system configuration directories.
+- Provide a main configuration file plus optional separate prompt and schema files in the selected configuration directory. Every optional file also has a built-in fallback.
 - Allow the main configuration path and **each** prompt/schema file path to be overridden individually from CLI parameters.
 - All configurable values must be overridable from CLI parameters where applicable.
-- Ensure the installation-specific config directory can be adapted for other operating systems during packaging.
 - Configuration should cover providers, models, prompts, schema, allowed formats, file selection behaviors, per-stage policies, XMP mappings/update modes, retries, and logging.
 
 ## Failure policies, retries and logging
@@ -153,6 +171,7 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 
 - Do not implement filesystem-specific branches unless a demonstrated compatibility problem requires them; allow a configurable alternate method if testing warrants it.
 - Expected environments include common Linux filesystems (such as XFS and ext4), NTFS (including FUSE-backed mounts), VFAT removable media, and virtual or memory-backed filesystems.
+- Linux is the required test platform; a full cross-platform CI matrix is not required, though portability to other operating systems is desirable.
 - Tests should cover available development filesystems and representative compatibility cases. Testing every filesystem, driver, and operating-system combination is **not** required.
 - Never promise fully crash-proof writes on filesystems that cannot guarantee them. Recovery behavior is required.
 
@@ -163,7 +182,7 @@ Implementation planning follows requirements acceptance. This document records *
 - **First buildable slice:** single-image, single-stage invocation, with model/provider configuration and correct output handling; choice of first stage and concrete implementation details are for design.
 - **Further buildable slices:** structured output; XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Ordering and dependencies are to be settled in the implementation plan rather than locked into this REQ.
 - **Later goals:** exclusion filters, expanded format/provider support, richer search configuration, and embeddings-based semantic search. Not all later goals need be part of release one.
-- Open-source packaging, licensing, CLI executable name, implementation language, provider adapters, exact default prompts, JSON schema and XMP field mappings remain decisions for design.
+- Open-source licensing and installation packaging, CLI executable name and framework, configuration format, specific model-client libraries, structured-generation prompt and JSON schema, and XMP field mappings remain decisions for design.
 
 ## Known non-goals of the initial implementation
 
@@ -180,8 +199,8 @@ Implementation planning follows requirements acceptance. This document records *
 Design work must resolve, without silently reducing any requirements above:
 
 - CLI executable name, command syntax and package structure
-- Main configuration format and exact default `/etc` directory
-- Prompt texts and JSON schema, including provenance representation
+- Main configuration format and filenames, plus path resolution for configuration, prompt, and schema files
+- Structured-generation prompt and JSON schema, including provenance representation
 - XMP fields and representation-specific mappings, with tests against digiKam
 - Stage prerequisites and configurable actions on failure
 - Search matching syntax, field filters and output formats
