@@ -262,14 +262,17 @@ image-clarus search
 1. Specify exact default JSON prompt text and file path; ensure it consumes the persisted description and asks for valid output matching the selected schema.
 2. Specify the built-in metadata payload's exact field names/types/requiredness for subjects/objects, actions, setting/context, useful visual characteristics, and searchable keywords/tags. Specify provenance in the application-owned envelope. Keep the contract useful for discovery and later XMP mapping without designing XMP behavior now.
 3. Decide whether provenance is represented inside the replaceable user schema, in an application-owned envelope, or through another explicit mechanism. Define how full schema replacement works without silently losing the required model/prompt provenance.
-4. Define the provenance fields and stable values captured (selected provider alias, model alias and model ID, prompt identity and exact-content SHA-256); exclude credentials, authorization headers, local paths, and secret-bearing URLs.
+4. Define the provenance fields and stable values captured (selected provider alias, model alias and model ID, prompt identity and exact-content SHA-256, and a SHA-256 of the exact persisted `.desc.txt` bytes consumed); exclude credentials, authorization headers, local paths, and secret-bearing URLs. State that the description fingerprint does not identify the description-stage producer or trigger automatic regeneration.
 5. Use the A2 key `stages.json.validation_retries` with default zero and a finite upper bound of two additional attempts; define normalized parse/schema feedback, strict JSON parsing, Unicode/serialization, envelope and payload validation, extra-property behavior, and fenced/prose-wrapped output handling.
 6. Establish a schema-versioning convention independent of application SemVer: freeze the initial schema version, how each generated `.desc.json` identifies that contract, compatibility/evolution rules, and how full custom-schema replacement identifies its version. Never infer schema version from the application version.
-7. Provide a small synthetic description, example structured JSON, and positive/negative schema-validation cases, including schema-version identification. Do not include a real photograph or personal metadata.
+7. Provide a small synthetic description with exact fixture bytes/hash, example structured JSON, and positive/negative schema-validation cases, including schema-version identification. Do not include a real photograph or personal metadata.
+8. Freeze the validity check for existing `.desc.json` outputs, including create-only skip behavior when the selected metadata schema/version or current description differs; preserve A2's explicit-regeneration boundary.
 
-**A3 frozen contract:** The canonical prompt and schema sources are `prompts/image-structure.txt` and `schemas/image-structure.schema.json`; B7 packages these without duplicate source copies. The Draft 2020-12 built-in payload is a closed object requiring `subjects` (unique non-empty-string array), `objects` (same), `actions` (same), `setting` (`type` and `context` strings), `visual_characteristics` (`colors` array plus `composition`, `lighting`, and `visual_style` strings), and `keywords` (same array rules). All fields are required; their strings/arrays may be empty where unsupported, and built-in objects reject extra properties. The app owns a fixed `format_version: 1` envelope with `schema_id`, `schema_version`, `provenance` (`provider_alias`, `model_alias`, `model_id`, `prompt_id`, `prompt_sha256`), and validated `metadata`; the exact closed envelope schema is in the A3 record and is an application constant, not a user asset. `format_version` is a separate major-only envelope contract; any envelope schema change increments it, independently of payload-schema SemVer. Custom schemas wholly replace the payload schema only, require an object root, allow same-document references only, and use the SHA-256 of exact schema bytes as their independent identity/version. The built-in schema starts at `1.0.0`. Strict parsing rejects fences/prose, duplicate keys, invalid Unicode, and non-finite values. `stages.json.validation_retries` accepts only non-boolean integers 0–2 and returns normalized, sorted feedback without raw output or validator prose. B7 must test valid/invalid payloads, fixed-envelope validation/versioning, full custom replacement with retained envelope/provenance, schema preflight without a provider call, strict parsing and retries, exact prompt hash, Unicode, deterministic serialization, and packaged-resource lookup; the completion record contains the synthetic examples and exact feedback/compatibility rules.
+**A3 frozen contract:** The canonical prompt and schema sources are `prompts/image-structure.txt` and `schemas/image-structure.schema.json`; B7 packages these without duplicate source copies. The Draft 2020-12 built-in payload is a closed object requiring `subjects` (unique non-empty-string array), `objects` (same), `actions` (same), `setting` (`type` and `context` strings), `visual_characteristics` (`colors` array plus `composition`, `lighting`, and `visual_style` strings), and `keywords` (same array rules). All fields are required; their strings/arrays may be empty where unsupported, and built-in objects reject extra properties. The app owns a fixed `format_version: 1` envelope with `schema_id`, `schema_version`, `provenance` (`provider_alias`, `model_alias`, `model_id`, `prompt_id`, `prompt_sha256`, `description_sha256`), and `metadata`; the exact closed envelope schema is in the A3 record and is an application constant, not a user asset. `description_sha256` is the lowercase SHA-256 of the exact persisted `.desc.txt` bytes consumed by a generation; the same byte snapshot is strictly decoded and used as model input. It identifies textual input only, not the description-stage model/provider, and does not trigger freshness detection. The description fingerprint is part of the initial envelope v1 contract; no implementation or generated artifacts existed when this pre-acceptance design was refined. `format_version` is a separate major-only envelope contract; any envelope schema change increments it, independently of payload-schema SemVer. Custom schemas wholly replace the payload schema only, require an object root, allow same-document references only, and use the SHA-256 of exact schema bytes as their independent identity/version. The built-in schema starts at `1.0.0`. Strict parsing rejects fences/prose, duplicate keys, invalid Unicode, and non-finite values. `stages.json.validation_retries` accepts only non-boolean integers 0–2 and returns normalized, sorted feedback without raw output or validator prose.
 
-**Product Owner gate:** Erik's review of this A3 design remains pending. The A3 design artifact is complete, but A6 remains unchecked until the Phase A decisions are accepted or revised; this does not authorize Phase B implementation.
+For create-only skip, an existing `.desc.json` is structurally valid if strict JSON parsing succeeds and the fixed envelope v1 schema passes, including all required provenance and object-valued `metadata`. Do not validate its payload against the currently selected schema or compare schema identity/version, prompt/model, or description fingerprint; a valid envelope skips as `output_exists`, unchanged and without reading/hashing `.desc.txt` or calling a provider. Invalid JSON/envelope is `invalid_artifact` and is not overwritten unless explicit regeneration is requested. Regeneration uses current inputs/schema and A5 safe-write; failures preserve the prior artifact. B7 must test valid/invalid payloads, fixed-envelope validation/versioning, full custom replacement with retained envelope/provenance, schema preflight without a provider call, strict parsing and retries, exact prompt and description hashes, schema-version-mismatch skip, invalid-existing-artifact failure, Unicode, deterministic serialization, and packaged-resource lookup; the completion record contains the synthetic examples and exact feedback/compatibility rules.
+
+**Product Owner gate:** Erik's review of this A3 design remains pending. The two GPT review findings are incorporated in the design contract, but this is not Product Owner acceptance. A6 remains unchecked until the Phase A decisions are accepted or revised; this does not authorize Phase B implementation.
 
 **Outputs:**
 - Reviewed JSON/schema-version contract and examples in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md)
@@ -280,6 +283,8 @@ image-clarus search
 - [x] Every required semantic category from the REQ is represented and testable.
 - [x] Full custom-schema replacement and provenance interaction have an explicit, non-contradictory rule.
 - [x] The generated metadata schema has an independent, identified version and explicit compatibility/evolution rules, including custom-schema behavior.
+- [x] Provenance fingerprints the exact persisted `.desc.txt` bytes used for generation and states the limits of that identity.
+- [x] Existing JSON structural validity and create-only skip behavior across schema-version changes are explicit and testable.
 - [x] No secrets or identifying photo/device data can enter the public example contract.
 - [x] [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md) is complete and linked.
 
@@ -520,7 +525,7 @@ image-clarus search
 
 ### Step B7 — Implement the structured JSON stage [CODE/TEST]
 
-**Goal:** Convert the persisted description into schema-valid structured metadata with required provenance and safe create/regenerate behavior.
+**Goal:** Convert the persisted description into schema-valid structured metadata with required provenance (including an exact input fingerprint) and safe create/regenerate behavior.
 
 **Files:**
 - Create/update: `src/image_clarus/stages/structure.py`
@@ -531,8 +536,8 @@ image-clarus search
 - Read: `src/image_clarus/artifacts.py`, `src/image_clarus/providers/openai_compatible.py`
 
 **Actions:**
-1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, existing JSON skip, and explicit regeneration.
-2. Verify RED; implement a stage that reads `.desc.txt` from disk, calls the selected JSON model, parses and validates against the resolved schema, adds/validates provenance and schema-version identification exactly as A3 specifies, and writes only validated content through the artifact service.
+1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, exact `description_sha256` for the persisted bytes consumed, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, schema-version-mismatch existing-output skip (unchanged file, no description read/provider call), valid existing-output skip with missing `.desc.txt`, invalid existing-envelope failure, and explicit regeneration.
+2. Verify RED; implement a stage that reads `.desc.txt` bytes once, computes `description_sha256` from that snapshot, strictly decodes and uses the same snapshot, calls the selected JSON model when generation is required, parses and validates against the resolved schema, adds/validates provenance and schema-version identification exactly as A3 specifies, and writes only validated content through the artifact service. Follow A3's structural-only existing-output skip check before reading the description.
 3. Keep model-generated values distinct from application-owned provenance according to the A3-frozen contract. Do not allow custom schema replacement to silently remove required provenance.
 4. Ensure a missing description for explicit one-image `json` selection follows A2 and does not trigger `desc` implicitly.
 5. Verify GREEN and run the complete current test suite.
@@ -541,8 +546,10 @@ image-clarus search
 
 **Acceptance:**
 - [ ] `json` consumes the persisted `.desc.txt` and writes exactly `<image>.desc.json`.
-- [ ] The output is fully schema-validated, includes the required provenance contract, and covers all required metadata categories.
+- [ ] Every newly generated output is fully schema-validated, includes the required provenance contract, and covers all required metadata categories.
 - [ ] The output identifies its metadata-schema version independently of the application version, following A3's default/custom-schema rules.
+- [ ] Newly generated output fingerprints the exact persisted description bytes consumed; a structurally valid existing output skips unchanged across selected schema/version changes.
+- [ ] Invalid existing JSON/envelope is not overwritten without explicit regeneration; regenerated output uses current selected inputs/schema and is published only after validation.
 - [ ] Custom schema and prompt replacement work without source changes and follow A3 semantics.
 - [ ] Invalid/missing prerequisites follow the approved result policy; invalid output is never published as complete.
 - [ ] RED/GREEN and regression evidence is recorded; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md) is linked.
@@ -608,11 +615,11 @@ image-clarus search
 - Read: all Slice 1 stage, config, provider, and CLI modules
 
 **Actions:**
-1. Run the CLI against a generated synthetic image with a local HTTP stub; assert `desc` creates `.desc.txt` and `json` reads that exact file to produce `.desc.json` with the schema-version identifier frozen in A3.
+1. Run the CLI against a generated synthetic image with a local HTTP stub; assert `desc` creates `.desc.txt` and `json` reads that exact file to produce `.desc.json` with the schema-version identifier and `description_sha256` frozen in A3.
 2. Test `desc` only, `json` only with an existing description, `json` only with a missing description, combined stages, default stage selection, existing-output skip, and explicit regeneration.
 3. Assert stage order and persisted-file handoff; make the JSON fake model inspect the description content it receives, not an in-memory stage return.
 4. Seed `.desc.txt` with a complete sentinel description `v1`. Launch a real `desc`-only CLI process with its own temporary config and selected description model; use a threaded local HTTP stub to hold its regeneration response before the stage writes `v2`. While it is held, launch a separate `json`-only CLI process with a different temporary config and JSON model. Observe and hold the JSON request, release the description response so the first process writes complete `v2`, then release the JSON response. This forces the JSON request to consume the persisted `v1` while the two OS processes overlap.
-5. Assert the requests use their distinct configured model IDs, the JSON request contains exactly the on-disk `v1` description, both processes return the expected results, final `.desc.txt` equals the complete `v2` response, and `.desc.json` parses and validates against the selected schema. The JSON test response must be deterministic for the `v1` request; assert no output is truncated or interleaved.
+5. Assert the requests use their distinct configured model IDs, the JSON request contains exactly the on-disk `v1` description, `description_sha256` matches the exact `v1` bytes consumed (not the final `v2` file), both processes return the expected results, final `.desc.txt` equals the complete `v2` response, and `.desc.json` parses and validates against the selected schema. The JSON test response must be deterministic for the `v1` request; assert no output is truncated or interleaved.
 6. Assert original image bytes/hash are unchanged and no XMP or unrelated files are written.
 7. Run targeted integration tests, then all current tests.
 
@@ -622,6 +629,7 @@ image-clarus search
 - [ ] All required Slice 1 stage combinations and prerequisite behaviors pass.
 - [ ] `json` reads the persisted handoff and never triggers `desc` when explicitly omitted.
 - [ ] Generated `.desc.json` identifies the schema version according to A3, independently of the application version.
+- [ ] Generated `.desc.json` fingerprints the exact persisted description snapshot consumed by the JSON request.
 - [ ] Two separate CLI processes execute `desc` and `json` concurrently with their independently selected models; JSON consumes a complete persisted description and neither completed sidecar is corrupted.
 - [ ] Source image remains unchanged; outputs use the exact sidecar names.
 - [ ] [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md) is complete and linked.

@@ -13,11 +13,11 @@
 
 ## Summary
 
-Completed Step A3 as a design-only step. This record freezes the default structured-metadata payload schema and prompt, a fixed application-owned output envelope and provenance contract, built-in and custom schema identification, validation and serialization behavior, the bounded opt-in validation-retry contract, and synthetic examples and test cases. Step B7 owns creating and packaging the actual prompt/schema assets and implementing their tests. No production code, test files, prompt/schema resource files, or user-facing config examples were created. Steps A4–A6 and Phases B/C remain pending.
+Completed Step A3 as a design-only step. This record freezes the default structured-metadata payload schema and prompt, a fixed application-owned output envelope and provenance contract, built-in and custom schema identification, validation and serialization behavior, the bounded opt-in validation-retry contract, and synthetic examples and test cases. It also resolves the review findings by fingerprinting the exact persisted description input and defining create-only skip behavior across schema changes. Step B7 owns creating and packaging the actual prompt/schema assets and implementing their tests. No production code, test files, prompt/schema resource files, or user-facing config examples were created. Steps A4–A6 and Phases B/C remain pending.
 
-The schema fields, envelope, prompt, schema dialect and retry limit below are A3 design choices made to complete the authorized step. This record does not claim a separate Product Owner review or approval of these detailed choices.
+The schema fields, envelope, prompt, schema dialect, retry limit, description fingerprint, and existing-output skip policy below are A3 design choices made to complete the authorized step. The two review clarifications are incorporated, but this record does not claim Product Owner acceptance of them or the other detailed choices.
 
-**Product Owner decision gate:** Pending Erik's review of the prompt, metadata fields, envelope/custom-schema boundary, provenance, schema-versioning rules, and retry contract. The A3 design outputs are complete, but this record does not pass the Phase A readiness gate or authorize Phase B implementation; A6 remains unchecked until the required decisions are accepted or revised.
+**Product Owner decision gate:** Pending Erik's review of the prompt, metadata fields, envelope/custom-schema boundary, provenance (including the persisted-description fingerprint), schema-versioning rules, create-only skip behavior, and retry contract. The two review findings have explicit contract resolutions below; Product Owner acceptance remains pending. The A3 design outputs do not pass the Phase A readiness gate or authorize Phase B implementation; A6 remains unchecked until the required decisions are accepted or revised.
 
 ## Canonical paths and resource ownership
 
@@ -39,6 +39,10 @@ Use only facts explicitly stated or directly supported by the description. Do no
 The file is UTF-8 without a BOM and ends with one LF. Read the effective prompt bytes once; hash and use that same byte snapshot so provenance identifies the exact instructions sent. The persisted `.desc.txt` is supplied as data separately from this static prompt; it is not interpolated into a template. A4 owns Chat Completions message framing and must pass the persisted description and selected schema without changing this prompt text. The prompt directs the model to return only the metadata payload. Image Clarus adds the envelope and provenance after model output has passed validation.
 
 Prompt provenance records `prompt_id: "builtin:image-structure"` for this resource and `prompt_id: "custom"` for an override. In both cases `prompt_sha256` is the lowercase SHA-256 of the exact UTF-8 bytes of the effective prompt file, including its final LF, before the description or retry feedback is added. Never record the override's local path.
+
+For a JSON generation attempt, read the persisted `.desc.txt` bytes once. Compute `description_sha256` as the lowercase SHA-256 of those exact bytes before decoding, then strictly decode that same byte snapshot as UTF-8 (without BOM-stripping) and pass the decoded text as description data. Do not trim text or normalize line endings. Invalid UTF-8 is an `invalid_artifact` failure before any provider request. This fingerprint identifies the exact persisted textual input to the JSON stage; it does not identify the source image or the provider/model/prompt that originally produced the description. It is provenance, not an automatic staleness or regeneration trigger.
+
+This field is part of the initial `format_version: 1` contract. The earlier A3 draft was pre-acceptance, not a released wire format; no application implementation or generated `.desc.json` artifacts existed when this design was refined, so this clarification requires no artifact migration. Once accepted, subsequent envelope changes follow the version-increment rule below.
 
 ## Built-in metadata-payload schema
 
@@ -180,6 +184,7 @@ Every `.desc.json` is one UTF-8 JSON object with the fixed application-owned env
     }
   },
   "provenance": {
+    "description_sha256": "4ddc3c884d9a44a0a9649004a55aedad0049ed287cb4db5fde526eeaadbaf836",
     "model_alias": "local-vision",
     "model_id": "synthetic-vision-model",
     "prompt_id": "builtin:image-structure",
@@ -191,7 +196,7 @@ Every `.desc.json` is one UTF-8 JSON object with the fixed application-owned env
 }
 ```
 
-The sample is synthetic and non-identifying. Its example description is: “Several red bell peppers, one with a green stem, rest on a white plate on a kitchen counter in soft natural light.” The prompt hash is the SHA-256 of the exact built-in prompt bytes shown above.
+The sample is synthetic and non-identifying. Its `.desc.txt` fixture bytes are the UTF-8 encoding of `Several red bell peppers, one with a green stem, rest on a white plate on a kitchen counter in soft natural light.` followed by exactly one LF and no BOM (115 bytes). The example `description_sha256` is the SHA-256 of those exact bytes. The prompt hash is the SHA-256 of the exact built-in prompt bytes shown above.
 
 The application-owned envelope has these fixed rules:
 
@@ -200,8 +205,8 @@ The application-owned envelope has these fixed rules:
 | `format_version` | Integer constant `1`; identifies the envelope shape, not the application or metadata schema version. |
 | `schema_id` | Non-empty string. Built-in: `urn:image-clarus:metadata-schema:1.0.0`; custom: `urn:image-clarus:custom-metadata-schema`. |
 | `schema_version` | Non-empty string. Built-in: `1.0.0`; custom: `custom-sha256:<64 lowercase hexadecimal characters>`. |
-| `provenance` | Closed object requiring non-empty `provider_alias`, `model_alias`, `model_id`, `prompt_id`, and lowercase 64-hex `prompt_sha256` strings. |
-| `metadata` | JSON object validated against the complete selected payload schema. |
+| `provenance` | Closed object requiring non-empty `provider_alias`, `model_alias`, `model_id`, and `prompt_id`, plus lowercase 64-hex `prompt_sha256` and `description_sha256` strings. |
+| `metadata` | JSON object validated against the complete selected payload schema when generated; existing-output skip validation is envelope-structural only, as defined below. |
 
 The exact fixed envelope schema is embedded in `stages/structure.py`; it is not a second user-selectable asset. It validates `metadata` as an object, while the selected payload schema validates that object separately:
 
@@ -239,7 +244,8 @@ The exact fixed envelope schema is embedded in `stages/structure.py`; it is not 
         "model_alias",
         "model_id",
         "prompt_id",
-        "prompt_sha256"
+        "prompt_sha256",
+        "description_sha256"
       ],
       "properties": {
         "provider_alias": {
@@ -261,6 +267,10 @@ The exact fixed envelope schema is embedded in `stages/structure.py`; it is not 
         "prompt_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "description_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       }
     },
@@ -271,15 +281,23 @@ The exact fixed envelope schema is embedded in `stages/structure.py`; it is not 
 }
 ```
 
-The final artifact passes only when the fixed envelope schema and selected payload schema both validate. An envelope-validation failure is an application/configuration failure, not a model-output validation retry. The built-in metadata schema has SemVer `1.0.0`, independently of application SemVer. Increment its major version when a change removes/renames a required field, changes a field's type/meaning, or tightens validation so previously valid payloads fail; increment minor for backward-compatible optional-field additions or loosened constraints; increment patch only for annotation/documentation changes that do not affect validation or field meaning. Newer built-in versions must continue to accept payloads valid under prior compatible versions; incompatible changes require a major increment.
+Every newly generated artifact passes only when the fixed envelope schema and selected payload schema both validate. An envelope-validation failure is an application/configuration failure, not a model-output validation retry. The built-in metadata schema has SemVer `1.0.0`, independently of application SemVer. Increment its major version when a change removes/renames a required field, changes a field's type/meaning, or tightens validation so previously valid payloads fail; increment minor for backward-compatible optional-field additions or loosened constraints; increment patch only for annotation/documentation changes that do not affect validation or field meaning. Newer built-in versions must continue to accept payloads valid under prior compatible versions; incompatible changes require a major increment.
 
 `format_version: 1` identifies this exact closed envelope contract and is separate from `schema_version`. Any change to the envelope's properties, types, requiredness, or provenance semantics requires an integer `format_version` increment and a matching envelope-schema `$id` suffix; do not silently accept an unknown envelope format. Changes to the metadata payload schema use its independent SemVer and do not change `format_version`.
+
+## Existing JSON and create-only skip behavior
+
+A2's existing-output policy is create-only: when `.desc.json` exists and JSON regeneration is not requested, first perform the A2 recovery check, then strictly parse the existing file and validate only the fixed `format_version: 1` envelope contract before prerequisite checks. A structurally valid existing artifact is exactly one strict JSON object with no duplicate keys or non-finite numbers that passes the closed envelope schema, including required provenance and object-valued `metadata`. The envelope requires non-empty `schema_id` and `schema_version` strings but does not require them to match a schema currently installed or selected.
+
+If that structural check passes, return `skipped` with `output_exists`, leave the existing bytes unchanged, and make no provider request. Do not read or hash the current `.desc.txt`, compare `description_sha256`, compare prompt/model provenance, or validate `metadata` against the currently selected payload schema. In particular, a valid existing artifact remains skipped when its recorded built-in/custom `schema_id` or `schema_version` differs from the selected schema. The create-only default does not perform schema migration or stale-input detection; use explicit regeneration to apply a changed description, prompt, model, or schema. Because historical custom-schema contents are not stored in the envelope, this skip check proves JSON/envelope structure, not conformance to an unavailable historical payload schema.
+
+Malformed JSON, duplicate keys, non-finite values, an unsupported envelope format, or any other envelope-structure failure is `invalid_artifact`; without explicit regeneration, fail without replacing the existing file or making a provider request. With explicit regeneration, generate from the current persisted description and selected schema, include the current `description_sha256`, and replace the destination only after the complete output validates through A5 safe-write. Any generation/validation failure preserves the existing artifact.
 
 A custom schema fully replaces the metadata payload schema: it is not merged with the built-in field set and need not retain those field names. It must be valid JSON Schema Draft 2020-12 and declare root `"type": "object"`; when `$schema` is absent, Draft 2020-12 is assumed, and a declared different dialect is rejected. Only same-document fragment `$ref` references are allowed; filesystem and remote references are rejected before any provider request. Draft 2020-12 `format` keywords are annotation-only in Slice 1. The custom schema controls its own payload properties and `additionalProperties` behavior. The fixed envelope and provenance remain required, so a custom schema cannot remove them.
 
 Custom schema identity uses `schema_id: "urn:image-clarus:custom-metadata-schema"` and `schema_version: "custom-sha256:<hex>"`, where `<hex>` is the lowercase SHA-256 of the exact custom schema file bytes. Read the effective bytes once and compute the hash and parsed schema from that same snapshot. Formatting or line-ending changes therefore produce a distinct custom version. A custom schema's `$id`, if any, is not copied into the output; artifact identity uses only the application-owned ID and exact-content hash. Whether a schema identifier is transmitted to a provider is part of A4's explicit request/data-transfer contract. This scheme does not add a configuration key and remains independent of the application release.
 
-Provenance values come from the resolved A2 configuration: `provider_alias`, `model_alias`, and the selected provider's `model_id`. `prompt_id` and `prompt_sha256` follow the prompt rules above. Do not include `base_url`, local prompt/schema paths, inline or resolved credentials, authorization headers, raw request/response headers, or other secret-bearing URL components in the output, logs, errors, or retry feedback. Do not add a timestamp; it is not needed to identify the producer and would make otherwise identical outputs nondeterministic.
+Provenance values come from the resolved A2 configuration: `provider_alias`, `model_alias`, and the selected provider's `model_id`. `prompt_id` and `prompt_sha256` follow the prompt rules above; `description_sha256` fingerprints the exact persisted `.desc.txt` byte snapshot consumed for that generation. Do not store the description text itself in provenance. Do not include `base_url`, local prompt/schema paths, inline or resolved credentials, authorization headers, raw request/response headers, or other secret-bearing URL components in the output, logs, errors, or retry feedback. Do not add a timestamp; it is not needed to identify the producer and would make otherwise identical outputs nondeterministic.
 
 ## Parsing, validation, retries, and serialization
 
@@ -310,16 +328,20 @@ Negative cases:
 | Duplicate keyword/subject entries | Payload validation failure due to `uniqueItems`. |
 | Custom payload schema requires only `caption` and rejects other payload keys | Accepted as full payload replacement when `metadata` matches it; envelope and provenance remain present. |
 | Invalid schema JSON, duplicate schema keys, wrong dialect, non-object root, `$dynamicRef`, or non-fragment `$ref` | Preflight configuration failure; no model call and no output write. |
-| Missing/invalid envelope provenance, wrong `format_version`, or extra envelope keys | Fixed-envelope validation fails; no JSON artifact is published and no model-output retry is attempted. |
+| Missing/invalid envelope provenance (including either fingerprint), wrong `format_version`, or extra envelope keys | Fixed-envelope validation fails; no JSON artifact is published and no model-output retry is attempted. |
 | Fenced JSON, prose-wrapped JSON, duplicate JSON keys, malformed JSON, unpaired surrogate, or non-finite number | Strict parse failure; no silent cleanup; eligible for configured validation retry only. |
 | Unicode metadata values | Preserved as UTF-8 without a BOM; parsed output round-trips exactly. |
 | Custom schema bytes change, even only by formatting | Custom `schema_version` hash changes; the application version is not used. |
+| The persisted `.desc.txt` bytes change | A generation fingerprints the exact byte snapshot it consumes; the same description hash is provenance only and does not trigger automatic regeneration. |
+| Existing `.desc.json` has a valid fixed envelope but its schema ID/version or recorded description hash differs from current selections/files | Skip as `output_exists`, preserve bytes, and do not call the provider, read/hash `.desc.txt`, or validate metadata against the newly selected payload schema. |
+| Existing `.desc.json` has a valid fixed envelope but `.desc.txt` is missing | Skip as `output_exists` before prerequisite validation; do not call the provider or require/read the description. |
+| Existing `.desc.json` has malformed/duplicate-key JSON, non-finite values, unsupported envelope version, or invalid envelope structure | Fail as `invalid_artifact`, preserve the file, and make no provider request unless explicit regeneration is requested. |
 | Credential, endpoint URL, prompt path, schema path, raw invalid response, or parser/validator message | Absent from persisted provenance and diagnostics. |
 | Retry count `0`, `1`, `2`, `true`, `-1`, or `3` | Calls are bounded to 1/2/3 attempts for `0`/`1`/`2`; booleans and out-of-range values fail selected-stage preflight. |
 | More than 20 schema violations | Retry report is deterministically sorted, contains 20 entries, the full `total_errors`, and `truncated: true`. |
 | Validation retry exhaustion with no existing JSON and with an existing JSON | `schema_validation` failure; no incomplete artifact is published and any existing artifact is preserved. |
 
-B7's tests also verify the final envelope separately from the selected payload schema, the exact built-in prompt bytes/hash, built-in and custom schema-version values, source-tree and wheel resource lookup, and that `json` consumes persisted `.desc.txt` without invoking `desc`. These are test assertions for later implementation, not tests claimed as run in A3.
+B7's tests also verify the final envelope separately from the selected payload schema, the exact built-in prompt bytes/hash, the exact persisted-description byte hash and same-snapshot decode, built-in and custom schema-version values, source-tree and wheel resource lookup, and that `json` consumes persisted `.desc.txt` without invoking `desc`. Existing-output tests verify schema-version mismatch skips without reading the description or calling the provider, while malformed envelope artifacts fail without being overwritten. These are test assertions for later implementation, not tests claimed as run in A3.
 
 ## Decisions and rationale
 
@@ -328,6 +350,8 @@ B7's tests also verify the final envelope separately from the selected payload s
 - Chose SHA-256 of exact custom schema bytes as the custom schema version rather than adding a user-supplied version field or configuration key. This identifies precisely what validated the payload and cannot be mistaken for application SemVer.
 - Chose strict JSON rejection rather than stripping fences or extracting JSON from prose; silent repair could change model output and hide malformed responses.
 - Chose two opt-in validation retries (three maximum responses) to bound cost/latency while keeping the accepted default at zero. Network/provider retry behavior remains A4's responsibility.
+- Added `description_sha256` for the exact persisted description bytes used by a JSON generation, without claiming the vision-stage producer identity or using the hash as a cache key.
+- Kept A2's create-only default: a strictly parsed existing artifact with a valid fixed envelope skips even when its schema or source-description fingerprint differs from current selections. This avoids implicit migration; explicit regeneration applies new inputs/schema. The envelope check does not claim to revalidate an unavailable historical custom schema.
 - Chose a small descriptive schema with empty values for unsupported information and no controlled vocabularies; avoid speculative taxonomies and XMP mappings in Slice 1.
 
 ## Acceptance
@@ -336,6 +360,8 @@ B7's tests also verify the final envelope separately from the selected payload s
 - [x] Every required semantic category from the REQ is represented and testable.
 - [x] Full custom-schema replacement and provenance interaction have an explicit, non-contradictory rule.
 - [x] The generated metadata schema has an independent, identified version and explicit compatibility/evolution rules, including custom-schema behavior.
+- [x] Provenance fingerprints the exact persisted `.desc.txt` bytes used for generation and states the limits of that identity.
+- [x] Existing JSON structural validity and create-only skip behavior across schema-version changes are explicit and testable.
 - [x] No secrets or identifying photo/device data can enter the public example contract.
 - [x] `IMPL-A3-COMPLETED.md` is complete and linked.
 
@@ -343,7 +369,7 @@ B7's tests also verify the final envelope separately from the selected payload s
 
 - This was a `[DESIGN]` step. No application code, tests, package metadata, prompt/schema resource files, or user-facing configuration examples were created. No application tests, builds, or provider requests were run.
 - The built-in schema and synthetic example are design artifacts in this record; B7 creates the canonical resource files and tests them against the installed package and wheel.
-- Synthetic contract checks with Python's standard library and `jsonschema 4.26.0` passed: both schemas passed `Draft202012Validator.check_schema`; built-in and custom-payload envelopes validated; three negative payload cases and three negative envelope cases were rejected; boolean `format_version` was rejected; and Unicode serialization round-tripped as UTF-8 without a BOM and with one final LF. These checks validate the documented contract, not application code.
-- The prompt SHA-256 in the example was calculated from the exact UTF-8 prompt bytes above, including the final LF, and matched the hash embedded in the example.
-- Documentation checks passed: 20/20 plan summary/detail step headings matched; all six A3 acceptance rows were checked in both plan and completion record; local links in A2/A3 resolved; all other missing plan links were intentionally future step-completion artifacts; no trailing whitespace was found in the changed documents.
+- Synthetic contract checks with Python's standard library and `jsonschema 4.26.0` passed: both schemas passed `Draft202012Validator.check_schema`; built-in and custom-payload envelopes validated; three negative payload cases and four negative envelope cases (missing/malformed description fingerprint, boolean format version, and extra envelope key) were rejected; and Unicode serialization round-tripped as UTF-8 without a BOM and with one final LF. These checks validate the documented contract, not application code.
+- The prompt SHA-256 in the example was calculated from the exact UTF-8 prompt bytes above, including the final LF, and matched the hash embedded in the example. The description SHA-256 was calculated from the exact 115-byte UTF-8 fixture (one final LF, no BOM) and matched the embedded `description_sha256`.
+- Documentation checks passed: 20/20 plan summary/detail step headings matched; all eight A3 acceptance rows were checked in both plan and completion record; local links in A2/A3 resolved; all other missing plan links were intentionally future step-completion artifacts; no trailing whitespace was found in the changed documents.
 - A4 retains ownership of provider request/response semantics and capability/error mapping. A5 retains ownership of safe-write/recovery details. A6 remains the Phase A readiness gate; no Phase B work begins until A4–A6 and the Phase A exit rule are complete.

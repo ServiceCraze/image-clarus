@@ -172,7 +172,7 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 - This is a `[DESIGN]` step. No production/test files were created or modified, and no application tests, typechecks, or builds were run.
 - The plan's exact A2 acceptance decisions and its previously pending command/result/config details are recorded in this completion artifact and cross-linked from the plan.
 - C2 owns later runtime verification of signal stop behavior. B2/B8/C1 own automated configuration, CLI, result, and exit-code tests using temporary config roots and local stubs; A2 does not claim those tests have run.
-- Step A3 subsequently froze the exact JSON prompt/schema content, JSON artifact validity, schema versioning, and finite upper bound and error-feedback semantics for `validation_retries`; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). A4 owns Chat Completions request/response details and provider-specific capability/error mapping. A5 owns safe-write boundaries and interruption/recovery fault cases. These are defined by their named Phase A steps, not left for Phase B implementers to guess.
+- Step A3 subsequently froze the exact JSON prompt/schema content, JSON artifact validity, schema versioning, the exact persisted-description input fingerprint, create-only skip behavior across selected schema changes, and finite upper bound/error-feedback semantics for `validation_retries`; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). A4 owns Chat Completions request/response details and provider-specific capability/error mapping. A5 owns safe-write boundaries and interruption/recovery fault cases. These are defined by their named Phase A steps, not left for Phase B implementers to guess.
 
 ## Follow-ups
 
