@@ -156,7 +156,7 @@ Generic effort choices, ordered from least to most, are:
 
 `minimal`, `low`, `medium`, `high`, `extra_high`, `max`, `ultra`.
 
-`default` means preserve the configured model/provider default, normally by omitting a reasoning parameter; `off` explicitly requests disabled reasoning where possible. Built-in provider mappings translate generic values into native settings. Multiple generic levels may intentionally collapse onto one supported native level. Provider/model configuration can override mappings, including parameter name, disable mechanism, and supported native values. If a selected level cannot be mapped, report a clear error rather than silently falling back. Provider-native extensions remain possible. A `fast` or similar execution toggle is separate from reasoning effort.
+`default` means preserve the configured model/provider default, normally by omitting a reasoning parameter; `off` explicitly requests disabled reasoning where possible. Built-in provider mappings translate generic values into native settings. Multiple generic levels may intentionally collapse onto one supported native level. Provider/model configuration can override mappings, including parameter name, disable mechanism, and supported native values. If a selected level cannot be mapped, report a clear error rather than silently falling back. Provider-native extensions remain possible. A `fast` or similar execution toggle is separate from reasoning effort. The Slice 1 Chat Completions mapping, configuration shape, and unsupported-capability behavior are frozen in the [A4 completion record](slice-1/IMPL-A4-COMPLETED.md).
 
 ### 4.4 Prompts and structured output
 
@@ -310,12 +310,10 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 ### 10.3 Open for implementation planning
 
-- **Slice 1 implementation-plan prerequisite:** During Phase A of the Slice 1 plan, define the initial built-in JSON schema, JSON-generation prompt, and provenance contract, including how full schema replacement interacts with required provenance. Make completion of this planning work a gate before JSON implementation begins.
-- Exact Python CLI framework, authoritative package-version source, `--version` output formatting, remaining argument grammar/placement, repeatability and option-conflict rules, model-client library, provider parameter mappings, and parsed `--set` value semantics.
-- Initial JSON schema version identifier/representation and compatibility/evolution rules, independent of application versioning.
-- Detailed retry, per-stage missing-input, continuation, logging, and exit-code configuration keys.
-- Detailed artifact-service API and filesystem-specific error recovery mechanics, without changing agreed backup and concurrency semantics.
-- Exact JSON-to-XMP mappings and which observed digiKam-compatible XMP fields require writing.
+- **Phase A design handoff (not implementation approval):** The Slice 1 plan records A1 package/runtime/dependency/version-source choices; A2 CLI, configuration, typed `--set`, result, failure, and exit contracts; A3 JSON schema/prompt/provenance and artifact-validity rules; and A4 Chat Completions request, reasoning mapping, transport, and security rules. See [IMPL-PLAN-slice-1.md](slice-1/IMPL-PLAN-slice-1.md) and its linked completion records. A3 Product Owner review remains pending, A5 is incomplete, and A6 readiness must pass before Phase B.
+- Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3; runtime verification remains assigned to the implementation/test steps.
+- Detailed artifact-service API and filesystem-specific error recovery mechanics remain A5 work; preserve the agreed backup and concurrency semantics.
+- Exact JSON-to-XMP mappings and which observed digiKam-compatible XMP fields require writing remain the responsibility of the XMP slice plan.
 
 ### 10.4 Deferred without narrowing the end-state requirements
 

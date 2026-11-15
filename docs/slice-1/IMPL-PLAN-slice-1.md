@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A in progress; Steps A1–A3 design artifacts complete; A3 Product Owner decision pending; implementation not started
+**Status:** Candidate — Phase A in progress; Steps A1–A4 design artifacts complete; A3 Product Owner review pending; A5–A6 pending; implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -139,7 +139,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
 - [x] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 - [x] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
-- [ ] Step A4 — Freeze the provider request and security contract [DESIGN]
+- [x] Step A4 — Freeze the provider request and security contract [DESIGN]
 - [ ] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
 - [ ] Step A6 — Pass the Phase A readiness gate [DESIGN]
 
@@ -298,23 +298,23 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Steps A1–A3 decisions
 
 **Actions:**
-1. Use A2's `providers.<name>.base_url`, `timeout_seconds`, `api_key`/`api_key_env`, and `models.<name>.provider`/`model_id` keys. Freeze their OpenAI-compatible request semantics and, if required, add explicitly named generation-setting leaves under the existing provider/model/stage maps; do not add another config root, rename A2 fields, or duplicate key sources. Keep credentials out of provider result objects and logs.
-2. Define the supported OpenAI-compatible Chat Completions request shape for description image input and structured JSON generation. Use a local test server/transport to assert request and response handling.
-3. Use the A2 `stages.<stage>.model` references for independent or shared model selection. Define provider-independent behavior for a shared versus distinct provider/model and model-default versus stage-specific generation settings.
-4. Use A2's generic reasoning-effort values and stage-over-model precedence; record the provider mapping source and error behavior for unsupported options. Do not silently send unsupported capabilities or silently fall back.
-5. Specify authentication, HTTP status/error mapping, timeouts, response parsing, malformed/empty response handling, and redaction requirements. Built-in request retry count stays zero; do not include broad retry/backoff behavior.
-6. Specify automated tests using a local HTTP stub, including image payload, prompt, model ID, structured output request, auth header presence without disclosure, timeout, auth failure, provider error, and capability mismatch.
+1. Keep A2's provider/model/stage keys and precedence. Add only optional `reasoning_effort_mapping` leaves under `providers.<name>` and `models.<name>`; freeze their shape and provider/model/built-in precedence without adding another config root or credential source.
+2. Freeze `POST <base_url>/chat/completions`, root-path handling, JSON headers, `stream: false`, `n: 1`, image data-URL messages, the JSON-object response format, and the separate prompt/description/schema message parts. State which image bytes and schema annotations are sent.
+3. Use A2's `stages.<stage>.model` references for independent or shared selection. Freeze exact model/default/stage reasoning precedence and ensure distinct requests have no shared conversation state or hidden model fallback.
+4. Record the built-in generic-to-native reasoning map and override semantics. Unsupported mappings/capabilities fail clearly; do not silently omit, lower, or replace an explicit setting.
+5. Specify Bearer authentication, base-URL validation, TLS/proxy/redirect behavior, the four HTTPX timeout phases, response-envelope parsing, empty/malformed output handling, existing A2 error-category mapping, and redaction. Provider-layer automatic retries remain zero; distinguish A3 validation retries.
+6. Specify hermetic B3 tests for request path/body, image-byte/MIME round-trip, JSON mode, model and reasoning selection, successful/error responses, timeout/no-retry, capability mismatch, and credential/body/URL redaction.
 
 **Outputs:**
 - Provider contract, request/response examples, error table, and security notes in [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md)
-- This plan updated with exact request/response test fixtures and dependency/API choices
+- This plan updated with exact request/response test assertions, HTTPX/Chat Completions choices, optional reasoning-mapping leaves, and no dependency change from A1
 
 **Acceptance:**
-- [ ] Both stages can use independent named models and can share a provider/model without coordinator-specific configuration objects.
-- [ ] Unsupported provider capabilities fail clearly; there is no silent reasoning/model fallback.
-- [ ] Automated tests do not require external network access or real credentials.
-- [ ] A dummy credential is proven absent from captured logs and error messages.
-- [ ] [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md) is complete and linked.
+- [x] Both stages can use independent named models and can share a provider/model without coordinator-specific configuration objects.
+- [x] Unsupported provider capabilities fail clearly; there is no silent reasoning/model fallback.
+- [x] B3 automated tests are specified to use no external network or real credentials.
+- [x] B3 test coverage is specified to prove a dummy credential is absent from captured logs and error messages while present only in the captured Authorization header.
+- [x] [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md) is complete and linked.
 
 ### Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
 
@@ -436,10 +436,10 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Create: `tests/unit/test_openai_compatible.py`
 
 **Actions:**
-1. Add failing local-transport tests for description image/prompt requests, structured JSON requests, model IDs, stage-specific selection, response parsing, reasoning default/off/mapping, and unsupported capabilities.
+1. Add failing local-transport tests for the exact Chat Completions path/body, description image/prompt request, JSON-object request and separate schema/description parts, model IDs, independent/shared stage selection, response parsing, reasoning default/off/mapping, and unsupported capabilities.
 2. Verify RED; implement a minimal synchronous provider adapter using the A1-selected HTTP client and A4 request contract.
-3. Add tests for timeout, authentication failure, non-success HTTP responses, malformed/empty responses, and zero automatic retry behavior.
-4. Use a dummy credential to prove headers are sent when configured but never appear in logs, exceptions, or returned results. Do not make live API calls.
+3. Add tests for the A4 status/error map, timeout, redirects disabled, authentication failure, malformed/empty responses, no sensitive URL/body/exception text, and exactly zero provider-layer retries.
+4. Use a dummy credential to prove the Bearer header is sent when configured but never appears in logs, exceptions, or returned results. Do not make live API calls.
 5. Verify GREEN and run current tests/quality checks.
 
 **Outputs:** Provider adapter and local HTTP-boundary tests; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md)
@@ -508,7 +508,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Read: `prompts/image-description.txt`, `src/image_clarus/resources.py`
 
 **Actions:**
-1. Write failing tests for one valid synthetic image, exact default prompt text, prompt override, selected description model, new-only skip behavior, explicit regeneration, provider failure, and safe-write failure.
+1. Write failing tests for one valid synthetic image, exact default prompt text, prompt override, selected description model, empty/whitespace-only model content (no artifact), new-only skip behavior, explicit regeneration, provider failure, and safe-write failure.
 2. Verify RED; implement stage-owned input checks, provider request, complete output validation, result construction, and artifact write through the shared service.
 3. Ensure the default request contains exactly `Fully describe and explain everything about this image.` as its prompt, without appended instructions.
 4. Verify existing `.desc.txt` is preserved unless regeneration is explicitly selected; a failed model call never creates a completion sidecar.
@@ -520,7 +520,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - [ ] `desc` works alone and writes exactly `<image>.desc.txt` beside the input.
 - [ ] The default prompt is byte-for-byte consistent with the existing resource; prompt override works independently.
 - [ ] Existing output is skipped by default and replaced only on explicit regeneration.
-- [ ] Failures are reported and leave no falsely completed output.
+- [ ] Empty/whitespace-only responses and other failures are reported and leave no falsely completed output.
 - [ ] RED/GREEN and regression evidence is recorded; [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md) is linked.
 
 ### Step B7 — Implement the structured JSON stage [CODE/TEST]
@@ -536,7 +536,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Read: `src/image_clarus/artifacts.py`, `src/image_clarus/providers/openai_compatible.py`
 
 **Actions:**
-1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, exact `description_sha256` for the persisted bytes consumed, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, schema-version-mismatch existing-output skip (unchanged file, no description read/provider call), valid existing-output skip with missing `.desc.txt`, invalid existing-envelope failure, and explicit regeneration.
+1. Add failing tests for valid and invalid model JSON, exact A3 prompt/description/schema separation and A4 JSON-object request, all A3-required semantic/provenance fields, exact `description_sha256` for the persisted bytes consumed, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, schema-version-mismatch existing-output skip (unchanged file, no description read/provider call), valid existing-output skip with missing `.desc.txt`, invalid existing-envelope failure, and explicit regeneration.
 2. Verify RED; implement a stage that reads `.desc.txt` bytes once, computes `description_sha256` from that snapshot, strictly decodes and uses the same snapshot, calls the selected JSON model when generation is required, parses and validates against the resolved schema, adds/validates provenance and schema-version identification exactly as A3 specifies, and writes only validated content through the artifact service. Follow A3's structural-only existing-output skip check before reading the description.
 3. Keep model-generated values distinct from application-owned provenance according to the A3-frozen contract. Do not allow custom schema replacement to silently remove required provenance.
 4. Ensure a missing description for explicit one-image `json` selection follows A2 and does not trigger `desc` implicitly.
@@ -754,7 +754,6 @@ All of the following are Phase A work, not permission to invent details during c
 
 | Open item | Resolve in | Required result |
 | --- | --- | --- |
-| Provider request shape, image encoding, reasoning/capability mapping, timeouts and errors | A4 | Local-testable HTTP contract with secret-redaction rules |
 | Artifact API details, temp/backup naming, permissions, failure and recovery assertions | A5 | Fault-testable state table preserving HLD invariants |
 
 ## Source documents and planning basis
