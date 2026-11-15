@@ -330,9 +330,9 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Steps A1–A4 decisions
 
 **Actions:**
-1. Freeze the write transaction for `.desc.txt` and `.desc.json`: unique same-directory temporary names, exclusive creation, complete-byte write, flush/fsync/close, read-back equality and stage validation before touching the destination, replacement, read-back validation, permission behavior, cleanup, and `file_io` reporting.
+1. Freeze the write transaction for `.desc.txt` and `.desc.json`: unique same-directory temporary names, exclusive creation, complete-byte write, flush/fsync/close, read-back equality and stage validation before touching the destination, replacement, read-back validation, POSIX mode preservation for destination/backup/recovery, cleanup, and `file_io` reporting.
 2. Freeze `<destination>.bak` creation/refresh from the current original and add only `pipeline.backup_retention: remove|retain` (default `remove`) under A2's existing `pipeline` map; update A2's config contract and B2/B5 test requirements without adding a new root or CLI flag.
-3. Specify recovery exactly: when destination is missing and `.bak` exists, restore its bytes through a unique temporary file and verify; when both exist, destination remains authoritative; temporary files are never recovery sources. Clean only current-operation temporary files or files independently proven stale; do not guess that pre-existing temporary files are stale.
+3. Specify recovery exactly: when destination is missing and `.bak` exists, restore its bytes and mode bits through a unique temporary file and verify both; when both exist, destination remains authoritative; temporary files are never recovery sources. Clean only current-operation temporary files or files independently proven stale; do not guess that pre-existing temporary files are stale.
 4. Define observable results for generation/validation failure, temporary-file failure, backup refresh failure, destination replacement/read-back failure, graceful interruption, process death, and cleanup failure. Never discard the only recoverable original or report an unverified artifact as completed.
 5. Define lock-free last-successful-replacement-wins behavior and the accepted backup/cleanup races. Do not add locks, compare-and-swap, conflict detection, deterministic-winner claims, or crash-proof claims.
 6. Specify deterministic B5/C2 fault tests using temporary directories and injected filesystem-operation failures; require separate OS processes and a barrier for overlapping-writer tests. Record the actual Linux test filesystem and optional second filesystem only when available; do not require destructive mounts or an exhaustive matrix.
@@ -347,7 +347,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - [x] Backup retention is configurable through `pipeline.backup_retention` (`remove` or `retain`, default `remove`) under the existing config root; failure paths preserve backups regardless of policy.
 - [x] Pre-existing temporary files are never recovery sources and are not deleted unless proven stale; each operation cleans only its own temporary files.
 - [x] Lock-free, last-successful-replacement-wins behavior and accepted backup/cleanup races remain explicit; tests use separate processes without asserting a winner.
-- [x] Permission behavior, representative Linux filesystem evidence, fault injection, and durability limitations are specified without promising crash-proof writes.
+- [x] Permission behavior—including mode preservation for backup refresh and recovery—representative Linux filesystem evidence, fault injection, and durability limitations are specified without promising crash-proof writes.
 - [x] [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md) is complete and linked.
 
 ### Step A6 — Pass the Phase A readiness gate [DESIGN]
@@ -491,9 +491,9 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Create: `tests/unit/test_artifacts.py`
 
 **Actions:**
-1. Add failing tests for create, replacement, byte-exact current-original backup refresh, restore when destination is missing, destination-authoritative behavior when both destination and backup exist, and `remove`/`retain` behavior after verified success.
-2. Inject failures at temporary create/write/fsync/validation, backup copy/fsync/replace, destination replace/read-back, and backup/temp cleanup; assert the prior destination or recoverable backup remains and no unverified output is reported complete.
-3. Test unique same-directory temporary files, mode preservation for replacement, 0600 mode for new private sidecars, ignored pre-existing temporary files, and cleanup of only files owned by the current operation.
+1. Add failing tests for create, replacement, byte- and mode-exact current-original backup refresh, restore of bytes and mode when destination is missing, destination-authoritative behavior when both destination and backup exist, and `remove`/`retain` behavior after verified success.
+2. Inject failures at temporary create/write/fsync/validation/mode-setting, backup copy/mode-setting/fsync/replace, destination replace/read-back, and backup/temp cleanup; assert the prior destination or recoverable backup remains and no unverified output is reported complete.
+3. Test unique same-directory temporary files, mode preservation for replacement, matching mode bits on refreshed backups and recovered destinations (SW-02/SW-04/SW-15), 0600 mode for new private sidecars, ignored pre-existing temporary files, and cleanup of only files owned by the current operation.
 4. Use two separate OS processes and a barrier to overlap complete writes; assert the final sidecar is one complete valid submitted payload, with no deterministic winner or conflict-detection claim.
 5. Run under the test runner's actual Linux filesystem; if a distinct writable filesystem such as `/dev/shm` is available, run a scoped smoke case and record it. Do not mount filesystems or write to user data.
 6. Verify RED; implement the minimal artifact API needed by `desc` and `json`, then verify GREEN and current regression suite.
@@ -507,6 +507,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - [ ] Source image paths are never passed as write destinations.
 - [ ] Backup retention follows `pipeline.backup_retention`; failure paths preserve backups independently of retention policy.
 - [ ] Only operation-owned temporary files are cleaned automatically; concurrent tests run as separate OS processes and leave a complete artifact.
+- [ ] SW-02/SW-04/SW-15 verify POSIX mode preservation on backup refresh and recovery.
 - [ ] RED/GREEN and fault-test evidence is recorded; [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md) is linked.
 
 ### Step B6 — Implement the description stage [CODE/TEST]
