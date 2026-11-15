@@ -1,5 +1,5 @@
 # image-clarus
-Image Clarus is an open-source CLI tool for AI-powered image description, structured metadata generation, XMP tagging, and search. It supports configurable AI providers and models, batch processing, and integration with photo management applications such as digiKam.
+Image Clarus is an open-source CLI project intended to make photo collections easier to search and reuse. Planned capabilities include AI-generated descriptions and structured metadata, optional digiKam-compatible XMP, deterministic search, configurable providers and models, and batch processing.
 
 ## Project documents
 
