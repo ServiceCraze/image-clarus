@@ -15,9 +15,11 @@
 
 Step A4 freezes the synchronous OpenAI-compatible Chat Completions boundary used by both `desc` and `json`: endpoint construction, request bodies, image encoding, model/reasoning selection, authentication, HTTP timeout/redirect/TLS behavior, response validation, error categories, retry boundaries, redaction, and hermetic provider tests. Slice 1 supports reasoning effort as its only configurable model-generation parameter; HLD §4.2's broader named-model defaults and generic parameter overrides remain an end-state requirement but are explicitly deferred beyond Slice 1. A4 preserves A2's resolved-image and sidecar-output path reporting; provider-path redaction is scoped to provider-facing data, provider errors, and diagnostics. A4 adds only optional reasoning-mapping leaves under A2's existing provider/model maps; it adds no dependency and does not change A2's configuration-source or CLI precedence.
 
-This is a design-only step. No application modules, test files, user-facing configuration example files, or lockfiles were created; the mapping snippet below is illustrative documentation only. No application tests/builds or live provider requests were run. A5 and A6 remain pending; Phase B/C work has not started.
+This was a design-only step. No application modules, test files, user-facing configuration example files, or lockfiles were created; the mapping snippet below is illustrative documentation only. No application tests/builds or live provider requests were run. At A4 closeout, A5 and A6 were pending and Phase B/C work had not started. A5 has since completed; A6 remains pending and Phase B/C work has not started.
 
 **Decision/approval boundary:** These choices complete the A4 design artifact; they are not a Product Owner approval. Erik's A3 Product Owner review remains pending, A6 remains unchecked, and Phase B implementation is not authorized until the Phase A readiness gate passes.
+
+**Subsequent progress:** Step A5 later froze safe-write, backup-retention, recovery, and concurrency details in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). This does not change A4's provider contract or pass the Phase A readiness gate.
 
 ## Provider boundary and request interface
 

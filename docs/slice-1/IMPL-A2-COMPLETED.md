@@ -53,7 +53,7 @@ image-clarus search
 
 ### A2 configuration keys and defaults
 
-A4 may add explicitly named request-specific leaves under these provider/model/stage maps, without adding another config root, duplicating a key source, or changing precedence. The complete provider request contract remains A4's responsibility.
+A4 added explicitly named reasoning-mapping leaves under the existing provider/model maps. A5 subsequently adds only `pipeline.backup_retention` under the existing `pipeline` map; neither step adds another config root, duplicates a key source, or changes precedence. The provider request contract remains A4's responsibility, and the backup/recovery semantics are frozen in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md).
 
 | Key | Type / default | Contract |
 | --- | --- | --- |
@@ -76,9 +76,10 @@ A4 may add explicitly named request-specific leaves under these provider/model/s
 | `stages.json.validation_retries` | Non-negative integer; default `0` | Opt-in schema-validation retries; A3 sets and enforces the finite upper bound and exact error-feedback contents. |
 | `pipeline.missing_prerequisite` | `fail` or `skip`; default `fail` | For this single-image contract, applies when `json` needs a missing persisted `.desc.txt`. |
 | `pipeline.on_stage_failure` | `stop` or `continue`; default `stop` | `stop` does not invoke later selected stages; `continue` invokes them and lets each stage independently evaluate its persisted inputs/outputs. |
+| `pipeline.backup_retention` | `remove` or `retain`; default `remove` | A5-defined `.bak` policy after successful artifact verification. Failed writes preserve any backup regardless of this value. |
 | `logging.level` | `DEBUG`, `INFO`, `WARNING`, or `ERROR`; default `WARNING` | Console diagnostics go to stderr. Single-image stage summaries always go to stdout. File/both destinations and batch summaries remain deferred to the operations slice. |
 
-The CLI `--regenerate` sets regeneration true for every selected `desc`/`json` stage and wins over file or `--set` values. `--missing-prerequisite fail|skip` overrides `pipeline.missing_prerequisite`. Dedicated prompt/schema options override their respective `stages.*.*_file` values. Stage-specific model selection and reasoning can be overridden through `--set`, for example `--set stages.desc.model=local-vision`.
+The CLI `--regenerate` sets regeneration true for every selected `desc`/`json` stage and wins over file or `--set` values. `--missing-prerequisite fail|skip` overrides `pipeline.missing_prerequisite`. Dedicated prompt/schema options override their respective `stages.*.*_file` values. Stage-specific model selection, reasoning, and the A5 backup-retention leaf can be overridden through `--set`, for example `--set stages.desc.model=local-vision` or `--set pipeline.backup_retention=retain`.
 
 Illustrative config shape (not a B9 user-facing example):
 
@@ -172,8 +173,8 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 - This is a `[DESIGN]` step. No production/test files were created or modified, and no application tests, typechecks, or builds were run.
 - The plan's exact A2 acceptance decisions and its previously pending command/result/config details are recorded in this completion artifact and cross-linked from the plan.
 - C2 owns later runtime verification of signal stop behavior. B2/B8/C1 own automated configuration, CLI, result, and exit-code tests using temporary config roots and local stubs; A2 does not claim those tests have run.
-- Step A3 subsequently froze the exact JSON prompt/schema content, JSON artifact validity, schema versioning, the exact persisted-description input fingerprint, create-only skip behavior across selected schema changes, and finite upper bound/error-feedback semantics for `validation_retries`; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). Step A4 subsequently froze Chat Completions request/response details and provider-specific capability/error mapping; see [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md). A5 owns safe-write boundaries and interruption/recovery fault cases. These are defined by their named Phase A steps, not left for Phase B implementers to guess.
+- Step A3 subsequently froze the exact JSON prompt/schema content, JSON artifact validity, schema versioning, the exact persisted-description input fingerprint, create-only skip behavior across selected schema changes, and finite upper bound/error-feedback semantics for `validation_retries`; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). Step A4 subsequently froze Chat Completions request/response details and provider-specific capability/error mapping; see [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md). Step A5 has since frozen safe-write boundaries, backup retention, recovery, and interruption/fault cases; see [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). These are defined by their named Phase A steps, not left for Phase B implementers to guess.
 
 ## Follow-ups
 
-- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3 and A4 were completed subsequently; A5–A6 remain unchecked. Erik's A3 Product Owner review and the Phase A readiness gate remain pending. Do not start Phase B until the remaining Phase A decisions are accepted and A6 passes.
+- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3–A5 have since completed; A6 remains unchecked. A5's later `pipeline.backup_retention` addition is documented above and in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). Erik's A3 Product Owner review and the Phase A readiness gate remain pending. Do not start Phase B until the remaining Phase A decisions are accepted and A6 passes.

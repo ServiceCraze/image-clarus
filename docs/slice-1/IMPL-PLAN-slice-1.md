@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A in progress; Steps A1–A4 design artifacts complete; A3 Product Owner review pending; A5–A6 pending; implementation not started
+**Status:** Candidate — Phase A in progress; Steps A1–A5 design artifacts complete; A3 Product Owner review pending; A6 pending; implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -76,7 +76,7 @@ This matrix allocates the REQ's end-state requirements without expanding Slice 1
 | Configuration and precedence (Configuration and precedence) | One selected YAML file, built-in defaults, CLI precedence, prompt/schema overrides, Linux discovery, and OS-aware path resolution without creating system directories | Add optional-stage configuration only when the owning stage is introduced | — | A2; B2/B8; C1 config matrix with temporary roots and platform-path unit tests |
 | Failures, retries, logging and summaries (Failure policies, retries and logging) | Clear single-image results/errors and nonzero failures; zero request retries; bounded opt-in schema retry; credentials excluded from logs | Batch category actions, per-file continuation, summaries and configurable destinations belong to later operational work; Release 1 inclusion is uncommitted | General retry/backoff policy remains optional beyond the schema-retry requirement | A2/A4; B2–B8; C1/C2/C4; later batch plan owns aggregate exit behavior |
 | External scheduling, stop, resume and concurrency (External scheduling, stop and resume) | No internal scheduler or queue; independent CLI processes and lock-free last-write-wins semantics are exercised for `desc`/`json` | Multi-image rescan/resume, graceful batch stop and run bounds are later operational-slice candidates; Release 1 inclusion is uncommitted | A built-in scheduler remains a non-goal | C1/C2 subprocess tests; later operational plan tests signal/run-bound behavior |
-| Safe writes and recovery (Safe-write requirements) | Shared service for `.desc.txt` and `.desc.json`, backup/recovery and failure handling; test representative available Linux filesystems | Reuse the service for XMP if that stage is added | Expand filesystem/OS coverage only when evidence warrants it; no exhaustive matrix | A5; B5; C2 fault injection and separate-process writer test; C3 records actual filesystem/interpreter |
+| Safe writes and recovery (Safe-write requirements) | Shared service for `.desc.txt` and `.desc.json`, backup/recovery, `pipeline.backup_retention` (`remove` by default or `retain`), and failure handling; test representative available Linux filesystems | Reuse the service for XMP if that stage is added | Expand filesystem/OS coverage only when evidence warrants it; no exhaustive matrix | A5; B2/B5; C2 fault injection and separate-process writer test; C3 records actual filesystem/interpreter |
 | Requirements-to-design handoff (Requirements-to-design handoff) | Phase A resolves Slice 1 CLI/config/provider/schema/provenance/safe-write decisions before implementation | XMP mappings, selection/search syntax and batch controls belong to their own plans before implementation | — | A1–A6 readiness gate; every later plan maps assigned REQ obligations to tests |
 
 ## Confirmed project layout
@@ -140,7 +140,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 - [x] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 - [x] Step A4 — Freeze the provider request and security contract [DESIGN]
-- [ ] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
+- [x] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
 - [ ] Step A6 — Pass the Phase A readiness gate [DESIGN]
 
 ### Phase B — Build the single-image pipeline
@@ -330,21 +330,25 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Steps A1–A4 decisions
 
 **Actions:**
-1. Specify temporary-file naming/location, flush/close/validation order, destination replacement, backup creation/refresh, permission handling, success verification, cleanup, and error reporting.
-2. Specify recovery order exactly: missing destination + `.bak` restores backup; destination + `.bak` keeps destination authoritative; temporary files are never recovery sources; remove only temporary files proven stale.
-3. Define observable behavior for failed generation, failed validation, backup failure, replacement failure, interrupted write, and cleanup failure. Preserve the original or recoverable backup; never mark partial output complete.
-4. Define testable last-write-wins behavior for overlapping writers without locks. Do not claim serialized updates, conflict detection, or crash-proof semantics on unsupported filesystems.
-5. Record representative Linux filesystem/test-environment coverage and how fault injection will exercise failures without destructive host operations.
+1. Freeze the write transaction for `.desc.txt` and `.desc.json`: unique same-directory temporary names, exclusive creation, complete-byte write, flush/fsync/close, read-back equality and stage validation before touching the destination, replacement, read-back validation, permission behavior, cleanup, and `file_io` reporting.
+2. Freeze `<destination>.bak` creation/refresh from the current original and add only `pipeline.backup_retention: remove|retain` (default `remove`) under A2's existing `pipeline` map; update A2's config contract and B2/B5 test requirements without adding a new root or CLI flag.
+3. Specify recovery exactly: when destination is missing and `.bak` exists, restore its bytes through a unique temporary file and verify; when both exist, destination remains authoritative; temporary files are never recovery sources. Clean only current-operation temporary files or files independently proven stale; do not guess that pre-existing temporary files are stale.
+4. Define observable results for generation/validation failure, temporary-file failure, backup refresh failure, destination replacement/read-back failure, graceful interruption, process death, and cleanup failure. Never discard the only recoverable original or report an unverified artifact as completed.
+5. Define lock-free last-successful-replacement-wins behavior and the accepted backup/cleanup races. Do not add locks, compare-and-swap, conflict detection, deterministic-winner claims, or crash-proof claims.
+6. Specify deterministic B5/C2 fault tests using temporary directories and injected filesystem-operation failures; require separate OS processes and a barrier for overlapping-writer tests. Record the actual Linux test filesystem and optional second filesystem only when available; do not require destructive mounts or an exhaustive matrix.
 
 **Outputs:**
 - Safe-write state table and fault-injection matrix in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md)
-- This plan updated with exact failure/recovery assertions
+- This plan and the A2 config record updated with the `pipeline.backup_retention` policy, exact failure/recovery assertions, and fault-test matrix
 
 **Acceptance:**
-- [ ] Every HLD backup/recovery invariant is represented in a deterministic test case.
-- [ ] Failure paths never delete the only recoverable original or publish an incomplete sidecar.
-- [ ] The lock-free, last-successful-replacement-wins limitation remains explicit; no lock mechanism is added.
-- [ ] [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md) is complete and linked.
+- [x] Every HLD backup/recovery invariant is represented in the state table and deterministic B5/C2 test cases.
+- [x] Failure paths preserve the destination or available backup; incomplete/unverified output is never reported as completed, and no rollback overwrites a destination after a failed verification.
+- [x] Backup retention is configurable through `pipeline.backup_retention` (`remove` or `retain`, default `remove`) under the existing config root; failure paths preserve backups regardless of policy.
+- [x] Pre-existing temporary files are never recovery sources and are not deleted unless proven stale; each operation cleans only its own temporary files.
+- [x] Lock-free, last-successful-replacement-wins behavior and accepted backup/cleanup races remain explicit; tests use separate processes without asserting a winner.
+- [x] Permission behavior, representative Linux filesystem evidence, fault injection, and durability limitations are specified without promising crash-proof writes.
+- [x] [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md) is complete and linked.
 
 ### Step A6 — Pass the Phase A readiness gate [DESIGN]
 
@@ -416,8 +420,8 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Modify: `src/image_clarus/cli.py` only for config argument integration if required by A2
 
 **Actions:**
-1. Add failing tests for built-in defaults, explicit config suppressing discovery, user-level-before-system-level selection, no user/system merge, CLI-over-file precedence, independent prompt/schema overrides, relative paths, and invalid global configuration.
-2. Verify RED; implement configuration parsing/resolution with the selected YAML library and only the exact keys/precedence from A2.
+1. Add failing tests for built-in defaults (including `pipeline.backup_retention: remove`), valid `remove`/`retain` overrides, invalid policy values, explicit config suppressing discovery, user-level-before-system-level selection, no user/system merge, CLI-over-file precedence, independent prompt/schema overrides, relative paths, and invalid global configuration.
+2. Verify RED; implement configuration parsing/resolution with the selected YAML library and only the exact keys/precedence from A2, including A5's named leaf under the existing `pipeline` map.
 3. Validate global settings independently from selected-stage settings; do not require an unused provider credential/model for a different selected stage.
 4. Add tests showing CLI generic overrides parse into the types specified in A2 and invalid overrides report a clear path/value error without revealing secrets.
 5. Verify GREEN and run the full current suite.
@@ -487,11 +491,12 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Create: `tests/unit/test_artifacts.py`
 
 **Actions:**
-1. Add failing tests for create, replacement, current-original backup refresh, restore when destination is missing, destination-authoritative behavior when both destination and backup exist, and removal/retention after verified success.
-2. Add fault-injection tests for write/flush/validation/backup/replacement failure; assert the previous destination or recoverable backup is preserved and incomplete output is never published.
-3. Test temporary files are created in the destination directory, are never recovery sources, and only proven-stale temporary files are removed.
-4. Test permission behavior where supported and overlapping writers on a temporary directory; assert final content is complete and comes from a successful writer, without asserting lock/serialization behavior.
-5. Verify RED; implement the minimal artifact API needed by `desc` and `json`, then verify GREEN and current regression suite.
+1. Add failing tests for create, replacement, byte-exact current-original backup refresh, restore when destination is missing, destination-authoritative behavior when both destination and backup exist, and `remove`/`retain` behavior after verified success.
+2. Inject failures at temporary create/write/fsync/validation, backup copy/fsync/replace, destination replace/read-back, and backup/temp cleanup; assert the prior destination or recoverable backup remains and no unverified output is reported complete.
+3. Test unique same-directory temporary files, mode preservation for replacement, 0600 mode for new private sidecars, ignored pre-existing temporary files, and cleanup of only files owned by the current operation.
+4. Use two separate OS processes and a barrier to overlap complete writes; assert the final sidecar is one complete valid submitted payload, with no deterministic winner or conflict-detection claim.
+5. Run under the test runner's actual Linux filesystem; if a distinct writable filesystem such as `/dev/shm` is available, run a scoped smoke case and record it. Do not mount filesystems or write to user data.
+6. Verify RED; implement the minimal artifact API needed by `desc` and `json`, then verify GREEN and current regression suite.
 
 **Outputs:** Shared artifact service and fault tests; [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md)
 
@@ -500,6 +505,8 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - [ ] Failed writes preserve recoverable originals and cannot produce a success result.
 - [ ] No application-level lock or false crash-proof promise is introduced.
 - [ ] Source image paths are never passed as write destinations.
+- [ ] Backup retention follows `pipeline.backup_retention`; failure paths preserve backups independently of retention policy.
+- [ ] Only operation-owned temporary files are cleaned automatically; concurrent tests run as separate OS processes and leave a complete artifact.
 - [ ] RED/GREEN and fault-test evidence is recorded; [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md) is linked.
 
 ### Step B6 — Implement the description stage [CODE/TEST]
@@ -646,8 +653,8 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Create/update: `tests/unit/test_artifacts.py`, `tests/unit/test_openai_compatible.py`, `tests/integration/test_single_image_pipeline.py`
 
 **Actions:**
-1. Run safe-write fault-injection cases for backup, replacement, invalid model output, and cleanup failures; inspect destination/backup/temp state after each case.
-2. Run recovery cases for destination absent + backup present and destination + backup present; confirm temporary files are never used as recovery sources.
+1. Run safe-write fault-injection cases for temporary write/validation, backup refresh, replacement, post-replacement verification, and backup/temp cleanup; inspect destination/backup/temp state after each case.
+2. Run recovery cases for destination absent + backup present and destination + backup present; confirm retention behavior, destination authority, and that temporary files are never recovery sources.
 3. Spawn two separate OS processes through the safe-write test harness, synchronize them to write different complete payloads to the same temporary sidecar, and assert the destination is exactly one complete valid payload, not truncated/interleaved. Do not assert which writer wins or imply serialized updates; document the last-write-wins limitation.
 4. Use local provider/write barriers to send SIGINT and SIGTERM before a response and during a safe-write operation; assert statuses `130`/`143`, no later selected stage starts, in-flight requests are cancelled when safe, and an already-started write reaches its safe boundary. Do not call SIGKILL graceful; verify its filesystem aftermath through A5 recovery cases.
 5. Capture logs/errors using a dummy API key and assert the secret is absent. Verify no real credential or real personal image is used.
