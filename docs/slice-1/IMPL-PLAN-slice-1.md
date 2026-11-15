@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A in progress; Steps A1–A2 complete; implementation not started
+**Status:** Candidate — Phase A in progress; Steps A1–A3 design artifacts complete; A3 Product Owner decision pending; implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -81,7 +81,7 @@ This matrix allocates the REQ's end-state requirements without expanding Slice 1
 
 ## Confirmed project layout
 
-Step A1 confirms the package/module/test layout. The proposed JSON prompt/schema filenames shown below remain subject to A3's contract decision. `pyproject.toml` owns static package metadata, the version, dependency declarations, Hatchling configuration, and the console entry point. Hatchling maps the existing root-level prompt and later schema assets into package resources without maintaining duplicate source files. `uv.lock` is generated in B1 and must be committed by the repository owner. `examples/config.yaml` is created only in B9, after A2 freezes the config keys.
+Step A1 confirms the package/module/test layout. A3 freezes the JSON prompt/schema paths shown below. `pyproject.toml` owns static package metadata, the version, dependency declarations, Hatchling configuration, and the console entry point. Hatchling maps the existing root-level prompt and later schema assets into package resources without maintaining duplicate source files. `uv.lock` is generated in B1 and must be committed by the repository owner. `examples/config.yaml` is created only in B9, after A2 freezes the config keys.
 
 ```text
 .python-version                     # 3.13 development baseline
@@ -105,9 +105,9 @@ src/image_clarus/
     structure.py
 prompts/
   image-description.txt              # existing; preserve exact text
-  image-structure.txt                # proposed default JSON-generation prompt
+  image-structure.txt                # A3-frozen default JSON-generation prompt
 schemas/
-  image-structure.schema.json        # proposed built-in JSON schema
+  image-structure.schema.json        # A3-frozen built-in metadata-payload schema
 examples/
   config.yaml                        # created in B9 after A2; sanitized env-var reference only
 tests/
@@ -118,7 +118,7 @@ tests/
 
 Module ownership is fixed as follows: `__main__.py` delegates to `cli.main`; `cli.py` owns `argparse` construction and dispatch (A2 owns the exact command contract); `config.py` resolves and validates configuration; `results.py` defines shared outcomes; `pipeline.py` owns the ordered built-in stage registry and coordinator; `artifacts.py` owns safe sidecar access/recovery; `resources.py` locates built-in prompts/schemas from source-tree paths or with stdlib `importlib.resources`; `providers/openai_compatible.py` owns synchronous HTTP transport; and `stages/description.py` / `stages/structure.py` own `desc` / `json`. `__init__.py` contains no separately maintained version constant.
 
-Keep the existing `prompts/image-description.txt` as the canonical source asset. Hatchling maps it to `image_clarus/resources/prompts/image-description.txt` in B1. B7 adds mappings from the root paths selected in A3 into the corresponding `image_clarus/resources/prompts/` and `image_clarus/resources/schemas/` subdirectories; A1 does not preempt A3's source filenames. `resources.py` prefers package resources when installed and supports the repository-root file during source development. User override resolution remains part of A2, not `resources.py`. Use synthetic YAML/schema/description/provider-response fixtures; create image inputs under pytest `tmp_path` without real photos or identifying metadata. The sanitized config example is deferred to B9.
+Keep the existing `prompts/image-description.txt` as the canonical source asset. Hatchling maps it to `image_clarus/resources/prompts/image-description.txt` in B1. A3 freezes `prompts/image-structure.txt` and `schemas/image-structure.schema.json`; B7 adds mappings from those root paths into the corresponding `image_clarus/resources/prompts/` and `image_clarus/resources/schemas/` subdirectories. `resources.py` prefers package resources when installed and supports the repository-root file during source development. User override resolution remains part of A2, not `resources.py`. Use synthetic YAML/schema/description/provider-response fixtures; create image inputs under pytest `tmp_path` without real photos or identifying metadata. The sanitized config example is deferred to B9.
 
 Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`, `test_results.py`, `test_pipeline.py`, `test_artifacts.py`, `test_openai_compatible.py`, `test_description_stage.py`, `test_structure_stage.py`, and `tests/integration/test_single_image_pipeline.py`. Do not add a plugin framework, database, scheduler, type checker, coverage gate, image-processing dependency, or other unrequested architecture.
 
@@ -138,7 +138,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 
 - [x] Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
 - [x] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
-- [ ] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
+- [x] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 - [ ] Step A4 — Freeze the provider request and security contract [DESIGN]
 - [ ] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
 - [ ] Step A6 — Pass the Phase A readiness gate [DESIGN]
@@ -260,24 +260,28 @@ image-clarus search
 
 **Actions:**
 1. Specify exact default JSON prompt text and file path; ensure it consumes the persisted description and asks for valid output matching the selected schema.
-2. Specify the built-in schema's exact field names/types/requiredness for subjects/objects, actions, setting/context, useful visual characteristics, searchable keywords/tags, and provenance. Keep it useful for discovery and later XMP mapping without designing XMP behavior now.
+2. Specify the built-in metadata payload's exact field names/types/requiredness for subjects/objects, actions, setting/context, useful visual characteristics, and searchable keywords/tags. Specify provenance in the application-owned envelope. Keep the contract useful for discovery and later XMP mapping without designing XMP behavior now.
 3. Decide whether provenance is represented inside the replaceable user schema, in an application-owned envelope, or through another explicit mechanism. Define how full schema replacement works without silently losing the required model/prompt provenance.
-4. Define the provenance fields and stable values captured (at minimum selected provider/model identity and prompt identity/version or content fingerprint); exclude credentials, authorization headers, and secret-bearing URLs.
-5. Use the A2 key `stages.json.validation_retries` with default zero; set its finite upper bound and exact validation-error feedback, plus JSON serialization, Unicode, top-level shape, extra-property strictness, fenced/prose-wrapped output handling, and schema-error reporting.
+4. Define the provenance fields and stable values captured (selected provider alias, model alias and model ID, prompt identity and exact-content SHA-256); exclude credentials, authorization headers, local paths, and secret-bearing URLs.
+5. Use the A2 key `stages.json.validation_retries` with default zero and a finite upper bound of two additional attempts; define normalized parse/schema feedback, strict JSON parsing, Unicode/serialization, envelope and payload validation, extra-property behavior, and fenced/prose-wrapped output handling.
 6. Establish a schema-versioning convention independent of application SemVer: freeze the initial schema version, how each generated `.desc.json` identifies that contract, compatibility/evolution rules, and how full custom-schema replacement identifies its version. Never infer schema version from the application version.
 7. Provide a small synthetic description, example structured JSON, and positive/negative schema-validation cases, including schema-version identification. Do not include a real photograph or personal metadata.
+
+**A3 frozen contract:** The canonical prompt and schema sources are `prompts/image-structure.txt` and `schemas/image-structure.schema.json`; B7 packages these without duplicate source copies. The Draft 2020-12 built-in payload is a closed object requiring `subjects` (unique non-empty-string array), `objects` (same), `actions` (same), `setting` (`type` and `context` strings), `visual_characteristics` (`colors` array plus `composition`, `lighting`, and `visual_style` strings), and `keywords` (same array rules). All fields are required; their strings/arrays may be empty where unsupported, and built-in objects reject extra properties. The app owns a fixed `format_version: 1` envelope with `schema_id`, `schema_version`, `provenance` (`provider_alias`, `model_alias`, `model_id`, `prompt_id`, `prompt_sha256`), and validated `metadata`; the exact closed envelope schema is in the A3 record and is an application constant, not a user asset. `format_version` is a separate major-only envelope contract; any envelope schema change increments it, independently of payload-schema SemVer. Custom schemas wholly replace the payload schema only, require an object root, allow same-document references only, and use the SHA-256 of exact schema bytes as their independent identity/version. The built-in schema starts at `1.0.0`. Strict parsing rejects fences/prose, duplicate keys, invalid Unicode, and non-finite values. `stages.json.validation_retries` accepts only non-boolean integers 0–2 and returns normalized, sorted feedback without raw output or validator prose. B7 must test valid/invalid payloads, fixed-envelope validation/versioning, full custom replacement with retained envelope/provenance, schema preflight without a provider call, strict parsing and retries, exact prompt hash, Unicode, deterministic serialization, and packaged-resource lookup; the completion record contains the synthetic examples and exact feedback/compatibility rules.
+
+**Product Owner gate:** Erik's review of this A3 design remains pending. The A3 design artifact is complete, but A6 remains unchecked until the Phase A decisions are accepted or revised; this does not authorize Phase B implementation.
 
 **Outputs:**
 - Reviewed JSON/schema-version contract and examples in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md)
 - This plan updated with final schema/prompt paths, fields, and test assertions
 
 **Acceptance:**
-- [ ] Schema, prompt, and provenance are defined before any JSON production-code step begins.
-- [ ] Every required semantic category from the REQ is represented and testable.
-- [ ] Full custom-schema replacement and provenance interaction have an explicit, non-contradictory rule.
-- [ ] The generated metadata schema has an independent, identified version and explicit compatibility/evolution rules, including custom-schema behavior.
-- [ ] No secrets or identifying photo/device data can enter the public example contract.
-- [ ] [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md) is complete and linked.
+- [x] Schema, prompt, and provenance are defined before any JSON production-code step begins.
+- [x] Every required semantic category from the REQ is represented and testable.
+- [x] Full custom-schema replacement and provenance interaction have an explicit, non-contradictory rule.
+- [x] The generated metadata schema has an independent, identified version and explicit compatibility/evolution rules, including custom-schema behavior.
+- [x] No secrets or identifying photo/device data can enter the public example contract.
+- [x] [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md) is complete and linked.
 
 ### Step A4 — Freeze the provider request and security contract [DESIGN]
 
@@ -529,7 +533,7 @@ image-clarus search
 **Actions:**
 1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, existing JSON skip, and explicit regeneration.
 2. Verify RED; implement a stage that reads `.desc.txt` from disk, calls the selected JSON model, parses and validates against the resolved schema, adds/validates provenance and schema-version identification exactly as A3 specifies, and writes only validated content through the artifact service.
-3. Keep model-generated values distinct from application-owned provenance according to the approved contract. Do not allow custom schema replacement to silently remove required provenance.
+3. Keep model-generated values distinct from application-owned provenance according to the A3-frozen contract. Do not allow custom schema replacement to silently remove required provenance.
 4. Ensure a missing description for explicit one-image `json` selection follows A2 and does not trigger `desc` implicitly.
 5. Verify GREEN and run the complete current test suite.
 
@@ -742,7 +746,6 @@ All of the following are Phase A work, not permission to invent details during c
 
 | Open item | Resolve in | Required result |
 | --- | --- | --- |
-| Built-in structured schema, independent schema version, JSON prompt, provenance and custom-schema interaction | A3 | Versioned/traceable schema-prompt-provenance contract plus examples and tests |
 | Provider request shape, image encoding, reasoning/capability mapping, timeouts and errors | A4 | Local-testable HTTP contract with secret-redaction rules |
 | Artifact API details, temp/backup naming, permissions, failure and recovery assertions | A5 | Fault-testable state table preserving HLD invariants |
 

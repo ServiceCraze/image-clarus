@@ -4,7 +4,7 @@
 
 **Scope deviations:** None
 
-**Files Created/Updated/Removed:**
+**Files Created/Updated/Removed at A2 closeout:**
 - Created: `docs/slice-1/IMPL-A2-COMPLETED.md`
 - Updated: `docs/slice-1/IMPL-PLAN-slice-1.md`, `docs/slice-1/IMPL-A1-COMPLETED.md`
 - Removed: None
@@ -13,7 +13,7 @@
 
 ## Summary
 
-Completed Phase A Step A2 as a design-only step. This record freezes the one-image `process` grammar, stage selection and regeneration behavior, CLI override names and precedence, Linux and portable config discovery, the A2 configuration-key schema, selected-stage validation, user-visible results, failure/exit behavior, interruption statuses, the exact `--version` line, and the help-only `search` stub. The plan records the public command examples and maps interruption verification to C2. No production code, tests, package metadata, or configuration examples were created; A3–A6 remain pending.
+Completed Phase A Step A2 as a design-only step. This record freezes the one-image `process` grammar, stage selection and regeneration behavior, CLI override names and precedence, Linux and portable config discovery, the A2 configuration-key schema, selected-stage validation, user-visible results, failure/exit behavior, interruption statuses, the exact `--version` line, and the help-only `search` stub. The plan records the public command examples and maps interruption verification to C2. No production code, tests, package metadata, or configuration examples were created. At A2 closeout, A3–A6 were pending; A3 was completed subsequently, while A4–A6 remain pending.
 
 ## Frozen CLI contract
 
@@ -172,8 +172,8 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 - This is a `[DESIGN]` step. No production/test files were created or modified, and no application tests, typechecks, or builds were run.
 - The plan's exact A2 acceptance decisions and its previously pending command/result/config details are recorded in this completion artifact and cross-linked from the plan.
 - C2 owns later runtime verification of signal stop behavior. B2/B8/C1 own automated configuration, CLI, result, and exit-code tests using temporary config roots and local stubs; A2 does not claim those tests have run.
-- A3 owns exact JSON prompt/schema contents, JSON artifact validity, schema versioning, and the finite upper bound and error-feedback semantics for `validation_retries`. A4 owns Chat Completions request/response details and provider-specific capability/error mapping. A5 owns safe-write boundaries and interruption/recovery fault cases. These are deferred to their named Phase A steps, not left for Phase B implementers to guess.
+- Step A3 subsequently froze the exact JSON prompt/schema content, JSON artifact validity, schema versioning, and finite upper bound and error-feedback semantics for `validation_retries`; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). A4 owns Chat Completions request/response details and provider-specific capability/error mapping. A5 owns safe-write boundaries and interruption/recovery fault cases. These are defined by their named Phase A steps, not left for Phase B implementers to guess.
 
 ## Follow-ups
 
-- Step A3 is next; A3–A6 remain unchecked. Phase A is still in progress and the Phase B readiness gate has not passed. Do not start Phase B until A3–A6 and the Phase A gate are complete.
+- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Step A3 was completed subsequently; A4–A6 remain unchecked. Phase A is still in progress and the Phase B readiness gate has not passed. Do not start Phase B until A4–A6 and the Phase A gate are complete.
