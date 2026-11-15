@@ -303,17 +303,21 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 3. Use A2's `stages.<stage>.model` references for independent or shared selection. Freeze exact model/default/stage reasoning precedence and ensure distinct requests have no shared conversation state or hidden model fallback.
 4. Record the built-in generic-to-native reasoning map and override semantics. Unsupported mappings/capabilities fail clearly; do not silently omit, lower, or replace an explicit setting.
 5. Specify Bearer authentication, base-URL validation, TLS/proxy/redirect behavior, the four HTTPX timeout phases, response-envelope parsing, empty/malformed output handling, existing A2 error-category mapping, and redaction. Provider-layer automatic retries remain zero; distinguish A3 validation retries.
-6. Specify hermetic B3 tests for request path/body, image-byte/MIME round-trip, JSON mode, model and reasoning selection, successful/error responses, timeout/no-retry, capability mismatch, and credential/body/URL redaction.
+6. Specify hermetic B3 tests for request path/body, image-byte/MIME round-trip, JSON mode, model and reasoning selection, successful/error responses, timeout/no-retry, capability mismatch, and credential/body/URL redaction. Verify local path values are absent from provider transport and provider errors/diagnostics without suppressing A2's application-facing path reporting.
+7. Reconcile HLD §4.2's broader named-model generation-parameter defaults and generic overrides with the Slice 1 boundary: reasoning effort is the only configurable generation parameter; explicitly defer all other generation parameters while preserving the HLD end-state requirement.
+8. Scope path redaction to provider transport, provider errors, and diagnostics; preserve A2's resolved image path in the internal result and per-stage `output_path` values in CLI summaries.
 
 **Outputs:**
 - Provider contract, request/response examples, error table, and security notes in [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md)
-- This plan updated with exact request/response test assertions, HTTPX/Chat Completions choices, optional reasoning-mapping leaves, and no dependency change from A1
+- This plan updated with exact request/response test assertions, HTTPX/Chat Completions choices, optional reasoning-mapping leaves, Slice 1's generation-parameter deferral, A2-compatible path-redaction scope, and no dependency change from A1
 
 **Acceptance:**
 - [x] Both stages can use independent named models and can share a provider/model without coordinator-specific configuration objects.
 - [x] Unsupported provider capabilities fail clearly; there is no silent reasoning/model fallback.
 - [x] B3 automated tests are specified to use no external network or real credentials.
 - [x] B3 test coverage is specified to prove a dummy credential is absent from captured logs and error messages while present only in the captured Authorization header.
+- [x] HLD §4.2's broader generation-parameter capability is preserved as an end-state requirement; Slice 1 supports only reasoning effort and explicitly defers other parameters without generic pass-through.
+- [x] Provider/diagnostic path redaction excludes local paths from provider requests, provider errors, and diagnostic logs while preserving A2's internal and CLI result-path reporting.
 - [x] [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md) is complete and linked.
 
 ### Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]

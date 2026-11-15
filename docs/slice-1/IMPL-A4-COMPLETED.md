@@ -13,7 +13,7 @@
 
 ## Summary
 
-Step A4 freezes the synchronous OpenAI-compatible Chat Completions boundary used by both `desc` and `json`: endpoint construction, request bodies, image encoding, model/reasoning selection, authentication, HTTP timeout/redirect/TLS behavior, response validation, error categories, retry boundaries, redaction, and hermetic provider tests. It adds only optional reasoning-mapping leaves under A2's existing provider/model maps; it adds no dependency and does not change A2's configuration-source or CLI precedence.
+Step A4 freezes the synchronous OpenAI-compatible Chat Completions boundary used by both `desc` and `json`: endpoint construction, request bodies, image encoding, model/reasoning selection, authentication, HTTP timeout/redirect/TLS behavior, response validation, error categories, retry boundaries, redaction, and hermetic provider tests. Slice 1 supports reasoning effort as its only configurable model-generation parameter; HLD §4.2's broader named-model defaults and generic parameter overrides remain an end-state requirement but are explicitly deferred beyond Slice 1. A4 preserves A2's resolved-image and sidecar-output path reporting; provider-path redaction is scoped to provider-facing data, provider errors, and diagnostics. A4 adds only optional reasoning-mapping leaves under A2's existing provider/model maps; it adds no dependency and does not change A2's configuration-source or CLI precedence.
 
 This is a design-only step. No application modules, test files, user-facing configuration example files, or lockfiles were created; the mapping snippet below is illustrative documentation only. No application tests/builds or live provider requests were run. A5 and A6 remain pending; Phase B/C work has not started.
 
@@ -28,7 +28,7 @@ This is a design-only step. No application modules, test files, user-facing conf
 
 ### Description request
 
-Use the canonical/custom description prompt as the exact `system` content. The `user` message contains the source image as an inline data URL; do not send a local path, fetch a remote image URL, or add text to the canonical prompt. The request has one choice and is non-streaming. Do not add temperature, token-limit, or other unapproved generation parameters.
+Use the canonical/custom description prompt as the exact `system` content. The `user` message contains the source image as an inline data URL; do not send a local path, fetch a remote image URL, or add text to the canonical prompt. The request has one choice and is non-streaming. For both stages, generic `reasoning_effort` is the only configurable model-generation parameter in Slice 1. HLD §4.2's broader named-model default/override capability remains an end-state requirement; temperature, token/output limits, and other generation parameters are deferred beyond Slice 1. Do not add config keys, CLI options, defaults, or arbitrary provider-parameter pass-through for them in this slice.
 
 Illustrative Chat Completions JSON body (the base64 value is a placeholder, not a runnable fixture):
 
@@ -103,6 +103,8 @@ For each A3 validation retry, resend the same effective prompt, description, sch
 
 ## Reasoning configuration and precedence
 
+Within Slice 1, `reasoning_effort` is the only configurable model-generation parameter. HLD §4.2's broader named-model default-generation-parameter and generic-override capability remains an end-state requirement, explicitly deferred beyond Slice 1 rather than removed. Temperature, token/output limits, and other generation parameters have no Slice 1 config keys, CLI overrides, defaults, or generic pass-through. The `reasoning_effort_mapping` below is exclusively a reasoning control, not a general provider-parameter escape hatch.
+
 A2's generic effort source precedence remains unchanged: non-null stage setting → model setting → `default`. `default` omits the native effort property and preserves the endpoint/model default. The Slice 1 Chat Completions default map is:
 
 | Generic setting | Native `reasoning_effort` value |
@@ -141,7 +143,7 @@ models:
         high: deep
 ```
 
-`providers.<name>.reasoning_effort_mapping` and `models.<name>.reasoning_effort_mapping` each have exactly `parameter` and `values`. `parameter` is one non-empty top-level JSON property name and may not be `model`, `messages`, `stream`, `n`, or `response_format`. `values` is a non-empty map from supported generic string levels (excluding `default`) to non-null native JSON scalar values (string, finite number, or boolean). For `off` only, the exact object `{"omit": true}` means omit the native property; configure this only when the endpoint's documented omission behavior disables reasoning. Null, sequence, and other object values are invalid. Because A2 parses YAML with PyYAML `safe_load`, quote the YAML key/value `"off"`; a bare YAML `off` can become boolean `false` and fails string-enum validation. For `--set`, preserve the quote characters inside the argument, e.g. `--set 'stages.desc.reasoning_effort="off"'`. A missing selected generic level is a `configuration` error before the request. A model-level mapping replaces the provider-level mapping in full; otherwise use the provider-level mapping; if neither exists, use the built-in map. A4 does not alter A2's built-in/YAML/`--set`/dedicated-flag precedence.
+`providers.<name>.reasoning_effort_mapping` and `models.<name>.reasoning_effort_mapping` each have exactly `parameter` and `values`. `parameter` is one non-empty top-level JSON property name for the provider/model's documented native reasoning-control input; it may not be `model`, `messages`, `stream`, `n`, or `response_format`. It is not an arbitrary generation-parameter pass-through. `values` is a non-empty map from supported generic string levels (excluding `default`) to non-null native JSON scalar values (string, finite number, or boolean). For `off` only, the exact object `{"omit": true}` means omit the native property; configure this only when the endpoint's documented omission behavior disables reasoning. Null, sequence, and other object values are invalid. Because A2 parses YAML with PyYAML `safe_load`, quote the YAML key/value `"off"`; a bare YAML `off` can become boolean `false` and fails string-enum validation. For `--set`, preserve the quote characters inside the argument, e.g. `--set 'stages.desc.reasoning_effort="off"'`. A missing selected generic level is a `configuration` error before the request. A model-level mapping replaces the provider-level mapping in full; otherwise use the provider-level mapping; if neither exists, use the built-in map. A4 does not alter A2's built-in/YAML/`--set`/dedicated-flag precedence.
 
 ## Authentication and HTTP transport
 
@@ -178,8 +180,9 @@ Only exact recognized structured fields such as `error.code`, `error.type`, and 
 
 ## Redaction and data handling
 
-- Never log/return the API key, resolved environment value, Authorization header, request/response body, image bytes/base64, description text, prompt text, schema text, provider error body, full endpoint URL, or local prompt/schema/image paths.
+- Never expose the API key, resolved environment value, Authorization header, request/response body, image bytes/base64, description text, prompt text, schema text, provider error body, or full endpoint URL in application diagnostics or provider-derived errors/results. Do not send local image, prompt, or schema filesystem-path values as request data or transport metadata, and do not include those values in provider error text or diagnostic logs; send only the content specified by the request contract.
 - Do not log `str(exc)`, `repr(exc)`, `raise_for_status()` text, HTTPX wire traces, or raw remote messages. Emit only fixed sanitized messages with the A2 category and, where useful, numeric HTTP status, stage/model alias, and attempt number. The provider result contains only the accepted content string for its owning stage and never includes the credential or transport details.
+- This provider/diagnostic redaction does not suppress A2's intentional application-facing path reporting: preserve the resolved image path in the internal single-image result and each stage's nullable `output_path` in per-stage records and stdout summaries. These values remain excluded from provider requests and provider-error diagnostics.
 - The configured provider receives the original image bytes and, for `json`, the persisted description plus selected prompt/schema content. A4 does not strip EXIF or other image metadata. Users choose the endpoint and any environment proxy and are responsible for authorizing this transfer.
 - Tests use synthetic image bytes, synthetic descriptions/schemas, and a dummy credential sentinel only. No actual photo, provider secret, or live endpoint is used.
 
@@ -188,11 +191,11 @@ Only exact recognized structured fields such as `error.code`, `error.type`, and 
 Implement with a local HTTP stub or `httpx.MockTransport`; no external network or real key. Write the failing test first, verify RED, then implement and verify GREEN as required by the plan.
 
 1. Assert API-root path joining, configured path-prefix preservation, invalid URL rejection, no query/user-info keys, JSON headers, `stream: false`, `n: 1`, and no redirect following.
-2. Capture description and JSON requests; assert exact selected model IDs, canonical prompt bytes/content, base64 round-trip of synthetic image bytes and MIME mapping, separate persisted-description/schema parts, `response_format: {"type":"json_object"}` only for JSON, and the mapped reasoning property.
+2. Capture description and JSON requests; assert exact selected model IDs, canonical prompt bytes/content, base64 round-trip of synthetic image bytes and MIME mapping, separate persisted-description/schema parts, `response_format: {"type":"json_object"}` only for JSON, the mapped reasoning property, and absence of deferred generation parameters or local file paths.
 3. Use separate selected models/providers for `desc`/`json`, and one shared model/provider; assert independent request bodies, per-stage reasoning precedence, no conversation/context leakage, and no cross-provider credential-header leakage.
 4. Cover successful response extraction, empty content, malformed/duplicate-key/non-finite response envelopes, wrong choice count/index/role, refusal, null content, tool-call/length/content-filter finish reasons, and JSON mode/model capability mismatch.
 5. Inject timeout, connection failure, redirect, 401/403, model-not-found, invalid/unsupported image, 413, 429, 5xx, and generic 4xx responses; assert exact A2 categories and exactly one HTTP attempt per provider call.
-6. Include dummy-key and sentinel strings in synthetic error body/URL tests; assert they are absent from captured application logs, exceptions, result messages, and returned objects while confirming the Authorization header was present in the captured request.
+6. Include dummy-key and sentinel strings in synthetic error body/URL tests; assert they are absent from captured application logs, exceptions, result messages, and returned objects while confirming the Authorization header was present in the captured request. Assert local paths are absent from provider-bound data and provider-derived errors/diagnostics; separate stage/CLI tests retain A2's resolved-image and sidecar-output path reporting.
 
 ## Alternatives and rationale
 
@@ -202,12 +205,21 @@ Implement with a local HTTP stub or `httpx.MockTransport`; no external network o
 - Kept HTTP retries at zero because a timeout can follow successful remote processing. A3 validation retries are separate, bounded, and only follow a complete normal completion.
 - Used a documented built-in reasoning map with model/provider overrides rather than silently guessing capability. Official API values are model-dependent, so a rejected explicit setting is a configuration failure.
 
+## Patch 009 clarifications
+
+1. **Generation parameters:** Slice 1 exposes only the A2/A4 reasoning-effort controls. The broader named-model generation-parameter defaults and generic overrides in HLD §4.2 remain an end-state requirement, with non-reasoning parameters deferred beyond Slice 1; no general provider-parameter framework or pass-through is introduced.
+2. **Path redaction:** A4 prohibits local paths in provider requests, provider-derived errors, and diagnostic logs. It does not override A2's internal resolved-image-path field or per-stage `output_path`/CLI summary contract.
+
+These clarifications address the two Patch 009 findings. This records the design resolution, not reviewer or Product Owner approval.
+
 ## Acceptance
 
 - [x] Both stages can use independent named models and can share a provider/model without coordinator-specific configuration objects.
 - [x] Unsupported provider capabilities fail clearly; there is no silent reasoning/model fallback.
 - [x] B3 automated tests are specified to use no external network or real credentials.
 - [x] B3 test coverage is specified to prove a dummy credential is absent from captured logs and error messages while present only in the captured Authorization header.
+- [x] HLD §4.2's broader generation-parameter capability is preserved as an end-state requirement; Slice 1 supports only reasoning effort and explicitly defers other parameters without generic pass-through.
+- [x] Provider/diagnostic path redaction excludes local paths from provider requests, provider errors, and diagnostic logs while preserving A2's internal and CLI result-path reporting.
 - [x] [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md) is complete and linked.
 
 ## Verification and environment notes
@@ -216,6 +228,7 @@ Implement with a local HTTP stub or `httpx.MockTransport`; no external network o
 - Consulted official OpenAI Chat Completions, Structured Outputs/JSON mode, Images and Vision, and reasoning documentation plus HTTPX timeout/client documentation. The design records their limits, especially model-dependent reasoning support and the standard OpenAI image-format list; this research does not claim every OpenAI-compatible service has identical capabilities.
 - Parsed the embedded reasoning-mapping YAML with PyYAML `safe_load`; verified the quoted `"off"` key and quoted `--set` value remain strings, while an unquoted YAML `off` becomes boolean `false`. This is a configuration-example check, not an application test.
 - This is a `[DESIGN]` closeout. No application tests, typechecks, builds, package installation, or provider calls were run. Planned provider tests are owned by B3; stage-level empty-output behavior is owned by B6/B7.
+- Patch 009's two clarification findings are reflected in the design and plan; reviewer acceptance is not inferred from making these edits.
 - A4's chosen request schema, mapping, error, and data-transfer decisions remain subject to the Phase A acceptance/readiness process; A3 Product Owner review is still pending.
 
 ## References
