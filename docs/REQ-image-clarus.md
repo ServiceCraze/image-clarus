@@ -1,7 +1,9 @@
 # REQ - image-clarus
 
-**Status:** Requirements captured; design and implementation planning pending  
-**Date:** 2026-11-13  
+**Status:** Requirements captured; Slice 1 implementation plan drafted; implementation not started
+
+**Date:** 2026-11-13
+
 **Project name:** image-clarus
 
 ## Purpose
@@ -180,6 +182,7 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice. Each numbered delivery slice has its own implementation plan; `Phase A`, `Phase B`, `Phase C`, and step identifiers are scoped within that plan and are not slice names.
 
 - **First buildable slice (Slice 1):** single-image Description and Structure (`desc` and `json`) processing, with each stage independently invocable and composable through the persisted `.desc.txt` handoff; model/provider configuration, configurable prompts and schema, JSON validation/provenance, and correct output handling. XMP, multi-image selection/traversal, batch processing, and search remain later slices.
+- **Current Slice 1 plan:** [Implementation plan](slice-1/IMPL-PLAN-slice-1.md) (candidate; implementation not started).
 - **Further buildable slices:** XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Their ordering remains indicative; each slice's own implementation plan defines its phases, steps, and validation.
 - **Later goals:** exclusion filters, expanded format/provider support, richer search configuration, and embeddings-based semantic search. Not all later goals need be part of release one.
 - Apache-2.0 is the intended license; verify publication notices. Installation packaging, CLI framework and detailed option grammar, specific model-client libraries, structured-generation prompt/schema/provenance details, and exact XMP field mappings remain for implementation planning.
