@@ -43,6 +43,22 @@ Completed Phase A1 as a design-only step. The Slice 1 package layout, module own
 - Defer `examples/config.yaml` until B9, after A2 freezes configuration keys.
 - Test data is synthetic: YAML/schema/description/provider-response fixtures only. Create image input files under pytest `tmp_path`; do not commit real photos or identifying metadata.
 
+### Decision rationale and provenance
+
+The project/user requirements established the YAML preference, HTTP provider boundary, shared resolved-configuration architecture, minimal-dependency posture, and SemVer versioning with Slice 1 starting at `0.1.0` on `0.1.x`. The specific Python libraries and Hatchling were selected by Hermes during A1; the rationales below explain those selections, not prior discussion or user approval of each package.
+
+| Decision | Provenance | Rationale |
+| --- | --- | --- |
+| Python 3.12+; Python 3.13 development baseline | Project requirement | Keeps 3.12 installations supported while standardizing development on 3.13 and testing compatibility separately. |
+| YAML; PyYAML parser | YAML is the established user preference; PyYAML is the A1 implementation choice | Uses the requested familiar configuration format with a small, established parser. |
+| `argparse` | A1 choice by Hermes | Standard library support is sufficient for the agreed subcommands/help surface without adding a CLI dependency; no need for Click/Typer at this scope. |
+| Synchronous `httpx` | Provider architecture is established; library choice by Hermes | Supports local/remote HTTP endpoints, timeouts, and test transports while matching the synchronous single-image pipeline; avoids coupling to a provider SDK. |
+| `jsonschema` | A1 choice by Hermes | Validates generated metadata against the built-in contract and full user-supplied schema replacements instead of adding bespoke validation logic. |
+| `uv` and committed `uv.lock` | Project requirement | Provides repeatable dependency resolution and isolated development/test environments. |
+| pytest and Ruff | A1 choices by Hermes | Cover automated tests, lint, and formatting with one focused test tool and one focused quality tool; no separate type-check or coverage infrastructure is justified for Slice 1. |
+| Static version in `pyproject.toml`; `importlib.metadata` retrieval | User established SemVer, `0.1.0`/`0.1.x`, and one authoritative source; A1 selected the mechanism | A single static metadata value avoids duplicated constants and reads the version from the installed distribution. |
+| Hatchling | A1 choice by Hermes | Its wheel `force-include` mapping packages the canonical root prompt as an application resource without a second maintained copy or custom packaging script. |
+
 ### Selected commands
 
 After B1 creates the project metadata and lockfile:
