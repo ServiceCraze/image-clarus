@@ -103,5 +103,5 @@ The formatter write command is run only when formatting changes are needed. C3 r
 
 ## Follow-ups
 
-- Step A2 remains the next Phase A step and was not started, per the user’s boundary.
+- At A1 closeout, Step A2 had not started; it was completed subsequently in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md).
 - B1 must create `.python-version` containing `3.13`, `pyproject.toml`, `uv.lock`, the package scaffold and resource lookup, tests, and `.gitignore` entries for `.venv/`, `dist/`, `build/`, `*.egg-info/`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` while preserving existing ignore patterns. The repository owner commits `uv.lock` with the implementation work.

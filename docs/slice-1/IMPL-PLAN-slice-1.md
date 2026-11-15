@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A in progress; Step A1 complete; implementation not started
+**Status:** Candidate — Phase A in progress; Steps A1–A2 complete; implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -137,7 +137,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 ### Phase A — Discovery and contract freeze
 
 - [x] Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
-- [ ] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
+- [x] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 - [ ] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 - [ ] Step A4 — Freeze the provider request and security contract [DESIGN]
 - [ ] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
@@ -217,7 +217,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 3. Preserve the accepted command surface: register the top-level `search` subcommand and provide `image-clarus search --help`. A non-help `search` invocation reports `search is not implemented in Slice 1` and exits nonzero using the not-implemented status selected in this step. Do not implement search matching, sidecar traversal, or model calls.
 4. Define configuration discovery and precedence exactly: built-in defaults; explicit config loads only that file and disables discovery; otherwise choose at most one user-level file before system-level on Linux; no implicit merge; CLI overrides highest. Define relative-path resolution for config, prompt, and schema files and which values can be overridden by `--set` versus dedicated flags.
 5. Define the configuration key schema for providers, named models, stage model selection, prompts/schema paths, reasoning effort, regeneration, validation retry, missing-prerequisite policy, logging needed for single-image results, and credentials/environment variables. Validate global settings before stage settings; unused stage credentials/models must not block an unrelated selected stage.
-6. Define stage outcomes (`completed`, `skipped`, `failed` or an explicitly justified equivalent), user-visible single-image result format, failure categories, default zero retries, single-image missing-`.desc.txt` behavior, continuation behavior after a stage failure, and exit-code mapping. Ensure a failed/invalid output is never reported as complete.
+6. Define stage outcomes (`completed`, `skipped`, `failed` or an explicitly justified equivalent), user-visible single-image result format, failure categories, default zero retries, single-image missing-`.desc.txt` behavior, continuation behavior after a stage failure, exit-code mapping, and graceful-stop status/behavior for SIGINT and SIGTERM. Ensure a failed/invalid output is never reported as complete.
 7. Record CLI examples for `desc` only, `json` only with an existing description, combined `desc,json`, explicit config, prompt/schema overrides, and regeneration. Label any examples as illustrative until the grammar is frozen.
 8. Freeze top-level `image-clarus --version`: print exactly one line, `image-clarus 0.1.0`, to stdout with success status; it must work without loading configuration, credentials, provider access, or an image. For later `0.1.x` releases, the displayed version must come from A1's authoritative package-version source.
 
@@ -225,13 +225,29 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - CLI/config/result contract, examples, and any decisions/deferred items in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md)
 - This plan updated with final command/version examples and the fixed `search` stub response/status
 
+**Frozen command and result summary:**
+
+```text
+image-clarus --help
+image-clarus --version
+image-clarus process --help
+image-clarus process IMAGE [--config FILE] [--stages STAGE[,STAGE...]] [--set PATH=VALUE]... [--desc-prompt FILE] [--json-prompt FILE] [--json-schema FILE] [--regenerate] [--missing-prerequisite {fail,skip}]
+image-clarus search --help
+image-clarus search
+```
+
+- No `--stages` selects `desc,json` in registry order. Explicit selection runs only those stages; `json` never expands to `desc`.
+- `image-clarus --version` prints exactly `image-clarus 0.1.0` on stdout, exits `0`, and reads the A1 authoritative version without loading runtime configuration.
+- `image-clarus search` prints exactly `search is not implemented in Slice 1` to stderr and exits `3`; `search --help` is available, with no matching, traversal, or model calls.
+- Single-image stage results are `completed`, `skipped`, or `failed`; skipped work does not fail the process. Exit statuses are `0` success/skips, `1` stage failure, `2` usage/config/input error, `3` not-implemented search, `130` SIGINT, and `143` SIGTERM. The completion record specifies streams, config keys/precedence, paths, and signal/write boundaries.
+
 **Acceptance:**
-- [ ] A user can tell exactly how to process one image, select stages, override config, regenerate, and interpret each result/exit status.
-- [ ] `image-clarus --version` returns exactly `image-clarus 0.1.0` for the initial package, uses the authoritative source, and requires no runtime configuration or provider access.
-- [ ] `json`-only execution never silently runs `desc`; absent description follows the approved single-file policy.
-- [ ] Configuration search/selection, no-merge behavior, precedence, stage validation, and path resolution are testable without relying on the host user's real config.
-- [ ] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with the nonzero status defined in A2, and no search matching leaks into Slice 1.
-- [ ] [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md) is complete and linked.
+- [x] A user can tell exactly how to process one image, select stages, override config, regenerate, and interpret each result/exit status, including graceful-stop signals.
+- [x] `image-clarus --version` returns exactly `image-clarus 0.1.0` for the initial package, uses the authoritative source, and requires no runtime configuration or provider access.
+- [x] `json`-only execution never silently runs `desc`; absent description follows the approved single-file policy.
+- [x] Configuration search/selection, no-merge behavior, precedence, stage validation, and path resolution are testable without relying on the host user's real config.
+- [x] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with exit status `3`. Do not implement search matching, sidecar traversal, or model calls.
+- [x] [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md) is complete and linked.
 
 ### Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 
@@ -247,7 +263,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 2. Specify the built-in schema's exact field names/types/requiredness for subjects/objects, actions, setting/context, useful visual characteristics, searchable keywords/tags, and provenance. Keep it useful for discovery and later XMP mapping without designing XMP behavior now.
 3. Decide whether provenance is represented inside the replaceable user schema, in an application-owned envelope, or through another explicit mechanism. Define how full schema replacement works without silently losing the required model/prompt provenance.
 4. Define the provenance fields and stable values captured (at minimum selected provider/model identity and prompt identity/version or content fingerprint); exclude credentials, authorization headers, and secret-bearing URLs.
-5. Define JSON serialization, Unicode, top-level shape, strictness for extra properties, treatment of fenced/prose-wrapped model output, schema-error reporting, and validation-retry input/limits. Default validation retry remains zero.
+5. Use the A2 key `stages.json.validation_retries` with default zero; set its finite upper bound and exact validation-error feedback, plus JSON serialization, Unicode, top-level shape, extra-property strictness, fenced/prose-wrapped output handling, and schema-error reporting.
 6. Establish a schema-versioning convention independent of application SemVer: freeze the initial schema version, how each generated `.desc.json` identifies that contract, compatibility/evolution rules, and how full custom-schema replacement identifies its version. Never infer schema version from the application version.
 7. Provide a small synthetic description, example structured JSON, and positive/negative schema-validation cases, including schema-version identification. Do not include a real photograph or personal metadata.
 
@@ -273,10 +289,10 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - Steps A1–A3 decisions
 
 **Actions:**
-1. Specify provider/model configuration fields: endpoint, model identifier, optional inline/environment-backed credential, request timeout, and settings needed for model generation. Keep credentials out of provider result objects and logs.
+1. Use A2's `providers.<name>.base_url`, `timeout_seconds`, `api_key`/`api_key_env`, and `models.<name>.provider`/`model_id` keys. Freeze their OpenAI-compatible request semantics and, if required, add explicitly named generation-setting leaves under the existing provider/model/stage maps; do not add another config root, rename A2 fields, or duplicate key sources. Keep credentials out of provider result objects and logs.
 2. Define the supported OpenAI-compatible Chat Completions request shape for description image input and structured JSON generation. Use a local test server/transport to assert request and response handling.
-3. Define how per-stage model selection works when `desc` and `json` use different models/providers or share one model. Define model-default vs stage-specific generation settings.
-4. Record the supported generic reasoning-effort values, `default`/`off` behavior, provider mapping source, and error behavior for unsupported options. Do not silently send unsupported capabilities or silently fall back.
+3. Use the A2 `stages.<stage>.model` references for independent or shared model selection. Define provider-independent behavior for a shared versus distinct provider/model and model-default versus stage-specific generation settings.
+4. Use A2's generic reasoning-effort values and stage-over-model precedence; record the provider mapping source and error behavior for unsupported options. Do not silently send unsupported capabilities or silently fall back.
 5. Specify authentication, HTTP status/error mapping, timeouts, response parsing, malformed/empty response handling, and redaction requirements. Built-in request retry count stays zero; do not include broad retry/backoff behavior.
 6. Specify automated tests using a local HTTP stub, including image payload, prompt, model ID, structured output request, auth header presence without disclosure, timeout, auth failure, provider error, and capability mismatch.
 
@@ -357,10 +373,10 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - Create: `tests/unit/test_cli.py`, `tests/unit/test_resources.py`
 
 **Actions:**
-1. Write failing tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, the fixed not-implemented result/status when `search` is executed, and resolution of the canonical description prompt from both a source checkout and the built wheel.
+1. Write failing tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, the exact search stub line/status `3`, and resolution of the canonical description prompt from both a source checkout and the built wheel.
 2. Run the targeted test and record the expected failure before adding package code.
 3. Define package metadata, initial version `0.1.0` from A1's static `[project].version`, `requires-python = ">=3.12"`, the `image-clarus` console entry point, Hatchling build configuration, the A1-selected runtime/dev dependencies and Apache-2.0 license metadata, and the lockfile using `uv`.
-4. Configure Hatchling to map `prompts/image-description.txt` to `image_clarus/resources/prompts/image-description.txt`; implement the minimal `resources.py` lookup using A1's package-resource/source-tree paths. Implement importable package startup, both subcommand help surfaces, and top-level `--version` from installed distribution metadata without a duplicated version constant; make non-help `search` invocations return the explicit not-implemented result/status. Do not add search behavior or process-stage behavior in this step.
+4. Configure Hatchling to map `prompts/image-description.txt` to `image_clarus/resources/prompts/image-description.txt`; implement the minimal `resources.py` lookup using A1's package-resource/source-tree paths. Implement importable package startup, both subcommand help surfaces, and top-level `--version` from installed distribution metadata without a duplicated version constant; make bare `search` return the exact A2 stderr line and exit status `3`. Do not add search behavior or process-stage behavior in this step.
 5. Run the targeted test, then all current tests and selected lint/format checks.
 
 **Outputs:**
@@ -540,7 +556,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 1. Add failing CLI tests for exact A2 command grammar, help, one image, `--config`, `--stages`, generic/dedicated overrides, invalid options, skip/completed/failure output, and exit codes.
 2. Verify RED; wire CLI parsing to config resolution and coordinator without re-implementing stage logic.
 3. Verify `desc` only, `json` only, and combined selection. Verify combined execution reads the description back from the sidecar written to disk.
-4. Verify `image-clarus search --help`; verify executing `search` returns the explicit A2 not-implemented message and exit status. Do not add search matching or sidecar traversal.
+4. Verify `image-clarus search --help`; verify bare `search` returns the exact A2 not-implemented message and exit status `3`. Do not add search matching or sidecar traversal.
 5. Verify GREEN and full suite.
 
 **Outputs:** CLI integration and tests; [IMPL-B8-COMPLETED.md](IMPL-B8-COMPLETED.md)
@@ -617,8 +633,9 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 1. Run safe-write fault-injection cases for backup, replacement, invalid model output, and cleanup failures; inspect destination/backup/temp state after each case.
 2. Run recovery cases for destination absent + backup present and destination + backup present; confirm temporary files are never used as recovery sources.
 3. Spawn two separate OS processes through the safe-write test harness, synchronize them to write different complete payloads to the same temporary sidecar, and assert the destination is exactly one complete valid payload, not truncated/interleaved. Do not assert which writer wins or imply serialized updates; document the last-write-wins limitation.
-4. Capture logs/errors using a dummy API key and assert the secret is absent. Verify no real credential or real personal image is used.
-5. Record the filesystem used and any unsupported durability limitations; do not claim crash-proof or cross-filesystem coverage.
+4. Use local provider/write barriers to send SIGINT and SIGTERM before a response and during a safe-write operation; assert statuses `130`/`143`, no later selected stage starts, in-flight requests are cancelled when safe, and an already-started write reaches its safe boundary. Do not call SIGKILL graceful; verify its filesystem aftermath through A5 recovery cases.
+5. Capture logs/errors using a dummy API key and assert the secret is absent. Verify no real credential or real personal image is used.
+6. Record the filesystem used and any unsupported durability limitations; do not claim crash-proof or cross-filesystem coverage.
 
 **Outputs:** Safety/fault evidence; [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md)
 
@@ -626,6 +643,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [ ] Recoverable originals are preserved across injected failures.
 - [ ] No incomplete/invalid artifact is reported as complete.
 - [ ] Separate-process overlapping writes leave a complete valid sidecar; the test does not claim conflict detection or a deterministic winner.
+- [ ] SIGINT/SIGTERM return `130`/`143`, stop before the next stage, cancel requests when safe, and finish any write already in progress before exit.
 - [ ] Secret redaction and lock-free limitations are verified.
 - [ ] Evidence states actual tested filesystem and does not overclaim.
 - [ ] [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md) is complete and linked.
@@ -641,7 +659,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 2. Run the full suite with `uv run --locked --extra dev --python 3.13 pytest`.
 3. Run `uv run --locked --extra dev --python 3.13 ruff check .` and `uv run --locked --extra dev --python 3.13 ruff format --check .`.
 4. Run `uv sync --locked --extra dev --python 3.12`, then `uv run --locked --extra dev --python 3.12 pytest` on Linux to verify the declared minimum. If a required interpreter/dependency cannot be obtained, report the precise blocker and leave the affected acceptance row unchecked.
-5. Verify the console entry point, `image-clarus --version` against the authoritative package metadata, top-level help, `process --help`, `search --help`, and the not-implemented `search` response in the isolated environment; confirm `desc`/`json` use no external executable. Do not run an exhaustive OS/filesystem matrix.
+5. Verify the console entry point, `image-clarus --version` against the authoritative package metadata, top-level help, `process --help`, `search --help`, and the exact `search` stderr line/status `3` in the isolated environment; confirm `desc`/`json` use no external executable. Do not run an exhaustive OS/filesystem matrix.
 
 **Outputs:** Command transcript, interpreter versions, and result summary; [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md)
 
@@ -724,7 +742,6 @@ All of the following are Phase A work, not permission to invent details during c
 
 | Open item | Resolve in | Required result |
 | --- | --- | --- |
-| Exact command grammar, `--version` output, override keys/types, relative paths, stage result and exit mapping | A2 | Black-box CLI/config/version contract and examples |
 | Built-in structured schema, independent schema version, JSON prompt, provenance and custom-schema interaction | A3 | Versioned/traceable schema-prompt-provenance contract plus examples and tests |
 | Provider request shape, image encoding, reasoning/capability mapping, timeouts and errors | A4 | Local-testable HTTP contract with secret-redaction rules |
 | Artifact API details, temp/backup naming, permissions, failure and recovery assertions | A5 | Fault-testable state table preserving HLD invariants |
