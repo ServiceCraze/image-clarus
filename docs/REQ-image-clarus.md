@@ -24,6 +24,8 @@ The tool will use configurable vision and language models to produce descriptive
 ## Runtime and external dependencies
 
 - Implement in Python, support Python 3.12 or newer, and use Python 3.13 as the development baseline.
+- Application releases follow Semantic Versioning. Slice 1 starts at `0.1.0`; releases within Slice 1 remain on the `0.1.x` line. Maintain one authoritative package version source, selected in Phase A1 of the Slice 1 plan.
+- The CLI exposes the application version through `image-clarus --version`.
 - Define project metadata and dependencies in `pyproject.toml`; use `uv` for dependency management, commit `uv.lock`, and use an isolated Python environment for development.
 - Description and structured JSON generation must not require external executables beyond Python.
 - ExifTool is the recommended external executable for XMP processing. If used, it must be required only when the XMP stage is selected.
@@ -90,6 +92,8 @@ The default schema must support information useful for deterministic photo disco
 - Model and prompt provenance
 
 The exact field names, types, controlled vocabularies, schema and structured-generation prompt are design work. A replacement schema must be supported without modifying application source.
+
+The generated metadata format must be versioned independently from the application. Define its identifier/representation and evolution policy during Phase A3 of the Slice 1 plan.
 
 ## XMP metadata integration
 

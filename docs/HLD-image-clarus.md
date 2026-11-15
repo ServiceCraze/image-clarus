@@ -50,7 +50,7 @@ flowchart TB
   CFG -.-> MODELS
 ```
 
-**CLI and command routing.** Parse `process` or `search`, global options, and help. Both `image-clarus --help` and subcommand help, including `image-clarus search --help`, are supported.
+**CLI and command routing.** Parse `process` or `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`.
 
 **Configuration loader.** Discover, parse, merge defaults and CLI overrides, and validate general configuration; provide an immutable resolved configuration to consumers. The coordinator passes the entire resolved configuration to each stage without extracting stage-specific subsets.
 
@@ -72,7 +72,7 @@ flowchart TB
 
 ### 2.2 Runtime and packaging boundary
 
-Use Python 3.12 or newer, with Python 3.13 as the development baseline. Define dependencies and CLI packaging in `pyproject.toml`; manage development environments with `uv` and commit `uv.lock`. Description and JSON processing require no external executables. ExifTool remains an optional external prerequisite for XMP only. The project is intended for public open-source distribution under Apache-2.0; confirm repository licensing artifacts before publication.
+Use Python 3.12 or newer, with Python 3.13 as the development baseline. Define dependencies and CLI packaging in `pyproject.toml`; manage development environments with `uv` and commit `uv.lock`. Application releases follow Semantic Versioning; Slice 1 starts at `0.1.0` and remains on the `0.1.x` line. The CLI reports the single authoritative package version through `image-clarus --version`. The generated metadata schema is versioned independently from the application. Description and JSON processing require no external executables. ExifTool remains an optional external prerequisite for XMP only. The project is intended for public open-source distribution under Apache-2.0; confirm repository licensing artifacts before publication.
 
 ### 2.3 Processing boundary
 
@@ -290,7 +290,8 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 ### 10.1 Decided
 
-- Single CLI `image-clarus` with `process` and `search`, including top-level and subcommand help.
+- Single CLI `image-clarus` with `process` and `search`, including top-level and subcommand help plus `image-clarus --version`.
+- Application releases use Semantic Versioning; Slice 1 starts at `0.1.0` and stays on the `0.1.x` line. The JSON metadata schema version is independent of the application version.
 - Independent `desc`, `json`, `xmp` stages using persisted file handoffs; ordered registry; image-first execution; selectable subsets with no automatic prerequisite expansion.
 - Coordinator delegates configuration interpretation and completion policy to each stage and applies configurable continuation policy to structured results.
 - One YAML `config.yaml`, prompts/schemas external and separately overridable; configuration precedence CLI > selected YAML > defaults; global then selected-stage validation.
@@ -310,7 +311,8 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 ### 10.3 Open for implementation planning
 
 - **Slice 1 implementation-plan prerequisite:** During Phase A of the Slice 1 plan, define the initial built-in JSON schema, JSON-generation prompt, and provenance contract, including how full schema replacement interacts with required provenance. Make completion of this planning work a gate before JSON implementation begins.
-- Exact Python CLI framework, remaining argument grammar/placement, repeatability and option-conflict rules, model-client library, provider parameter mappings, and parsed `--set` value semantics.
+- Exact Python CLI framework, authoritative package-version source, `--version` output formatting, remaining argument grammar/placement, repeatability and option-conflict rules, model-client library, provider parameter mappings, and parsed `--set` value semantics.
+- Initial JSON schema version identifier/representation and compatibility/evolution rules, independent of application versioning.
 - Detailed retry, per-stage missing-input, continuation, logging, and exit-code configuration keys.
 - Detailed artifact-service API and filesystem-specific error recovery mechanics, without changing agreed backup and concurrency semantics.
 - Exact JSON-to-XMP mappings and which observed digiKam-compatible XMP fields require writing.
@@ -323,4 +325,4 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 ### 10.5 Requirements reconciliation
 
-The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.
+The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; application releases use SemVer with Slice 1 starting at `0.1.0`; the CLI exposes `--version`; the JSON schema version is independent; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.

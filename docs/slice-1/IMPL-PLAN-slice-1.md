@@ -6,6 +6,7 @@
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+; Python 3.13 development baseline; `uv`, `pyproject.toml`, and committed `uv.lock`. The CLI framework, YAML parser, JSON Schema validator, HTTP client, and test/lint tools are Phase A decisions; candidate choices are recorded in Step A1, not assumed to be installed.
+**Versioning:** Application releases use Semantic Versioning. Slice 1 starts at `0.1.0` and remains on the `0.1.x` line. The generated metadata schema is versioned independently from the application.
 
 ---
 
@@ -25,7 +26,9 @@ The source of truth is the [REQ](../REQ-image-clarus.md), [HLD](../HLD-image-cla
 - The complete resolved application configuration is passed to each stage. The coordinator must not construct stage-specific configuration objects or own stage-specific prerequisite/overwrite rules.
 - Initial model transport is OpenAI-compatible Chat Completions over HTTP. Named providers/models and independent model selection for `desc` and `json` are required. Do not hard-code a specific model. Credentials may be direct or environment-variable-backed and must never appear in logs, errors, test evidence, or committed examples.
 - The built-in description prompt remains exactly `Fully describe and explain everything about this image.` No extra instruction may be appended to that default prompt.
+- Application releases use Semantic Versioning; Slice 1 starts at `0.1.0`, and Slice 1 releases stay on the `0.1.x` line. The CLI reports the sole authoritative package version through top-level `image-clarus --version`; A1 selects the source and A2 freezes output behavior.
 - Phase A must define the initial JSON schema, JSON-generation prompt, and provenance contract, including custom-schema behavior, before JSON implementation begins.
+- JSON metadata schema versioning is independent of application versioning; A3 defines its marker, initial value, and evolution/replacement rules.
 - Built-in retry count is zero. Optional schema-validation retry is opt-in and must be bounded. Invalid or incomplete outputs are not marked complete.
 - Use a shared safe-write/recovery service. If the destination is absent and `.bak` exists, restore the backup; if both exist, the destination is authoritative. Temporary files are disposable, not recovery sources. Do not add application-level locks; last successful replacement wins and lost concurrent updates remain an accepted limitation.
 - Description and JSON generation require no external executable beyond Python. ExifTool, XMP work, and digiKam validation are outside Slice 1.
@@ -34,7 +37,7 @@ The source of truth is the [REQ](../REQ-image-clarus.md), [HLD](../HLD-image-cla
 ## In scope
 
 - Installable Python package and `image-clarus` console entry point.
-- One-image `process` invocation and the accepted top-level, `process`, and `search` help surfaces. Search execution returns an explicit not-implemented result in Slice 1; search matching is not implemented.
+- One-image `process` invocation, the accepted top-level, `process`, and `search` help surfaces, and top-level `image-clarus --version`. Search execution returns an explicit not-implemented result in Slice 1; search matching is not implemented.
 - YAML configuration discovery and explicit configuration selection; built-in defaults; CLI override precedence; independent prompt/schema path overrides; selected-stage validation.
 - Named providers/models and the OpenAI-compatible adapter needed by both model-driven stages.
 - Ordered `desc` and `json` stage registry/coordinator, per-stage result reporting, and no automatic prerequisite expansion.
@@ -62,12 +65,12 @@ This matrix allocates the REQ's end-state requirements without expanding Slice 1
 
 | REQ area | Slice 1 allocation | Candidate Release 1 delivery (later slices; not committed) | Later goal | Prerequisite and verification evidence |
 | --- | --- | --- | --- | --- |
-| Product purpose, platform, runtime, packaging and license (Purpose; Guiding requirements; Runtime and external dependencies; Delivery approach and scope; Known non-goals of the initial implementation) | Python 3.12+, Python 3.13 dev baseline, `uv`, locked package, one-image CLI; confirm Apache-2.0 metadata/notices | Package/publish only after the selected release scope is implemented and verified | Non-Linux portability is desirable; exhaustive cross-platform CI is not required | A1/B1 freeze metadata; C3 install/tests on Linux and Python 3.12/3.13 |
+| Product purpose, platform, runtime, packaging and license (Purpose; Guiding requirements; Runtime and external dependencies; Delivery approach and scope; Known non-goals of the initial implementation) | Python 3.12+, Python 3.13 dev baseline, `uv`, locked package, initial app version `0.1.0` on the SemVer `0.1.x` line, top-level `--version`; confirm Apache-2.0 metadata/notices | Package/publish only after the selected release scope is implemented and verified | Non-Linux portability is desirable; exhaustive cross-platform CI is not required | A1/A2/B1 freeze and exercise version source/behavior; C3 verifies installed CLI and runtime support |
 | Stage outputs, source integrity, create-only defaults, and explicit regeneration (Guiding requirements; Processing stages and artifacts) | `desc`/`json` sidecars for one image; source unchanged; skip existing outputs unless explicitly regenerated | XMP field-specific updates only if the XMP slice is included in Release 1 | — | A2 contract; B6–B8; C1–C2 test exact paths, skip/regenerate, and image integrity |
 | Input selection and traversal (Input selection and traversal) | One image path only | Directory, pattern and recursive selection are later-slice candidates; Release 1 inclusion is uncommitted | Exclusion patterns and expanded format support are later goals | Later selection plan defines traversal, allowlist, corrupt/unsupported-image and eligibility tests; C1 covers one image |
 | Stage prerequisites and composition (Stage dependencies) | `json` requires valid persisted `.desc.txt`; explicit `json` never auto-runs `desc`; single-image missing-input policy is frozen in Phase A | Directory/pattern skip-and-continue behavior only with the selection/batch slice | — | A2; B4/B7/B8; C1 prerequisite and independent-stage matrix |
 | Providers, prompts, model selection, reasoning and schema retry (Model providers and prompts) | OpenAI-compatible HTTP adapter; named per-stage models; exact description prompt; JSON prompt/schema overrides; reasoning and bounded opt-in validation retry | Additional adapters only if selected for Release 1 | Expanded provider protocols are a later goal | A3–A4; B3/B6/B7; C1/C4 local-stub and authorized-provider evidence |
-| Structured metadata and provenance (Structured metadata expectations) | Default schema covers required discovery fields; full custom-schema replacement and required provenance are defined | Schema evolution follows a separately reviewed contract/versioning decision | — | A3 gate before JSON code; B7; C1 schema-positive/negative tests |
+| Structured metadata and provenance (Structured metadata expectations) | Default schema covers required discovery fields; full custom-schema replacement, required provenance, and schema-version identification independent of app version are defined | Schema evolution follows the independent version/compatibility policy frozen in A3 | — | A3 gate before JSON code; B7; C1 schema-positive/negative/version-marker tests |
 | XMP/digiKam integration and metadata preservation (XMP metadata integration) | Not implemented | ExifTool backend, digiKam mappings, `ai` tag hierarchy/policies, title/description defaults, unrelated-data preservation and round-trip tests are a later slice; Release 1 inclusion is uncommitted | Optional non-digiKam representations remain separately configurable | XMP plan defines mappings and sanitized fixtures; do not infer them in Slice 1 |
 | Search (Search) | Register `search`; top-level and `search --help`; execution reports not implemented | Deterministic case-insensitive text/JSON matching, human- and machine-readable results, and shared traversal are a later slice; Release 1 inclusion is uncommitted | Embeddings are an explicit future goal and not a Release 1 requirement | B1/B8/C3 verify stub; search plan defines matching, traversal and result tests |
 | Configuration and precedence (Configuration and precedence) | One selected YAML file, built-in defaults, CLI precedence, prompt/schema overrides, Linux discovery, and OS-aware path resolution without creating system directories | Add optional-stage configuration only when the owning stage is introduced | — | A2; B2/B8; C1 config matrix with temporary roots and platform-path unit tests |
@@ -159,11 +162,11 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 
 ## Phase A — Discovery and contract freeze
 
-**Phase A exit rule:** All Phase A decisions below are recorded and accepted in completion artifacts, all planned paths/commands are exact, the accepted top-level/`process`/`search` help surfaces and the not-implemented `search` result are specified, and this plan is updated before Phase B starts. Phase A produces design evidence only; no production code is changed.
+**Phase A exit rule:** All Phase A decisions below are recorded and accepted in completion artifacts, all planned paths/commands are exact, the accepted top-level/`process`/`search` help surfaces, top-level `--version` output, application SemVer/version-source contract, independent schema-version contract, and the not-implemented `search` result are specified, and this plan is updated before Phase B starts. Phase A produces design evidence only; no production code is changed.
 
 ### Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
 
-**Goal:** Lock the greenfield Python package structure, dependency set, and reproducible Linux development/verification commands.
+**Goal:** Lock the greenfield Python package structure, application version source, dependency set, and reproducible Linux development/verification commands.
 
 **Inputs:**
 - `docs/REQ-image-clarus.md` — runtime/dependency requirements and Slice 1 boundary
@@ -177,22 +180,24 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 2. Evaluate and record exact runtime choices for the CLI, YAML parsing, JSON Schema validation, and synchronous HTTP requests. Candidate defaults are stdlib `argparse`, PyYAML, `jsonschema`, and `httpx`; select alternatives only with a short requirements-based rationale. Do not add a generic provider/plugin framework.
 3. Select test and quality tools. Candidate commands are `uv run pytest`, `uv run ruff check .`, and `uv run ruff format --check .`; do not add a type checker or coverage gate without a Slice 1 reason.
 4. Confirm `requires-python = ">=3.12"`, Python 3.13 as the development baseline, Linux as the required validation platform, use of `uv`, a committed `uv.lock`, and Apache-2.0 package metadata/notices consistent with the existing `LICENSE`.
-5. Record exact dependency names, supported Python constraints, package/entry-point names, fixture strategy, and all commands used by later steps.
+5. Establish application versioning: Semantic Versioning, initial Slice 1 package version `0.1.0`, and the `0.1.x` line for releases within Slice 1. Select one authoritative package-version source and ensure the CLI will not maintain a duplicate version constant.
+6. Record exact dependency names, supported Python constraints, package/entry-point names, fixture strategy, and all commands used by later steps.
 
 **Outputs:**
 - Decision record and final package/tooling contract in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md)
-- This plan updated with final paths, dependencies, and commands if any proposal changes
+- This plan updated with the initial version, authoritative version source, final paths, dependencies, and commands if any proposal changes
 
 **Acceptance:**
 - [ ] Runtime, development, and test dependencies are explicitly selected with rationale; no choice is presented as already installed.
 - [ ] Package layout and console-script name are exact and consistent with `image-clarus`.
+- [ ] Initial Slice 1 application version is `0.1.0`, the Slice 1 version line is `0.1.x`, and the sole authoritative package-version source is recorded.
 - [ ] Python 3.12+ support, Python 3.13 baseline, Linux validation, `uv`, and committed lockfile are preserved.
 - [ ] No extra architecture or dependency is introduced without a Slice 1 requirement.
 - [ ] `IMPL-A1-COMPLETED.md` exists, lists files created/updated/removed, and is linked above.
 
 ### Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 
-**Goal:** Make the Slice 1 command surface, resolution rules, stage semantics, single-image outcomes, and process exit behavior unambiguous before implementation.
+**Goal:** Make the Slice 1 command surface, version display, resolution rules, stage semantics, single-image outcomes, and process exit behavior unambiguous before implementation.
 
 **Inputs:**
 - `docs/REQ-image-clarus.md` — stages, config precedence, failures/retries, single-image prerequisite policy
@@ -207,13 +212,15 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 5. Define the configuration key schema for providers, named models, stage model selection, prompts/schema paths, reasoning effort, regeneration, validation retry, missing-prerequisite policy, logging needed for single-image results, and credentials/environment variables. Validate global settings before stage settings; unused stage credentials/models must not block an unrelated selected stage.
 6. Define stage outcomes (`completed`, `skipped`, `failed` or an explicitly justified equivalent), user-visible single-image result format, failure categories, default zero retries, single-image missing-`.desc.txt` behavior, continuation behavior after a stage failure, and exit-code mapping. Ensure a failed/invalid output is never reported as complete.
 7. Record CLI examples for `desc` only, `json` only with an existing description, combined `desc,json`, explicit config, prompt/schema overrides, and regeneration. Label any examples as illustrative until the grammar is frozen.
+8. Freeze top-level `image-clarus --version`: print exactly one line, `image-clarus 0.1.0`, to stdout with success status; it must work without loading configuration, credentials, provider access, or an image. For later `0.1.x` releases, the displayed version must come from A1's authoritative package-version source.
 
 **Outputs:**
 - CLI/config/result contract, examples, and any decisions/deferred items in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md)
-- This plan updated with final command examples and the fixed `search` stub response/status
+- This plan updated with final command/version examples and the fixed `search` stub response/status
 
 **Acceptance:**
 - [ ] A user can tell exactly how to process one image, select stages, override config, regenerate, and interpret each result/exit status.
+- [ ] `image-clarus --version` returns exactly `image-clarus 0.1.0` for the initial package, uses the authoritative source, and requires no runtime configuration or provider access.
 - [ ] `json`-only execution never silently runs `desc`; absent description follows the approved single-file policy.
 - [ ] Configuration search/selection, no-merge behavior, precedence, stage validation, and path resolution are testable without relying on the host user's real config.
 - [ ] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with the nonzero status defined in A2, and no search matching leaks into Slice 1.
@@ -221,7 +228,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 
 ### Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 
-**Goal:** Define the initial structured artifact contract completely enough to implement and test JSON generation without inventing field semantics.
+**Goal:** Define the initial structured artifact and independent schema-version contract completely enough to implement and test JSON generation without inventing field semantics.
 
 **Inputs:**
 - `docs/REQ-image-clarus.md` §§7–8 — schema and semantic coverage requirements
@@ -234,16 +241,18 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 3. Decide whether provenance is represented inside the replaceable user schema, in an application-owned envelope, or through another explicit mechanism. Define how full schema replacement works without silently losing the required model/prompt provenance.
 4. Define the provenance fields and stable values captured (at minimum selected provider/model identity and prompt identity/version or content fingerprint); exclude credentials, authorization headers, and secret-bearing URLs.
 5. Define JSON serialization, Unicode, top-level shape, strictness for extra properties, treatment of fenced/prose-wrapped model output, schema-error reporting, and validation-retry input/limits. Default validation retry remains zero.
-6. Provide a small synthetic description, example structured JSON, and positive/negative schema-validation cases. Do not include a real photograph or personal metadata.
+6. Establish a schema-versioning convention independent of application SemVer: freeze the initial schema version, how each generated `.desc.json` identifies that contract, compatibility/evolution rules, and how full custom-schema replacement identifies its version. Never infer schema version from the application version.
+7. Provide a small synthetic description, example structured JSON, and positive/negative schema-validation cases, including schema-version identification. Do not include a real photograph or personal metadata.
 
 **Outputs:**
-- Reviewed JSON contract and examples in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md)
+- Reviewed JSON/schema-version contract and examples in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md)
 - This plan updated with final schema/prompt paths, fields, and test assertions
 
 **Acceptance:**
 - [ ] Schema, prompt, and provenance are defined before any JSON production-code step begins.
 - [ ] Every required semantic category from the REQ is represented and testable.
 - [ ] Full custom-schema replacement and provenance interaction have an explicit, non-contradictory rule.
+- [ ] The generated metadata schema has an independent, identified version and explicit compatibility/evolution rules, including custom-schema behavior.
 - [ ] No secrets or identifying photo/device data can enter the public example contract.
 - [ ] [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md) is complete and linked.
 
@@ -330,7 +339,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 
 ### Step B1 — Bootstrap the installable Python package and test harness [CODE/TEST]
 
-**Goal:** Establish the declared Python package, CLI entry point, dependency lock, and automated test harness without implementing pipeline behavior.
+**Goal:** Establish the declared Python package, authoritative version metadata, CLI entry point including `--version`, dependency lock, and automated test harness without implementing pipeline behavior.
 
 **Inputs:** Step A1 and A6 records; finalized toolchain commands in this plan.
 
@@ -340,10 +349,10 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Create: `tests/unit/test_cli.py`
 
 **Actions:**
-1. Write failing CLI tests for top-level help, `process --help`, `search --help`, and the fixed not-implemented result/status when `search` is executed.
+1. Write failing CLI tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, and the fixed not-implemented result/status when `search` is executed.
 2. Run the targeted test and record the expected failure before adding package code.
-3. Define package metadata, `requires-python = ">=3.12"`, the `image-clarus` console entry point, the exact runtime/dev dependencies and Apache-2.0 license metadata selected in A1, and the lockfile using `uv`.
-4. Implement importable package startup and both subcommand help surfaces; make non-help `search` invocations return the explicit not-implemented result/status. Do not add search behavior or process-stage behavior in this step.
+3. Define package metadata, initial version `0.1.0` from A1's authoritative source, `requires-python = ">=3.12"`, the `image-clarus` console entry point, the exact runtime/dev dependencies and Apache-2.0 license metadata selected in A1, and the lockfile using `uv`.
+4. Implement importable package startup, both subcommand help surfaces, and top-level `--version` using the A1 source without a duplicated version constant; make non-help `search` invocations return the explicit not-implemented result/status. Do not add search behavior or process-stage behavior in this step.
 5. Run the targeted test, then all current tests and selected lint/format checks.
 
 **Outputs:**
@@ -353,6 +362,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - [ ] The package installs in an isolated Linux environment and exposes `image-clarus`.
 - [ ] `uv.lock` is present and consistent with `pyproject.toml`.
 - [ ] Python 3.12+ is declared and Python 3.13 is used for the development baseline.
+- [ ] Installed `image-clarus --version` prints the A2-defined version, initially `image-clarus 0.1.0`, from the authoritative package version source.
 - [ ] Top-level help lists `process` and `search`; both subcommand help surfaces work, and executing `search` reports not implemented as specified in A2.
 - [ ] No external executable is required.
 - [ ] RED and GREEN evidence is recorded and all current tests/quality checks pass.
@@ -490,8 +500,8 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Read: `src/image_clarus/artifacts.py`, `src/image_clarus/providers/openai_compatible.py`
 
 **Actions:**
-1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, custom full-schema replacement, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, existing JSON skip, and explicit regeneration.
-2. Verify RED; implement a stage that reads `.desc.txt` from disk, calls the selected JSON model, parses and validates against the resolved schema, adds/validates provenance exactly as A3 specifies, and writes only validated content through the artifact service.
+1. Add failing tests for valid and invalid model JSON, all A3-required semantic/provenance fields, schema-version identification for default and custom schema contracts, custom prompt/schema file overrides, malformed/fenced responses, zero validation retries by default, configured bounded validation retry, missing `.desc.txt`, existing JSON skip, and explicit regeneration.
+2. Verify RED; implement a stage that reads `.desc.txt` from disk, calls the selected JSON model, parses and validates against the resolved schema, adds/validates provenance and schema-version identification exactly as A3 specifies, and writes only validated content through the artifact service.
 3. Keep model-generated values distinct from application-owned provenance according to the approved contract. Do not allow custom schema replacement to silently remove required provenance.
 4. Ensure a missing description for explicit one-image `json` selection follows A2 and does not trigger `desc` implicitly.
 5. Verify GREEN and run the complete current test suite.
@@ -501,6 +511,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Acceptance:**
 - [ ] `json` consumes the persisted `.desc.txt` and writes exactly `<image>.desc.json`.
 - [ ] The output is fully schema-validated, includes the required provenance contract, and covers all required metadata categories.
+- [ ] The output identifies its metadata-schema version independently of the application version, following A3's default/custom-schema rules.
 - [ ] Custom schema and prompt replacement work without source changes and follow A3 semantics.
 - [ ] Invalid/missing prerequisites follow the approved result policy; invalid output is never published as complete.
 - [ ] RED/GREEN and regression evidence is recorded; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md) is linked.
@@ -540,11 +551,11 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Read: `docs/REQ-image-clarus.md`, `docs/HLD-image-clarus.md`, final CLI help
 
 **Actions:**
-1. Document Python/`uv` installation, the `image-clarus` entry point, required provider configuration, environment-variable credential setup, and the exact config precedence.
+1. Document Python/`uv` installation, the `image-clarus` entry point and `--version` command, required provider configuration, environment-variable credential setup, and the exact config precedence.
 2. Provide sanitized examples for `desc`, `json`, combined execution, custom prompt/schema, and explicit regeneration using the frozen CLI grammar.
 3. State current Slice 1 limitations: single-image only; the `search` command exists for help but reports not implemented; no search matching, traversal/batch, XMP, ExifTool, or scheduler.
 4. Ensure the sample config contains only an environment variable name, never a credential value, and example images/data contain no private metadata.
-5. Run every documented command that does not require a live provider; label the manual provider smoke command and authorization boundary clearly.
+5. Run every documented command that does not require a live provider, including `image-clarus --version`; label the manual provider smoke command and authorization boundary clearly.
 6. Preserve the README's project-document links while adding Slice 1 installation and usage guidance.
 
 **Outputs:** Updated README, sanitized sample config, command verification; [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md)
@@ -566,7 +577,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Read: all Slice 1 stage, config, provider, and CLI modules
 
 **Actions:**
-1. Run the CLI against a generated synthetic image with a local HTTP stub; assert `desc` creates `.desc.txt` and `json` reads that exact file to produce `.desc.json`.
+1. Run the CLI against a generated synthetic image with a local HTTP stub; assert `desc` creates `.desc.txt` and `json` reads that exact file to produce `.desc.json` with the schema-version identifier frozen in A3.
 2. Test `desc` only, `json` only with an existing description, `json` only with a missing description, combined stages, default stage selection, existing-output skip, and explicit regeneration.
 3. Assert stage order and persisted-file handoff; make the JSON fake model inspect the description content it receives, not an in-memory stage return.
 4. Seed `.desc.txt` with a complete sentinel description `v1`. Launch a real `desc`-only CLI process with its own temporary config and selected description model; use a threaded local HTTP stub to hold its regeneration response before the stage writes `v2`. While it is held, launch a separate `json`-only CLI process with a different temporary config and JSON model. Observe and hold the JSON request, release the description response so the first process writes complete `v2`, then release the JSON response. This forces the JSON request to consume the persisted `v1` while the two OS processes overlap.
@@ -579,6 +590,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Acceptance:**
 - [ ] All required Slice 1 stage combinations and prerequisite behaviors pass.
 - [ ] `json` reads the persisted handoff and never triggers `desc` when explicitly omitted.
+- [ ] Generated `.desc.json` identifies the schema version according to A3, independently of the application version.
 - [ ] Two separate CLI processes execute `desc` and `json` concurrently with their independently selected models; JSON consumes a complete persisted description and neither completed sidecar is corrupted.
 - [ ] Source image remains unchanged; outputs use the exact sidecar names.
 - [ ] [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md) is complete and linked.
@@ -609,7 +621,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 
 ### Step C3 — Run Linux package and quality gates [TEST]
 
-**Goal:** Verify reproducible installation, supported Python baseline, test suite, and selected quality gates on Linux.
+**Goal:** Verify reproducible installation, installed CLI version display, supported Python baseline, test suite, and selected quality gates on Linux.
 
 **Files:** No production changes expected; if a fix is required, add a test-first corrective step and record it before proceeding.
 
@@ -618,7 +630,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 2. Run the exact A1-selected unit/integration test commands; proposed baseline is `uv run pytest`.
 3. Run the exact A1-selected lint/format commands; proposed baseline is `uv run ruff check .` and `uv run ruff format --check .`.
 4. Run the full test suite on Linux with Python 3.12 to verify the declared minimum, then Python 3.13 as development baseline. If a required interpreter/dependency cannot be obtained, report the precise blocker and leave the affected acceptance row unchecked.
-5. Verify the console entry point, top-level help, `process --help`, `search --help`, and the not-implemented `search` response in the isolated environment; confirm `desc`/`json` use no external executable. Do not run an exhaustive OS/filesystem matrix.
+5. Verify the console entry point, `image-clarus --version` against the authoritative package metadata, top-level help, `process --help`, `search --help`, and the not-implemented `search` response in the isolated environment; confirm `desc`/`json` use no external executable. Do not run an exhaustive OS/filesystem matrix.
 
 **Outputs:** Command transcript, interpreter versions, and result summary; [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md)
 
@@ -626,6 +638,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - [ ] Clean locked install succeeds on Linux.
 - [ ] All tests and selected quality gates pass on Python 3.13.
 - [ ] Python 3.12 compatibility is actually exercised, or remains explicitly unchecked with its blocker.
+- [ ] Installed `image-clarus --version` matches the authoritative package metadata and prints the initial `image-clarus 0.1.0` value.
 - [ ] `image-clarus` entry point and top-level, process, and search help work from the installed package; executing `search` reports not implemented.
 - [ ] No external executable is required for Slice 1.
 - [ ] [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md) is complete and linked.
@@ -691,6 +704,8 @@ These are the plan-level completion criteria. Detailed test evidence is owned by
 | S1-AC10 | Linux tests/quality gates pass; Python 3.12 compatibility is verified; no external executable is required for desc/json | B1–B9, C3 |
 | S1-AC11 | User docs and examples accurately describe the implemented Slice 1 scope and contain no credentials/private metadata | B9, C4–C5 |
 | S1-AC12 | Separate CLI processes can execute `desc` and `json` concurrently with independent model selections; JSON consumes persisted description and completed sidecars remain uncorrupted | C1–C2 |
+| S1-AC13 | Application uses SemVer, starts at `0.1.0` on the Slice 1 `0.1.x` line, has one authoritative version source, and `image-clarus --version` reports it | A1–A2, B1, C3 |
+| S1-AC14 | Generated JSON identifies its metadata-schema version independently of application version and follows A3 default/custom-schema rules | A3, B7, C1 |
 
 ## Open items and resolution paths
 
@@ -698,9 +713,9 @@ All of the following are Phase A work, not permission to invent details during c
 
 | Open item | Resolve in | Required result |
 | --- | --- | --- |
-| CLI framework, YAML/JSON Schema/HTTP/test/lint dependencies and source layout | A1 | Exact selected tools, package paths, lock and verification commands |
-| Exact command grammar, override keys/types, relative paths, stage result and exit mapping | A2 | Black-box CLI/config contract and examples |
-| Built-in structured schema, JSON prompt, provenance and custom-schema interaction | A3 | Versioned/traceable schema-prompt-provenance contract plus examples and tests |
+| CLI framework, YAML/JSON Schema/HTTP/test/lint dependencies, source layout, and authoritative application version source | A1 | Exact selected tools, package paths, initial `0.1.0` metadata/source, lock and verification commands |
+| Exact command grammar, `--version` output, override keys/types, relative paths, stage result and exit mapping | A2 | Black-box CLI/config/version contract and examples |
+| Built-in structured schema, independent schema version, JSON prompt, provenance and custom-schema interaction | A3 | Versioned/traceable schema-prompt-provenance contract plus examples and tests |
 | Provider request shape, image encoding, reasoning/capability mapping, timeouts and errors | A4 | Local-testable HTTP contract with secret-redaction rules |
 | Artifact API details, temp/backup naming, permissions, failure and recovery assertions | A5 | Fault-testable state table preserving HLD invariants |
 
