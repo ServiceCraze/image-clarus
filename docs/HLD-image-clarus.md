@@ -134,7 +134,7 @@ Configuration resolution is an independent component:
 4. Validate global structure and override paths, then supply the resolved configuration to consumers.
 5. Validate selected stage requirements only when that stage is selected, so an unused missing provider or stage-specific credential does not block an unrelated operation.
 
-No implicit merge between user and system files. An explicit config file disables discovery. Optional prompt and schema overrides have their own independent paths and fallbacks. The final YAML key schema, generic override value parsing, and option spelling beyond already agreed examples are implementation-plan details.
+No implicit merge between user and system files. An explicit config file disables discovery. Optional prompt and schema overrides have their own independent paths and fallbacks. The final YAML key schema, generic override value parsing, and exact argument grammar, placement, repeatability, and conflict rules remain implementation-plan details; the accepted CLI conventions are listed in §5.
 
 | OS | User configuration directory | System configuration directory |
 | --- | --- | --- |
@@ -148,7 +148,7 @@ Installation must not require administrator permissions or create system-level c
 
 Provider definitions own endpoint and authentication/connection configuration. Named model definitions reference providers, identify API model IDs, and specify default capabilities and generation parameters. Each model-driven stage **must select one named model**; several stages may share it or select different models/providers. CLI overrides can change a stage's named-model selection, and generic configuration overrides can change parameters of a named model. Stage-specific settings override shared model defaults where supported.
 
-Phase A initially supports **OpenAI-compatible Chat Completions HTTP APIs** for local or remote endpoints; the architecture permits additional adapter types later. Credentials may be inline or obtained via a specifically named environment variable. Do not log secrets. API compatibility does not imply that every endpoint supports identical image, schema, or reasoning controls. Unsupported capabilities must be surfaced clearly, not assumed to work.
+Slice 1 initially supports **OpenAI-compatible Chat Completions HTTP APIs** for local or remote endpoints; the architecture permits additional adapter types later. Credentials may be inline or obtained via a specifically named environment variable. Do not log secrets. API compatibility does not imply that every endpoint supports identical image, schema, or reasoning controls. Unsupported capabilities must be surfaced clearly, not assumed to work.
 
 ### 4.3 Reasoning convention
 
@@ -164,7 +164,7 @@ The built-in description prompt at `prompts/image-description.txt` is **exactly*
 
 > Fully describe and explain everything about this image.
 
-Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema must cover useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Exact field names, schema, prompt wording, and provenance fields are to be determined and tested in Phase A, not asserted prematurely in this HLD.
+Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema must cover useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Exact field names, schema, prompt wording, and provenance fields are not asserted in this HLD; the Slice 1 implementation plan must resolve them during its Phase A planning/readiness work before JSON implementation begins (see §10.3).
 
 ## 5. CLI and operational architecture
 
@@ -173,7 +173,9 @@ The CLI has two primary subcommands:
 - `image-clarus process` — process selected image files using selected stages.
 - `image-clarus search` — search previously generated sidecars without model calls.
 
-`image-clarus --help`, `image-clarus process --help`, and `image-clarus search --help` expose the command structure and relevant options. Common options include config path and generic overrides. Dedicated options cover frequently changed operations, including stages, models, and file selection; `--set` provides access to less common settings without a large dedicated flag inventory.
+**Accepted CLI conventions:** The executable is `image-clarus`, with `process` and `search` subcommands and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
+
+**Illustrative syntax:** Examples such as `--stages=desc,json` and `--set path=value` show intended option/value shapes, not a frozen argument grammar. The implementation plan for the relevant slice will settle exact argument placement (`=` versus a separate value), repeatability, positional arguments, `--set` value parsing, option conflicts, and output/result schemas.
 
 **Discovery.** Accept file paths, directories, and glob patterns/filters. Stream one eligible image at a time, with recursive traversal enabled by default. Process eligible files within a directory before descending depth-first. A configurable extension allowlist initially considers `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff`. Model decoding failures are distinct from extension selection. Exclusion filters may be added later.
 
@@ -260,19 +262,19 @@ Users who may run Image Clarus concurrently with digiKam can coordinate runs ext
 
 ## 8. Implementation strategy and slice roadmap
 
-Build independently usable slices. The HLD establishes boundaries; a separate implementation plan will enumerate precise tasks, acceptance criteria, testing, and sequencing inside each slice.
+Build independently usable, numbered slices. Each slice has its own implementation plan; the HLD establishes boundaries, while that plan defines its phases, steps, acceptance criteria, testing, and sequencing. `Phase A`, `Phase B`, `Phase C`, and step identifiers are plan-internal labels, not slice names.
 
 | Slice | Architectural capability | Boundary |
 | --- | --- | --- |
-| **Phase A** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
+| **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
 | Later | XMP integration | ExifTool backend, digiKam mappings, tag hierarchy/policies, title/description, sanitized fixtures |
 | Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |
 
-The ordering among later slices is indicative, not a locked schedule. Future search and batch features may be split or reordered by the implementation plan without changing this HLD's component boundaries.
+The ordering among later slices is indicative, not a locked schedule. Future search and batch capabilities may be split or reordered when their own slice plans are formed, without changing this HLD's component boundaries.
 
-**Why Phase A contains two stages:** It provides useful structured metadata immediately and exercises two independent model selections, shared-provider reuse, persisted stage handoffs, independently invoked stages in separate OS processes, concurrency and last-write-wins behavior, schema validation, and early assessment of JSON quality before committing to XMP mappings. Single-image invocation is sufficient for these tests; Phase A does not require directory traversal or an internal concurrency scheduler.
+**Why Slice 1 contains two stages:** It provides useful structured metadata immediately and exercises two independent model selections, shared-provider reuse, persisted stage handoffs, independently invoked stages in separate OS processes, concurrency and last-write-wins behavior, schema validation, and early assessment of JSON quality before committing to XMP mappings. Single-image invocation is sufficient for these tests; Slice 1 does not require directory traversal or an internal concurrency scheduler.
 
 ## 9. Verification approach
 
@@ -297,7 +299,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - digiKam-only tag writes for this release; generated hierarchy root `ai` by default, never `auto`; `add` default tag policy; no tag modifications outside the root.
 - Title and description independently default to `new`, with `overwrite` and `disabled` alternatives.
 - ExifTool only for initial XMP backend; independent search without model calls or database.
-- **Phase A contains both description and structured JSON generation for one image.**
+- **Slice 1 contains both description and structured JSON generation for one image.**
 
 ### 10.2 Observed, not yet fully mapped
 
@@ -305,10 +307,10 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - The inspected sample had no populated XMP title or description.
 - Exact writable field subsets, hierarchy/flat-keyword coherence, and ExifTool round-trip behavior still require fixture validation; observations must not be mistaken for verified write mappings.
 
-### 10.3 Open for implementation planning or Phase A evaluation
+### 10.3 Open for implementation planning
 
-- Final built-in JSON schema, JSON prompt, field names, provenance representation, and the precise schema-replacement contract.
-- Exact Python CLI framework, model-client library, provider parameter mappings, and parsed `--set` value semantics.
+- **Slice 1 implementation-plan prerequisite:** During Phase A of the Slice 1 plan, define the initial built-in JSON schema, JSON-generation prompt, and provenance contract, including how full schema replacement interacts with required provenance. Make completion of this planning work a gate before JSON implementation begins.
+- Exact Python CLI framework, remaining argument grammar/placement, repeatability and option-conflict rules, model-client library, provider parameter mappings, and parsed `--set` value semantics.
 - Detailed retry, per-stage missing-input, continuation, logging, and exit-code configuration keys.
 - Detailed artifact-service API and filesystem-specific error recovery mechanics, without changing agreed backup and concurrency semantics.
 - Exact JSON-to-XMP mappings and which observed digiKam-compatible XMP fields require writing.
@@ -319,13 +321,6 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - Multi-image traversal, search, richer batch controls, exclusion filters, and semantic search beyond their assigned slices.
 - Additional provider protocols, optional separate provider configuration files, and broad cross-platform automation.
 
-### 10.5 Requirements reconciliation before implementation
+### 10.5 Requirements reconciliation
 
-The current requirements text predates several design decisions. When reconciling it with this HLD, preserve the original requirements and record the evolution explicitly:
-
-1. The earlier first-slice suggestion of one stage is superseded by **two stages, `desc` and `json`**.
-2. The earlier XMP title/description default of `disabled` is superseded by **`new` for both**.
-3. The earlier requirement to decide how to prevent overlapping writes resolves to **lock-free last-write-wins with accepted lost-update risk**, rather than mandatory serialized writes.
-4. End-state support for other metadata representations is **deferred**; **digiKam-compatible tag writes only** are in scope for the initial XMP release.
-
-These changes should be reflected consistently in the subsequent implementation plan. No other end-state requirements are intentionally discarded by this draft.
+The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.

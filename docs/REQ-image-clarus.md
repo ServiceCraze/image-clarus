@@ -100,7 +100,7 @@ The exact field names, types, controlled vocabularies, schema and structured-gen
   - `new`: populate generated tags only if the configured root currently has no tags on the image.
   - `disabled`: do not modify those tags.
 - Other XMP tag/keyword representations are **disabled by default** and must offer configurable update behavior; their exact mappings are design work.
-- Optional XMP title and description population must each have **independent** configuration, **disabled by default**. When enabled, each supports `overwrite` and `new` (populate only if absent/empty), as well as `disabled`.
+- Optional XMP title and description population must each have **independent** configuration. The built-in default for each is `new` (populate only if absent/empty); each also supports `overwrite` and `disabled`.
 - Determine which JSON fields map to hierarchical tags, title, and description during design. Not every JSON field must become an XMP tag.
 - XMP tags remain editable through digiKam. Integration validation must verify generated tags are displayed and editable in digiKam, and manual tags remain intact.
 - Synchronizing historical removals from regenerated JSON into XMP is **not automatically required**. `overwrite` deliberately replaces only the configured generated-tag root; do not attempt automatic general-purpose tag reconciliation in the initial implementation.
@@ -133,7 +133,7 @@ Configuration precedence, highest first:
   | Windows | `%APPDATA%\image-clarus\` | `%PROGRAMDATA%\image-clarus\` |
 
 - Installation must not require administrator privileges or create system configuration directories.
-- Provide a main configuration file plus optional separate prompt and schema files in the selected configuration directory. Every optional file also has a built-in fallback.
+- The main configuration file is YAML named `config.yaml`, with optional separate prompt and schema files in the selected configuration directory. Every optional file also has a built-in fallback.
 - Allow the main configuration path and **each** prompt/schema file path to be overridden individually from CLI parameters.
 - All configurable values must be overridable from CLI parameters where applicable.
 - Configuration should cover providers, models, prompts, schema, allowed formats, file selection behaviors, per-stage policies, XMP mappings/update modes, retries, and logging.
@@ -155,7 +155,7 @@ Configuration precedence, highest first:
 - On a graceful stop request, cancel any model request still in flight when safe; once a file-writing operation has started, allow that operation to finish safely before exit.
 - Resume by rescanning eligible files and skipping already completed output sidecars. Do not require persistent in-memory job state.
 - Support externally controlled run bounds or time-window behavior where useful for long-running batch invocation, without requiring an internal clock-based scheduler. Precise controls may be designed in the appropriate slice.
-- Prevent unintended simultaneous writes to the same output when multiple processes overlap; exact locking/coordination mechanism is a design question.
+- The initial architecture uses no application-level file locks. Safe-write and recovery guarantees apply to an individual operation; when processes concurrently update the same output, the last successful replacement wins. Lost updates, including concurrent XMP edits, and backup/cleanup races are accepted limitations; do not promise serialized updates or conflict detection.
 
 ## Safe-write requirements
 
@@ -177,12 +177,12 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 
 ## Delivery approach and scope
 
-The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice.
+The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice. Each numbered delivery slice has its own implementation plan; `Phase A`, `Phase B`, `Phase C`, and step identifiers are scoped within that plan and are not slice names.
 
-- **First buildable slice:** single-image, single-stage invocation, with model/provider configuration and correct output handling; choice of first stage and concrete implementation details are for design.
-- **Further buildable slices:** structured output; XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Ordering and dependencies are to be settled in the implementation plan rather than locked into this REQ.
+- **First buildable slice (Slice 1):** single-image Description and Structure (`desc` and `json`) processing, with each stage independently invocable and composable through the persisted `.desc.txt` handoff; model/provider configuration, configurable prompts and schema, JSON validation/provenance, and correct output handling. XMP, multi-image selection/traversal, batch processing, and search remain later slices.
+- **Further buildable slices:** XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Their ordering remains indicative; each slice's own implementation plan defines its phases, steps, and validation.
 - **Later goals:** exclusion filters, expanded format/provider support, richer search configuration, and embeddings-based semantic search. Not all later goals need be part of release one.
-- Open-source licensing and installation packaging, CLI executable name and framework, configuration format, specific model-client libraries, structured-generation prompt and JSON schema, and XMP field mappings remain decisions for design.
+- Apache-2.0 is the intended license; verify publication notices. Installation packaging, CLI framework and detailed option grammar, specific model-client libraries, structured-generation prompt/schema/provenance details, and exact XMP field mappings remain for implementation planning.
 
 ## Known non-goals of the initial implementation
 
@@ -198,12 +198,12 @@ The project follows **REQ → High-Level Design → Implementation Plan → Impl
 
 Design work must resolve, without silently reducing any requirements above:
 
-- CLI executable name, command syntax and package structure
-- Main configuration format and filenames, plus path resolution for configuration, prompt, and schema files
+- CLI framework, detailed argument grammar, package structure, and result schemas
+- Final YAML key schema, generic override semantics, and relative-path resolution for prompt and schema files
 - Structured-generation prompt and JSON schema, including provenance representation
 - XMP fields and representation-specific mappings, with tests against digiKam
 - Stage prerequisites and configurable actions on failure
 - Search matching syntax, field filters and output formats
-- Safe-write implementation, interruption recovery and overlapping-write prevention
+- Safe-write implementation details and interruption recovery on supported/representative filesystems
 - Implementation slices and verification strategy
 
