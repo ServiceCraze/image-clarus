@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A readiness passed (Steps A1–A6); Phase B/C implementation not started
+**Status:** In progress — Phase A readiness passed; Phase B started (B1 complete); Phase C not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -145,7 +145,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 
 ### Phase B — Build the single-image pipeline
 
-- [ ] Step B1 — Bootstrap the installable Python package and test harness [CODE/TEST]
+- [x] Step B1 — Bootstrap the installable Python package and test harness [CODE/TEST]
 - [ ] Step B2 — Implement configuration resolution and precedence [CODE/TEST]
 - [ ] Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
 - [ ] Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
@@ -401,15 +401,15 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 - Package scaffold and test evidence; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md)
 
 **Acceptance:**
-- [ ] The package installs in an isolated Linux environment and exposes `image-clarus`.
-- [ ] `uv.lock` is present and consistent with `pyproject.toml`.
-- [ ] The canonical description prompt is available through `resources.py` from the source tree and installed wheel without a duplicated maintained copy.
-- [ ] Python 3.12+ is declared and Python 3.13 is used for the development baseline.
-- [ ] Installed `image-clarus --version` prints the A2-defined version, initially `image-clarus 0.1.0`, from the authoritative package version source.
-- [ ] Top-level help lists `process` and `search`; both subcommand help surfaces work, and executing `search` reports not implemented as specified in A2.
-- [ ] No external executable is required.
-- [ ] RED and GREEN evidence is recorded and all current tests/quality checks pass.
-- [ ] [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md) is complete and linked.
+- [x] The package installs in an isolated Linux environment and exposes `image-clarus`.
+- [x] `uv.lock` is present and consistent with `pyproject.toml`.
+- [x] The canonical description prompt is available through `resources.py` from the source tree and installed wheel without a duplicated maintained copy.
+- [x] Python 3.12+ is declared and Python 3.13 is used for the development baseline.
+- [x] Installed `image-clarus --version` prints the A2-defined version, initially `image-clarus 0.1.0`, from the authoritative package version source.
+- [x] Top-level help lists `process` and `search`; both subcommand help surfaces work, and executing `search` reports not implemented as specified in A2.
+- [x] No external executable is required.
+- [x] RED and GREEN evidence is recorded and all current tests/quality checks pass.
+- [x] [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md) is complete and linked.
 
 ### Step B2 — Implement configuration resolution and precedence [CODE/TEST]
 
