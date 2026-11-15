@@ -13,7 +13,7 @@
 
 ## Summary
 
-Completed Phase A Step A2 as a design-only step. This record freezes the one-image `process` grammar, stage selection and regeneration behavior, CLI override names and precedence, Linux and portable config discovery, the A2 configuration-key schema, selected-stage validation, user-visible results, failure/exit behavior, interruption statuses, the exact `--version` line, and the help-only `search` stub. The plan records the public command examples and maps interruption verification to C2. No production code, tests, package metadata, or configuration examples were created. At A2 closeout, A3–A6 were pending; A3 was completed subsequently, while A4–A6 remain pending.
+Completed Phase A Step A2 as a design-only step. This record freezes the one-image `process` grammar, stage selection and regeneration behavior, CLI override names and precedence, Linux and portable config discovery, the A2 configuration-key schema, selected-stage validation, user-visible results, failure/exit behavior, interruption statuses, the exact `--version` line, and the help-only `search` stub. The plan records the public command examples and maps interruption verification to C2. No production code, tests, package metadata, or configuration examples were created. At A2 closeout, Steps A3–A6 were pending; Steps A3–A5 have since completed, Erik accepted A3 as documented during A6, and the A6 readiness gate has passed. Phase B/C implementation remains unstarted.
 
 ## Frozen CLI contract
 
@@ -166,7 +166,7 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 - [x] `json`-only execution never silently runs `desc`; absent description follows the approved single-file policy.
 - [x] Configuration search/selection, no-merge behavior, precedence, stage validation, and path resolution are testable without relying on the host user's real config.
 - [x] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with exit `3`, and no search matching leaks into Slice 1.
-- [x] `IMPL-A2-COMPLETED.md` is complete and linked.
+- [x] [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md) is complete and linked.
 
 ## Verification and environment notes
 
@@ -177,4 +177,4 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 
 ## Follow-ups
 
-- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3–A5 have since completed; A6 remains unchecked. A5's later `pipeline.backup_retention` addition is documented above and in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). Erik's A3 Product Owner review and the Phase A readiness gate remain pending. Do not start Phase B until the remaining Phase A decisions are accepted and A6 passes.
+- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3–A5 have since completed; Erik accepted A3 as documented during A6, and the Phase A readiness gate has passed. A5's later `pipeline.backup_retention` addition is documented above and in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). Phase B/C implementation remains unstarted.

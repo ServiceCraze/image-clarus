@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — Phase A in progress; Steps A1–A5 design artifacts complete; A3 Product Owner review pending; A6 pending; implementation not started
+**Status:** Candidate — Phase A readiness passed (Steps A1–A6); Phase B/C implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -141,7 +141,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 - [x] Step A4 — Freeze the provider request and security contract [DESIGN]
 - [x] Step A5 — Freeze safe-write, recovery, and concurrency details [DESIGN]
-- [ ] Step A6 — Pass the Phase A readiness gate [DESIGN]
+- [x] Step A6 — Pass the Phase A readiness gate [DESIGN]
 
 ### Phase B — Build the single-image pipeline
 
@@ -169,7 +169,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 
 ## Phase A — Discovery and contract freeze
 
-**Phase A exit rule:** All Phase A decisions below are recorded and accepted in completion artifacts, all planned paths/commands are exact, the accepted top-level/`process`/`search` help surfaces, top-level `--version` output, application SemVer/version-source contract, independent schema-version contract, and the not-implemented `search` result are specified, and this plan is updated before Phase B starts. Phase A produces design evidence only; no production code is changed.
+**Phase A exit rule:** All Phase A decisions below are recorded and accepted in completion artifacts, the required A3 Product Owner review is explicitly accepted (or required revisions are incorporated and accepted), all planned paths/commands are exact, the accepted top-level/`process`/`search` help surfaces, top-level `--version` output, application SemVer/version-source contract, independent schema-version contract, and the not-implemented `search` result are specified, and this plan is updated before Phase B starts. Phase A produces design evidence only; no production code is changed.
 
 ### Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
 
@@ -198,9 +198,9 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Runtime, development, and test dependencies are explicitly selected with rationale; no choice is presented as already installed.
 - [x] Package layout, module ownership, built-in resource lookup, and console-script name are exact and consistent with `image-clarus`.
 - [x] Initial Slice 1 application version is `0.1.0`, the Slice 1 version line is `0.1.x`, and the sole authoritative package-version source is recorded.
-- [x] Python 3.12+ support, Python 3.13 baseline, Linux validation, `uv`, and committed lockfile are preserved.
+- [x] Python 3.12+ support, Python 3.13 baseline, Linux validation, `uv`, and committed lockfile are preserved as plan decisions; lockfile generation remains a B1 deliverable.
 - [x] No extra architecture or dependency is introduced without a Slice 1 requirement.
-- [x] `IMPL-A1-COMPLETED.md` exists, lists files created/updated/removed, and is linked above.
+- [x] This completion record exists, records created/updated/removed files, and is linked from Step A1.
 
 ### Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 
@@ -246,7 +246,7 @@ image-clarus search
 - [x] `image-clarus --version` returns exactly `image-clarus 0.1.0` for the initial package, uses the authoritative source, and requires no runtime configuration or provider access.
 - [x] `json`-only execution never silently runs `desc`; absent description follows the approved single-file policy.
 - [x] Configuration search/selection, no-merge behavior, precedence, stage validation, and path resolution are testable without relying on the host user's real config.
-- [x] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with exit status `3`. Do not implement search matching, sidecar traversal, or model calls.
+- [x] Top-level help, `process --help`, and `search --help` are part of Slice 1; executing `search` reports not implemented with exit `3`, and no search matching leaks into Slice 1.
 - [x] [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md) is complete and linked.
 
 ### Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
@@ -272,7 +272,7 @@ image-clarus search
 
 For create-only skip, an existing `.desc.json` is structurally valid if strict JSON parsing succeeds and the fixed envelope v1 schema passes, including all required provenance and object-valued `metadata`. Do not validate its payload against the currently selected schema or compare schema identity/version, prompt/model, or description fingerprint; a valid envelope skips as `output_exists`, unchanged and without reading/hashing `.desc.txt` or calling a provider. Invalid JSON/envelope is `invalid_artifact` and is not overwritten unless explicit regeneration is requested. Regeneration uses current inputs/schema and A5 safe-write; failures preserve the prior artifact. B7 must test valid/invalid payloads, fixed-envelope validation/versioning, full custom replacement with retained envelope/provenance, schema preflight without a provider call, strict parsing and retries, exact prompt and description hashes, schema-version-mismatch skip, invalid-existing-artifact failure, Unicode, deterministic serialization, and packaged-resource lookup; the completion record contains the synthetic examples and exact feedback/compatibility rules.
 
-**Product Owner gate:** Erik's review of this A3 design remains pending. The two GPT review findings are incorporated in the design contract, but this is not Product Owner acceptance. A6 remains unchecked until the Phase A decisions are accepted or revised; this does not authorize Phase B implementation.
+**Product Owner decision:** Erik explicitly accepted this A3 design as documented during A6; no revisions were requested. The two GPT review findings are incorporated in the design contract. A3 acceptance is recorded, and the Phase A readiness gate has since passed; Phase B/C implementation has not started.
 
 **Outputs:**
 - Reviewed JSON/schema-version contract and examples in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md)
@@ -352,26 +352,27 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 
 ### Step A6 — Pass the Phase A readiness gate [DESIGN]
 
-**Goal:** Ensure all implementation choices required by Slice 1 are decided, internally consistent, and reflected in the executable steps before coding starts.
+**Goal:** Ensure all implementation choices required by Slice 1 are decided, internally consistent, and reflected in the executable steps; resolve the required Product Owner review before the readiness gate passes.
 
 **Inputs:** Steps A1–A5 records and the current plan.
 
 **Actions:**
-1. Reconcile the decisions against the REQ/HLD; mark each open item resolved, explicitly deferred, or blocked for Product Owner decision.
+1. Reconcile the decisions against the REQ/HLD; mark each open item resolved, explicitly deferred, or blocked for Product Owner decision. A pending required Product Owner review blocks Phase A readiness.
 2. Update proposed paths, dependencies, command examples, and validation commands in this plan to the selected contract. Keep source documents unchanged unless separately authorized.
 3. Verify the scope still includes both `desc` and `json`, independent stage selection, full resolved configuration, the required provenance contract, safe writes, and basic failure reporting.
-4. Record any remaining blocker without proceeding to Phase B. A scope change requires explicit approval and a plan revision.
+4. Record any remaining blocker without proceeding to Phase B. If the A3 Product Owner review is pending, record A6 as blocked and leave its gate checkbox unchecked. A scope change requires explicit approval and a plan revision.
 
 **Outputs:**
 - Phase A readiness and unresolved-item disposition in [IMPL-A6-COMPLETED.md](IMPL-A6-COMPLETED.md)
 - This plan with all Phase B paths/commands finalized
 
 **Acceptance:**
-- [ ] Steps A1–A5 are complete and their summary and detailed acceptance rows agree.
-- [ ] No schema/prompt/provenance, CLI, provider, dependency, or safe-write decision is left for an implementer to guess during Phase B.
-- [ ] The detailed steps use the final selected file paths and commands.
-- [ ] No Phase B code work has started before this gate passes.
-- [ ] [IMPL-A6-COMPLETED.md](IMPL-A6-COMPLETED.md) is complete and linked.
+- [x] Steps A1–A5 are complete and their summary and detailed acceptance rows agree.
+- [x] No schema/prompt/provenance, CLI, provider, dependency, or safe-write decision is left for an implementer to guess during Phase B.
+- [x] The detailed steps use the final selected file paths and commands.
+- [x] No Phase B code work has started before this gate passes.
+- [x] Erik's A3 Product Owner review is recorded as accepted, or required revisions have been incorporated and the revised A3 record is explicitly accepted.
+- [x] [IMPL-A6-COMPLETED.md](IMPL-A6-COMPLETED.md) is complete and linked.
 
 ## Phase B — Build the single-image pipeline
 
@@ -391,10 +392,10 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 
 **Actions:**
 1. Write failing tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, the exact search stub line/status `3`, and resolution of the canonical description prompt from both a source checkout and the built wheel.
-2. Run the targeted test and record the expected failure before adding package code.
-3. Define package metadata, initial version `0.1.0` from A1's static `[project].version`, `requires-python = ">=3.12"`, the `image-clarus` console entry point, Hatchling build configuration, the A1-selected runtime/dev dependencies and Apache-2.0 license metadata, and the lockfile using `uv`.
+2. Define package metadata, initial version `0.1.0` from A1's static `[project].version`, `requires-python = ">=3.12"`, the `image-clarus` console entry point, Hatchling build configuration, the A1-selected runtime/dev dependencies and Apache-2.0 license metadata; run `uv lock` to create `uv.lock`.
+3. Before adding package code, run `uv sync --locked --extra dev --python 3.13 --no-install-project`, then `uv run --no-sync --locked --extra dev pytest <target>` and record the expected failing test. This installs the test tools without prematurely installing an unimplemented package.
 4. Configure Hatchling to map `prompts/image-description.txt` to `image_clarus/resources/prompts/image-description.txt`; implement the minimal `resources.py` lookup using A1's package-resource/source-tree paths. Implement importable package startup, both subcommand help surfaces, and top-level `--version` from installed distribution metadata without a duplicated version constant; make bare `search` return the exact A2 stderr line and exit status `3`. Do not add search behavior or process-stage behavior in this step.
-5. Run the targeted test, then all current tests and selected lint/format checks.
+5. After implementation, run `uv sync --locked --extra dev --python 3.13`, build with `uv build --python 3.13`, rerun the targeted test with `uv run --locked --extra dev pytest <target>`, then the suite with `uv run --locked --extra dev pytest`, `uv run --locked --extra dev ruff check .`, and `uv run --locked --extra dev ruff format --check .`. Run `uv run --locked --extra dev ruff format .` only when formatting changes are needed.
 
 **Outputs:**
 - Package scaffold and test evidence; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md)
@@ -762,11 +763,13 @@ These are the plan-level completion criteria. Detailed test evidence is owned by
 
 ## Open items and resolution paths
 
-All of the following are Phase A work, not permission to invent details during coding:
+Do not treat a pending approval or deferred runtime check as permission to invent details during coding.
 
-| Open item | Resolve in | Required result |
+| Item | Disposition | Resolution / owner |
 | --- | --- | --- |
-| Artifact API details, temp/backup naming, permissions, failure and recovery assertions | A5 | Fault-testable state table preserving HLD invariants |
+| Artifact API details, temp/backup naming, permissions, failure and recovery assertions | Resolved in A5 | See [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md), including backup/recovery mode preservation and SW-01–SW-15. |
+| A3 Product Owner review of the prompt, metadata fields, envelope/provenance boundary, schema-version rules, existing-output skip behavior, and retry contract | Resolved by explicit acceptance | Erik accepted the A3 contract as documented during A6; no revisions were requested. |
+| Python 3.12/3.13 interpreter availability for the runtime matrix | Explicitly deferred to C3; not a Phase A design blocker | A1 selected the versions and commands. At A6, neither interpreter is installed; `uv` reports 3.12.14 and 3.13.15 available for download. C3 must recheck/provision and leave any unrun compatibility acceptance unchecked. |
 
 ## Source documents and planning basis
 

@@ -17,7 +17,7 @@
 
 A5 freezes a shared safe-write contract for the Slice 1 `.desc.txt` and `.desc.json` artifacts: how complete bytes are staged and validated, how an existing output is backed up and replaced, how a missing destination is recovered, what retention means, and which failures may be reported as successful. It also specifies the lock-free concurrency limit and a deterministic test matrix for B5/C2.
 
-This record is design-only. No production code, tests, package resources, or configuration examples were created; no application tests, builds, typechecks, or provider requests were run. The artifact-service contract is reusable for later XMP work, but A5 does not add an XMP stage or authorize implementation. Erik's A3 Product Owner review remains pending, A6 remains the Phase A readiness gate, and Phase B/C implementation remains unauthorized until that gate passes.
+This record is design-only. No production code, tests, package resources, or configuration examples were created; no application tests, builds, typechecks, or provider requests were run. The artifact-service contract is reusable for later XMP work, but A5 does not add an XMP stage. At A5 closeout, Erik's A3 Product Owner review remained pending and A6 was the Phase A readiness gate; Erik has since accepted A3 and A6 has passed. Phase B/C implementation remains unstarted.
 
 The safe-write service owns filesystem mechanics only. The owning stage continues to decide whether an artifact is needed, whether an existing artifact is valid, whether explicit regeneration is required, and which stage-specific validator/category applies. A generation, parse, or schema-validation failure before safe-write begins must not modify the destination or its backup.
 

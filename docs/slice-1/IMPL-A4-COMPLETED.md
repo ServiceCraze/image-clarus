@@ -15,11 +15,11 @@
 
 Step A4 freezes the synchronous OpenAI-compatible Chat Completions boundary used by both `desc` and `json`: endpoint construction, request bodies, image encoding, model/reasoning selection, authentication, HTTP timeout/redirect/TLS behavior, response validation, error categories, retry boundaries, redaction, and hermetic provider tests. Slice 1 supports reasoning effort as its only configurable model-generation parameter; HLD §4.2's broader named-model defaults and generic parameter overrides remain an end-state requirement but are explicitly deferred beyond Slice 1. A4 preserves A2's resolved-image and sidecar-output path reporting; provider-path redaction is scoped to provider-facing data, provider errors, and diagnostics. A4 adds only optional reasoning-mapping leaves under A2's existing provider/model maps; it adds no dependency and does not change A2's configuration-source or CLI precedence.
 
-This was a design-only step. No application modules, test files, user-facing configuration example files, or lockfiles were created; the mapping snippet below is illustrative documentation only. No application tests/builds or live provider requests were run. At A4 closeout, A5 and A6 were pending and Phase B/C work had not started. A5 has since completed; A6 remains pending and Phase B/C work has not started.
+This was a design-only step. No application modules, test files, user-facing configuration example files, or lockfiles were created; the mapping snippet below is illustrative documentation only. No application tests/builds or live provider requests were run. At A4 closeout, A5 and A6 were pending and Phase B/C work had not started. A5 has since completed; Erik accepted A3 during A6 and the Phase A readiness gate has passed. Phase B/C work remains unstarted.
 
-**Decision/approval boundary:** These choices complete the A4 design artifact; they are not a Product Owner approval. Erik's A3 Product Owner review remains pending, A6 remains unchecked, and Phase B implementation is not authorized until the Phase A readiness gate passes.
+**Decision/approval boundary:** These choices complete the A4 design artifact; they are not a separate Product Owner approval. Erik's A3 Product Owner review was accepted during A6, and the Phase A readiness gate has passed. Phase B/C implementation has not started.
 
-**Subsequent progress:** Step A5 later froze safe-write, backup-retention, recovery, and concurrency details in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). This does not change A4's provider contract or pass the Phase A readiness gate.
+**Subsequent progress:** Step A5 later froze safe-write, backup-retention, recovery, and concurrency details in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). A5 did not itself pass the Phase A readiness gate; Erik later accepted A3 during A6, which passed the gate without changing A4's provider contract.
 
 ## Provider boundary and request interface
 
@@ -231,7 +231,7 @@ These clarifications address the two Patch 009 findings. This records the design
 - Parsed the embedded reasoning-mapping YAML with PyYAML `safe_load`; verified the quoted `"off"` key and quoted `--set` value remain strings, while an unquoted YAML `off` becomes boolean `false`. This is a configuration-example check, not an application test.
 - This is a `[DESIGN]` closeout. No application tests, typechecks, builds, package installation, or provider calls were run. Planned provider tests are owned by B3; stage-level empty-output behavior is owned by B6/B7.
 - Patch 009's two clarification findings are reflected in the design and plan; reviewer acceptance is not inferred from making these edits.
-- A4's chosen request schema, mapping, error, and data-transfer decisions remain subject to the Phase A acceptance/readiness process; A3 Product Owner review is still pending.
+- A4's chosen request schema, mapping, error, and data-transfer decisions were included in the A6 readiness audit. Erik accepted A3 and the Phase A readiness gate has passed; Phase B/C implementation remains unstarted.
 
 ## References
 
