@@ -2,10 +2,10 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** Candidate — implementation not started
+**Status:** Candidate — Phase A in progress; Step A1 complete; implementation not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
-**Tech stack:** Python 3.12+; Python 3.13 development baseline; `uv`, `pyproject.toml`, and committed `uv.lock`. The CLI framework, YAML parser, JSON Schema validator, HTTP client, and test/lint tools are Phase A decisions; candidate choices are recorded in Step A1, not assumed to be installed.
+**Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
 **Versioning:** Application releases use Semantic Versioning. Slice 1 starts at `0.1.0` and remains on the `0.1.x` line. The generated metadata schema is versioned independently from the application.
 
 ---
@@ -26,7 +26,7 @@ The source of truth is the [REQ](../REQ-image-clarus.md), [HLD](../HLD-image-cla
 - The complete resolved application configuration is passed to each stage. The coordinator must not construct stage-specific configuration objects or own stage-specific prerequisite/overwrite rules.
 - Initial model transport is OpenAI-compatible Chat Completions over HTTP. Named providers/models and independent model selection for `desc` and `json` are required. Do not hard-code a specific model. Credentials may be direct or environment-variable-backed and must never appear in logs, errors, test evidence, or committed examples.
 - The built-in description prompt remains exactly `Fully describe and explain everything about this image.` No extra instruction may be appended to that default prompt.
-- Application releases use Semantic Versioning; Slice 1 starts at `0.1.0`, and Slice 1 releases stay on the `0.1.x` line. The CLI reports the sole authoritative package version through top-level `image-clarus --version`; A1 selects the source and A2 freezes output behavior.
+- Application releases use Semantic Versioning; Slice 1 starts at `0.1.0`, and Slice 1 releases stay on the `0.1.x` line. Static `[project].version` in `pyproject.toml` is the sole authoritative source; the CLI reads installed distribution metadata with stdlib `importlib.metadata` and must not maintain a duplicate version constant. A2 freezes `--version` output behavior.
 - Phase A must define the initial JSON schema, JSON-generation prompt, and provenance contract, including custom-schema behavior, before JSON implementation begins.
 - JSON metadata schema versioning is independent of application versioning; A3 defines its marker, initial value, and evolution/replacement rules.
 - Built-in retry count is zero. Optional schema-validation retry is opt-in and must be bounded. Invalid or incomplete outputs are not marked complete.
@@ -79,11 +79,12 @@ This matrix allocates the REQ's end-state requirements without expanding Slice 1
 | Safe writes and recovery (Safe-write requirements) | Shared service for `.desc.txt` and `.desc.json`, backup/recovery and failure handling; test representative available Linux filesystems | Reuse the service for XMP if that stage is added | Expand filesystem/OS coverage only when evidence warrants it; no exhaustive matrix | A5; B5; C2 fault injection and separate-process writer test; C3 records actual filesystem/interpreter |
 | Requirements-to-design handoff (Requirements-to-design handoff) | Phase A resolves Slice 1 CLI/config/provider/schema/provenance/safe-write decisions before implementation | XMP mappings, selection/search syntax and batch controls belong to their own plans before implementation | — | A1–A6 readiness gate; every later plan maps assigned REQ obligations to tests |
 
-## Proposed project layout
+## Confirmed project layout
 
-This is the proposed layout for planning and code steps. Step A1 must confirm or revise it before Phase B; if it changes, update this plan's paths and commands before implementation begins.
+Step A1 confirms the package/module/test layout. The proposed JSON prompt/schema filenames shown below remain subject to A3's contract decision. `pyproject.toml` owns static package metadata, the version, dependency declarations, Hatchling configuration, and the console entry point. Hatchling maps the existing root-level prompt and later schema assets into package resources without maintaining duplicate source files. `uv.lock` is generated in B1 and must be committed by the repository owner. `examples/config.yaml` is created only in B9, after A2 freezes the config keys.
 
 ```text
+.python-version                     # 3.13 development baseline
 pyproject.toml
 uv.lock
 src/image_clarus/
@@ -94,6 +95,7 @@ src/image_clarus/
   results.py
   pipeline.py
   artifacts.py
+  resources.py
   providers/
     __init__.py
     openai_compatible.py
@@ -107,13 +109,18 @@ prompts/
 schemas/
   image-structure.schema.json        # proposed built-in JSON schema
 examples/
-  config.yaml                        # sanitized; environment-variable credential reference only
- tests/
+  config.yaml                        # created in B9 after A2; sanitized env-var reference only
+tests/
   unit/
   integration/
+  fixtures/                          # synthetic config/schema/text/provider data only
 ```
 
-Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_results.py`, `test_pipeline.py`, `test_artifacts.py`, `test_openai_compatible.py`, `test_description_stage.py`, `test_structure_stage.py`, and `tests/integration/test_single_image_pipeline.py`. Step A1 may refine module boundaries, but it must not introduce a plugin framework, database, scheduler, or other unrequested architecture.
+Module ownership is fixed as follows: `__main__.py` delegates to `cli.main`; `cli.py` owns `argparse` construction and dispatch (A2 owns the exact command contract); `config.py` resolves and validates configuration; `results.py` defines shared outcomes; `pipeline.py` owns the ordered built-in stage registry and coordinator; `artifacts.py` owns safe sidecar access/recovery; `resources.py` locates built-in prompts/schemas from source-tree paths or with stdlib `importlib.resources`; `providers/openai_compatible.py` owns synchronous HTTP transport; and `stages/description.py` / `stages/structure.py` own `desc` / `json`. `__init__.py` contains no separately maintained version constant.
+
+Keep the existing `prompts/image-description.txt` as the canonical source asset. Hatchling maps it to `image_clarus/resources/prompts/image-description.txt` in B1. B7 adds mappings from the root paths selected in A3 into the corresponding `image_clarus/resources/prompts/` and `image_clarus/resources/schemas/` subdirectories; A1 does not preempt A3's source filenames. `resources.py` prefers package resources when installed and supports the repository-root file during source development. User override resolution remains part of A2, not `resources.py`. Use synthetic YAML/schema/description/provider-response fixtures; create image inputs under pytest `tmp_path` without real photos or identifying metadata. The sanitized config example is deferred to B9.
+
+Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`, `test_results.py`, `test_pipeline.py`, `test_artifacts.py`, `test_openai_compatible.py`, `test_description_stage.py`, `test_structure_stage.py`, and `tests/integration/test_single_image_pipeline.py`. Do not add a plugin framework, database, scheduler, type checker, coverage gate, image-processing dependency, or other unrequested architecture.
 
 ## Implementer and reviewer protocol
 
@@ -129,7 +136,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 
 ### Phase A — Discovery and contract freeze
 
-- [ ] Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
+- [x] Step A1 — Confirm package layout, runtime, and development tools [DESIGN]
 - [ ] Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 - [ ] Step A3 — Freeze the JSON schema, prompt, and provenance contract [DESIGN]
 - [ ] Step A4 — Freeze the provider request and security contract [DESIGN]
@@ -176,24 +183,24 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Current repository tree and available Python/`uv` toolchain
 
 **Actions:**
-1. Confirm the proposed `src/image_clarus/` and `tests/` layout; record exact module ownership and whether `examples/config.yaml` is included.
-2. Evaluate and record exact runtime choices for the CLI, YAML parsing, JSON Schema validation, and synchronous HTTP requests. Candidate defaults are stdlib `argparse`, PyYAML, `jsonschema`, and `httpx`; select alternatives only with a short requirements-based rationale. Do not add a generic provider/plugin framework.
-3. Select test and quality tools. Candidate commands are `uv run pytest`, `uv run ruff check .`, and `uv run ruff format --check .`; do not add a type checker or coverage gate without a Slice 1 reason.
-4. Confirm `requires-python = ">=3.12"`, Python 3.13 as the development baseline, Linux as the required validation platform, use of `uv`, a committed `uv.lock`, and Apache-2.0 package metadata/notices consistent with the existing `LICENSE`.
-5. Establish application versioning: Semantic Versioning, initial Slice 1 package version `0.1.0`, and the `0.1.x` line for releases within Slice 1. Select one authoritative package-version source and ensure the CLI will not maintain a duplicate version constant.
-6. Record exact dependency names, supported Python constraints, package/entry-point names, fixture strategy, and all commands used by later steps.
+1. Confirm the `src/image_clarus/` and `tests/` layout and module ownership. Keep `prompts/image-description.txt` canonical and package it with Hatchling force-include; defer `examples/config.yaml` to B9 after A2 freezes configuration keys.
+2. Select stdlib `argparse` for CLI parsing (no added dependency), PyYAML for YAML, `jsonschema` for schema validation, and synchronous `httpx` for HTTP. Do not add a generic provider/plugin framework.
+3. Select pytest and Ruff. Use `uv run --locked --extra dev pytest <target>` for targeted tests, `uv run --locked --extra dev pytest` for the suite, `uv run --locked --extra dev ruff check .`, and `uv run --locked --extra dev ruff format --check .`; format only when required with `uv run --locked --extra dev ruff format .`. Do not add a type checker or coverage gate.
+4. Select Hatchling as the build backend; declare `requires-python = ">=3.12"`, pin development to Python 3.13 in `.python-version`, require Linux validation, use `uv` with a committed `uv.lock`, and set Apache-2.0 metadata/license-file references consistent with `LICENSE`.
+5. Establish application versioning: Semantic Versioning, initial Slice 1 package version `0.1.0`, and the `0.1.x` line for Slice 1 releases. Make static `[project].version` in `pyproject.toml` authoritative; obtain installed version through stdlib `importlib.metadata` and maintain no duplicate version constant.
+6. Record exact dependency names, supported Python constraints, package/entry-point names, built-in asset packaging, synthetic fixture strategy, and all setup, test, quality, and build commands used by later steps.
 
 **Outputs:**
 - Decision record and final package/tooling contract in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md)
-- This plan updated with the initial version, authoritative version source, final paths, dependencies, and commands if any proposal changes
+- This plan updated with the initial version, authoritative version source, final paths/module ownership, resource packaging, dependencies, fixture strategy, and commands
 
 **Acceptance:**
-- [ ] Runtime, development, and test dependencies are explicitly selected with rationale; no choice is presented as already installed.
-- [ ] Package layout and console-script name are exact and consistent with `image-clarus`.
-- [ ] Initial Slice 1 application version is `0.1.0`, the Slice 1 version line is `0.1.x`, and the sole authoritative package-version source is recorded.
-- [ ] Python 3.12+ support, Python 3.13 baseline, Linux validation, `uv`, and committed lockfile are preserved.
-- [ ] No extra architecture or dependency is introduced without a Slice 1 requirement.
-- [ ] `IMPL-A1-COMPLETED.md` exists, lists files created/updated/removed, and is linked above.
+- [x] Runtime, development, and test dependencies are explicitly selected with rationale; no choice is presented as already installed.
+- [x] Package layout, module ownership, built-in resource lookup, and console-script name are exact and consistent with `image-clarus`.
+- [x] Initial Slice 1 application version is `0.1.0`, the Slice 1 version line is `0.1.x`, and the sole authoritative package-version source is recorded.
+- [x] Python 3.12+ support, Python 3.13 baseline, Linux validation, `uv`, and committed lockfile are preserved.
+- [x] No extra architecture or dependency is introduced without a Slice 1 requirement.
+- [x] `IMPL-A1-COMPLETED.md` exists, lists files created/updated/removed, and is linked above.
 
 ### Step A2 — Freeze the single-image CLI, configuration, and result contracts [DESIGN]
 
@@ -344,15 +351,16 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Inputs:** Step A1 and A6 records; finalized toolchain commands in this plan.
 
 **Files:**
-- Create: `pyproject.toml`, `uv.lock`
-- Create: `src/image_clarus/__init__.py`, `src/image_clarus/__main__.py`, `src/image_clarus/cli.py`
-- Create: `tests/unit/test_cli.py`
+- Create: `.python-version`, `pyproject.toml`, `uv.lock`
+- Modify: `.gitignore`, preserving current patterns and adding `.venv/`, `dist/`, `build/`, `*.egg-info/`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/`
+- Create: `src/image_clarus/__init__.py`, `src/image_clarus/__main__.py`, `src/image_clarus/cli.py`, `src/image_clarus/resources.py`
+- Create: `tests/unit/test_cli.py`, `tests/unit/test_resources.py`
 
 **Actions:**
-1. Write failing CLI tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, and the fixed not-implemented result/status when `search` is executed.
+1. Write failing tests for top-level help, `process --help`, `search --help`, top-level `image-clarus --version`, the fixed not-implemented result/status when `search` is executed, and resolution of the canonical description prompt from both a source checkout and the built wheel.
 2. Run the targeted test and record the expected failure before adding package code.
-3. Define package metadata, initial version `0.1.0` from A1's authoritative source, `requires-python = ">=3.12"`, the `image-clarus` console entry point, the exact runtime/dev dependencies and Apache-2.0 license metadata selected in A1, and the lockfile using `uv`.
-4. Implement importable package startup, both subcommand help surfaces, and top-level `--version` using the A1 source without a duplicated version constant; make non-help `search` invocations return the explicit not-implemented result/status. Do not add search behavior or process-stage behavior in this step.
+3. Define package metadata, initial version `0.1.0` from A1's static `[project].version`, `requires-python = ">=3.12"`, the `image-clarus` console entry point, Hatchling build configuration, the A1-selected runtime/dev dependencies and Apache-2.0 license metadata, and the lockfile using `uv`.
+4. Configure Hatchling to map `prompts/image-description.txt` to `image_clarus/resources/prompts/image-description.txt`; implement the minimal `resources.py` lookup using A1's package-resource/source-tree paths. Implement importable package startup, both subcommand help surfaces, and top-level `--version` from installed distribution metadata without a duplicated version constant; make non-help `search` invocations return the explicit not-implemented result/status. Do not add search behavior or process-stage behavior in this step.
 5. Run the targeted test, then all current tests and selected lint/format checks.
 
 **Outputs:**
@@ -361,6 +369,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Acceptance:**
 - [ ] The package installs in an isolated Linux environment and exposes `image-clarus`.
 - [ ] `uv.lock` is present and consistent with `pyproject.toml`.
+- [ ] The canonical description prompt is available through `resources.py` from the source tree and installed wheel without a duplicated maintained copy.
 - [ ] Python 3.12+ is declared and Python 3.13 is used for the development baseline.
 - [ ] Installed `image-clarus --version` prints the A2-defined version, initially `image-clarus 0.1.0`, from the authoritative package version source.
 - [ ] Top-level help lists `process` and `search`; both subcommand help surfaces work, and executing `search` reports not implemented as specified in A2.
@@ -471,7 +480,7 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Files:**
 - Create: `src/image_clarus/stages/__init__.py`, `src/image_clarus/stages/description.py`
 - Create: `tests/unit/test_description_stage.py`
-- Read: `prompts/image-description.txt`
+- Read: `prompts/image-description.txt`, `src/image_clarus/resources.py`
 
 **Actions:**
 1. Write failing tests for one valid synthetic image, exact default prompt text, prompt override, selected description model, new-only skip behavior, explicit regeneration, provider failure, and safe-write failure.
@@ -497,6 +506,8 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 - Create/update: `src/image_clarus/stages/structure.py`
 - Create: `prompts/image-structure.txt`, `schemas/image-structure.schema.json`
 - Create: `tests/unit/test_structure_stage.py`
+- Modify: `pyproject.toml` to map the A3-selected root JSON-prompt and schema paths into the matching `image_clarus/resources/prompts/` and `image_clarus/resources/schemas/` subdirectories
+- Read: `src/image_clarus/resources.py`
 - Read: `src/image_clarus/artifacts.py`, `src/image_clarus/providers/openai_compatible.py`
 
 **Actions:**
@@ -626,10 +637,10 @@ Proposed test modules are `tests/unit/test_cli.py`, `test_config.py`, `test_resu
 **Files:** No production changes expected; if a fix is required, add a test-first corrective step and record it before proceeding.
 
 **Actions:**
-1. In a clean isolated environment, run `uv sync --locked` using Python 3.13 and confirm the committed lockfile is current.
-2. Run the exact A1-selected unit/integration test commands; proposed baseline is `uv run pytest`.
-3. Run the exact A1-selected lint/format commands; proposed baseline is `uv run ruff check .` and `uv run ruff format --check .`.
-4. Run the full test suite on Linux with Python 3.12 to verify the declared minimum, then Python 3.13 as development baseline. If a required interpreter/dependency cannot be obtained, report the precise blocker and leave the affected acceptance row unchecked.
+1. In a clean isolated environment, run `uv sync --locked --extra dev --python 3.13` and confirm the committed lockfile is current.
+2. Run the full suite with `uv run --locked --extra dev --python 3.13 pytest`.
+3. Run `uv run --locked --extra dev --python 3.13 ruff check .` and `uv run --locked --extra dev --python 3.13 ruff format --check .`.
+4. Run `uv sync --locked --extra dev --python 3.12`, then `uv run --locked --extra dev --python 3.12 pytest` on Linux to verify the declared minimum. If a required interpreter/dependency cannot be obtained, report the precise blocker and leave the affected acceptance row unchecked.
 5. Verify the console entry point, `image-clarus --version` against the authoritative package metadata, top-level help, `process --help`, `search --help`, and the not-implemented `search` response in the isolated environment; confirm `desc`/`json` use no external executable. Do not run an exhaustive OS/filesystem matrix.
 
 **Outputs:** Command transcript, interpreter versions, and result summary; [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md)
@@ -713,7 +724,6 @@ All of the following are Phase A work, not permission to invent details during c
 
 | Open item | Resolve in | Required result |
 | --- | --- | --- |
-| CLI framework, YAML/JSON Schema/HTTP/test/lint dependencies, source layout, and authoritative application version source | A1 | Exact selected tools, package paths, initial `0.1.0` metadata/source, lock and verification commands |
 | Exact command grammar, `--version` output, override keys/types, relative paths, stage result and exit mapping | A2 | Black-box CLI/config/version contract and examples |
 | Built-in structured schema, independent schema version, JSON prompt, provenance and custom-schema interaction | A3 | Versioned/traceable schema-prompt-provenance contract plus examples and tests |
 | Provider request shape, image encoding, reasoning/capability mapping, timeouts and errors | A4 | Local-testable HTTP contract with secret-redaction rules |
