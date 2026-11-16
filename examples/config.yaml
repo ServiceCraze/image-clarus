@@ -1,0 +1,26 @@
+# Replace the endpoint and model IDs with values supported by your provider.
+# Set IMAGE_CLARUS_API_KEY in your environment; do not put credentials here.
+providers:
+  local:
+    base_url: http://127.0.0.1:1234/v1
+    api_key_env: IMAGE_CLARUS_API_KEY
+    timeout_seconds: 60
+models:
+  vision:
+    provider: local
+    model_id: replace-with-vision-model-id
+  text:
+    provider: local
+    model_id: replace-with-text-model-id
+stages:
+  desc:
+    model: vision
+  json:
+    model: text
+    validation_retries: 0
+pipeline:
+  missing_prerequisite: fail
+  on_stage_failure: stop
+  backup_retention: remove
+logging:
+  level: WARNING

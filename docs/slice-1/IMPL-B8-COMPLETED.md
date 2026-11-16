@@ -34,3 +34,5 @@ SIGINT/SIGTERM are captured with signal-priority exit codes. Tests cover cancell
 - [x] RED/GREEN and regression evidence is recorded; [IMPL-B8-COMPLETED.md](IMPL-B8-COMPLETED.md) is linked.
 
 B9 and Phase C have not been started as part of B8.
+
+**Subsequent progress:** B9 is complete; see [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md). Phase C remains open.

@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** In progress — Phase A readiness passed; B1–B8 complete; Phase C not started
+**Status:** In progress — Phase A readiness passed; Phase B complete (B1–B9); Phase C not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -153,7 +153,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step B6 — Implement the description stage [CODE/TEST]
 - [x] Step B7 — Implement the structured JSON stage [CODE/TEST]
 - [x] Step B8 — Wire the single-image `process` command [CODE/TEST]
-- [ ] Step B9 — Document Slice 1 installation, configuration, and use [DOCS/TEST]
+- [x] Step B9 — Document Slice 1 installation, configuration, and use [DOCS/TEST]
 
 ### Phase C — Verify and close Slice 1
 
@@ -612,10 +612,10 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 **Outputs:** Updated README, sanitized sample config, command verification; [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md)
 
 **Acceptance:**
-- [ ] Examples match actual help and CLI behavior.
-- [ ] Configuration precedence, secret handling, and current scope are clear.
-- [ ] No unimplemented batch/search/XMP behavior is presented as available.
-- [ ] Documentation links and commands are validated; [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md) is linked.
+- [x] Examples match actual help and CLI behavior.
+- [x] Configuration precedence, secret handling, and current scope are clear.
+- [x] No unimplemented batch/search/XMP behavior is presented as available.
+- [x] Documentation links and commands are validated; [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md) is linked.
 
 ## Phase C — Verify and close Slice 1
 
