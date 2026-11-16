@@ -126,7 +126,14 @@ class ArtifactService:
         except OSError:
             raise ArtifactError("file_io") from None
 
-    def recover(self, destination, validator, validation_category="invalid_artifact"):
+    def recover(
+        self,
+        destination,
+        validator,
+        validation_category="invalid_artifact",
+        *,
+        retain_backup=False,
+    ):
         destination = Path(destination)
         backup = Path(str(destination) + ".bak")
         owned = set()
@@ -155,7 +162,8 @@ class ArtifactService:
                     data = restored
                 self._point("destination_validate")
                 self._validate(validator, data, validation_category)
-                self._remove_backup(backup)
+                if not retain_backup:
+                    self._remove_backup(backup)
                 return True
             finally:
                 self._cleanup(owned)

@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** In progress — Phase A readiness passed; B1–B5 complete; Phase C not started
+**Status:** In progress — Phase A readiness passed; B1–B6 complete; Phase C not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -150,7 +150,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
 - [x] Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
 - [x] Step B5 — Implement the recoverable sidecar artifact service [CODE/TEST]
-- [ ] Step B6 — Implement the description stage [CODE/TEST]
+- [x] Step B6 — Implement the description stage [CODE/TEST]
 - [ ] Step B7 — Implement the structured JSON stage [CODE/TEST]
 - [ ] Step B8 — Wire the single-image `process` command [CODE/TEST]
 - [ ] Step B9 — Document Slice 1 installation, configuration, and use [DOCS/TEST]
@@ -530,11 +530,11 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 **Outputs:** Description stage and tests; [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md)
 
 **Acceptance:**
-- [ ] `desc` works alone and writes exactly `<image>.desc.txt` beside the input.
-- [ ] The default prompt is byte-for-byte consistent with the existing resource; prompt override works independently.
-- [ ] Existing output is skipped by default and replaced only on explicit regeneration.
-- [ ] Empty/whitespace-only responses and other failures are reported and leave no falsely completed output.
-- [ ] RED/GREEN and regression evidence is recorded; [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md) is linked.
+- [x] `desc` works alone and writes exactly `<image>.desc.txt` beside the input.
+- [x] The default prompt is byte-for-byte consistent with the existing resource; prompt override works independently.
+- [x] Existing output is skipped by default and replaced only on explicit regeneration.
+- [x] Empty/whitespace-only responses and other failures are reported and leave no falsely completed output.
+- [x] RED/GREEN and regression evidence is recorded; [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md) is linked.
 
 ### Step B7 — Implement the structured JSON stage [CODE/TEST]
 

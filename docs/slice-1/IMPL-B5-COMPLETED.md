@@ -38,4 +38,4 @@ The read-back check verifies exact bytes and mode if the published inode is the 
 
 ## Follow-up
 
-B6 and later steps have not started. Stage-level source-path safety and signal behavior require integration evidence in the steps identified above.
+At B5 closeout, B6 and later steps had not started. B6 has since implemented the description stage and extended recovery to defer backup retention during regeneration; see [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md). B7 and later remain unstarted. Broader source-path safety and signal behavior require integration evidence in the steps identified above.

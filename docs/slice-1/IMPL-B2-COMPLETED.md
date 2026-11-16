@@ -28,4 +28,4 @@ Final independently run checks: `uv run --locked --extra dev pytest -q` — **52
 
 ## Follow-up
 
-At B2 closeout, B3 and later steps were unstarted. During B3, an audit identified an HTTPX-invalid URL that B2 preflight accepted; B3 corrected that shared preflight path and added a regression test. See [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md). B8 owns process CLI integration; C3 owns the Python 3.12 compatibility check.
+At B2 closeout, B3 and later steps were unstarted. During B3, an audit identified an HTTPX-invalid URL that B2 preflight accepted; B3 corrected that shared preflight path and added a regression test. See [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md). During B6, a regression test and fix aligned whitespace-only environment credential preflight with the provider's authentication check; see [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md). B8 owns process CLI integration; C3 owns the Python 3.12 compatibility check.

@@ -493,7 +493,7 @@ def _selected(config, stage):
         name = provider["api_key_env"]
         if not ENV_NAME.fullmatch(name):
             _fail()
-        if not os.environ.get(name):
+        if not os.environ.get(name, "").strip():
             raise ConfigurationError(
                 "Provider credential unavailable", "authentication"
             )

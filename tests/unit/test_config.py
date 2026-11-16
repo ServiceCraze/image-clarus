@@ -267,6 +267,10 @@ def test_selected_stage_isolation_and_authentication(tmp_path, monkeypatch):
     with pytest.raises(ConfigurationError) as exc:
         resolve_config(config_file=path, stages=("desc",))
     assert exc.value.category == "authentication"
+    monkeypatch.setenv("SYNTHETIC_TEST_KEY", " \t ")
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(config_file=path, stages=("desc",))
+    assert exc.value.category == "authentication"
     monkeypatch.setenv("SYNTHETIC_TEST_KEY", "secret-sentinel")
     config = resolve_config(config_file=path, stages=("desc",))
     assert "secret-sentinel" not in repr(config)
