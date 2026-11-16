@@ -42,3 +42,5 @@ All payloads, image bytes and credentials were synthetic. Provider traffic used 
 - [x] [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md) is complete and linked.
 
 C3 and later steps have not been started as part of C2.
+
+**Subsequent progress:** C3 is complete; see [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md). C4 and later steps remain open.
