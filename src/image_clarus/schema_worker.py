@@ -7,6 +7,7 @@ final kill/reap are not themselves interruptible. This is not a memory sandbox.
 
 import json
 import math
+import signal
 import subprocess
 import sys
 import time
@@ -36,26 +37,41 @@ def _run(request, timeout):
         remaining = timeout - (time.monotonic() - start)
         if remaining <= 0:
             return {"status": "timeout"}
-        process = subprocess.Popen(
-            [sys.executable, "-m", "image_clarus.schema_worker"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        )
+        # Defer CLI interrupts until the child is registered for cleanup.
+        process = None
+        old_mask = None
         try:
+            if hasattr(signal, "pthread_sigmask"):
+                old_mask = signal.pthread_sigmask(
+                    signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM}
+                )
+            process = subprocess.Popen(
+                [sys.executable, "-m", "image_clarus.schema_worker"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            if old_mask is not None:
+                mask, old_mask = old_mask, None
+                signal.pthread_sigmask(signal.SIG_SETMASK, mask)
             output, _ = process.communicate(
                 payload, timeout=max(0, timeout - (time.monotonic() - start))
             )
         except subprocess.TimeoutExpired:
             return {"status": "timeout"}
         finally:
-            if process.poll() is None:
-                process.kill()
-            process.wait()
-            if process.stdin:
-                process.stdin.close()
-            if process.stdout:
-                process.stdout.close()
+            try:
+                if old_mask is not None:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
+            finally:
+                if process is not None:
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait()
+                    if process.stdin:
+                        process.stdin.close()
+                    if process.stdout:
+                        process.stdout.close()
         if time.monotonic() - start >= timeout:
             return {"status": "timeout"}
         if process.returncode != 0:

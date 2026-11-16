@@ -48,3 +48,5 @@ The Product Owner also approved designing and implementing bounded, isolated val
 - [x] RED/GREEN and regression evidence is recorded; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md) is linked.
 
 B8 has not been started as part of B7. The B7 test-order exception above remains documented and explicitly accepted; it does not convert missing historical RED into observed evidence.
+
+**Subsequent progress:** B8 is complete; see [IMPL-B8-COMPLETED.md](IMPL-B8-COMPLETED.md). B9 and Phase C remain open.

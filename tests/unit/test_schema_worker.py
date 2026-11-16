@@ -1,6 +1,43 @@
 import json
 
 
+def test_signal_during_worker_spawn_reaps_child(monkeypatch):
+    import os
+    import signal
+    import subprocess
+
+    import pytest
+
+    from image_clarus import schema_worker
+
+    class Interrupted(BaseException):
+        pass
+
+    children = []
+    real_popen = subprocess.Popen
+    previous = signal.signal(
+        signal.SIGTERM, lambda *_: (_ for _ in ()).throw(Interrupted())
+    )
+
+    def spawn(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        children.append(process)
+        os.kill(os.getpid(), signal.SIGTERM)
+        return process
+
+    monkeypatch.setattr(schema_worker.subprocess, "Popen", spawn)
+    try:
+        with pytest.raises(Interrupted):
+            schema_worker.preflight("{}", timeout=5)
+        assert children[0].poll() is not None
+    finally:
+        for child in children:
+            if child.poll() is None:
+                child.kill()
+                child.wait()
+        signal.signal(signal.SIGTERM, previous)
+
+
 def test_preflight_accepts_valid_schema():
     from image_clarus.schema_worker import preflight
 
