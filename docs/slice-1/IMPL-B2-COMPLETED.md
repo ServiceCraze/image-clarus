@@ -1,9 +1,9 @@
-# Step B2 — Implement configuration resolution and precedence (PARTIAL)
+# Step B2 — Implement configuration resolution and precedence (COMPLETED)
 
-**Status:** In progress; completion blocked by unresolved schema/dependency decisions.
-**Scope deviations:** No pipeline or provider implementation. A candidate change declares `referencing` directly; this was already a transitive dependency of `jsonschema`, but explicit approval of the direct dependency has not been recorded. The current preflight conservatively rejects nested `$id`; A3 does not explicitly authorize that restriction.
+**Status:** Complete.
+**Scope deviations:** Product Owner approved a direct `referencing` dependency and the Slice 1 nested-`$id` restriction described below; no pipeline or provider implementation.
 **Files created:** `src/image_clarus/config.py`, `tests/unit/test_config.py`, and this record.
-**Files updated:** `pyproject.toml`, `uv.lock`, `docs/slice-1/IMPL-A2-COMPLETED.md`, `docs/slice-1/IMPL-A4-COMPLETED.md`, and `docs/slice-1/IMPL-PLAN-slice-1.md`.
+**Files updated:** `pyproject.toml`, `uv.lock`, `docs/slice-1/IMPL-A2-COMPLETED.md`, `docs/slice-1/IMPL-A3-COMPLETED.md`, `docs/slice-1/IMPL-A4-COMPLETED.md`, and `docs/slice-1/IMPL-PLAN-slice-1.md`.
 **Files removed:** None.
 
 ## Progress and evidence
@@ -12,20 +12,20 @@ Implemented a configuration resolver and tests for discovery, precedence, YAML h
 
 The Product Owner selected HTTP for `localhost`, loopback addresses, and literal private-network IP addresses; other hosts require HTTPS. A2/A4 record this clarification. Private-network HTTP remains unencrypted. A dedicated HTTP-policy test was observed failing before the correction and passing afterward.
 
-Review-driven regression work recorded RED/GREEN for CLI-layer precedence, schema handling, deep inputs, stage isolation, and sanitized errors. One subsequent audit identified unresolved same-document references and nested `$id` rebasing; the current candidate rejects all nested `$id` rather than implementing valid same-document rebasing. That restriction has not been approved and is not claimed to satisfy A3.
+Review-driven regression work recorded RED/GREEN for override precedence, schema handling, deep inputs, stage isolation, and sanitized errors. The Product Owner approved declaring `referencing` directly: it was already a transitive dependency of `jsonschema`. The Product Owner also approved rejecting nested `$id` in Slice 1, while supporting local anchors and same-document `$defs` references; this is a supported-subset restriction, not a judgment on JSON Schema validity. Compound-schema support is deferred beyond Slice 1. A3 records the decision.
 
-Most recent independently run checks: `uv run --locked --extra dev pytest -q` — **50 passed**; `uv run --locked --extra dev ruff check .` and `ruff format --check .` passed; `uv lock --check` passed. These results do not prove the unapproved schema restriction is correct.
+Patch 016 parser regression: `uv run --locked --extra dev pytest tests/unit/test_config.py::test_custom_schema_rejects_nonfinite_numbers_and_lone_surrogates -q` initially failed because the schema parser accepted `1e9999`; after the fix it passes for positive/negative overflow and lone surrogates in keys/values. A separate positive test accepts finite numbers and a valid Unicode surrogate pair.
+
+Final independently run checks: `uv run --locked --extra dev pytest -q` — **52 passed**; `uv run --locked --extra dev ruff check .` and `ruff format --check .` passed; `uv lock --check` and `uv build --python 3.13` passed. The two targeted strict-schema tests passed. Python 3.12 validation remains C3 work.
 
 ## Acceptance
 
-- [ ] All precedence and file-selection rules in A2 have passing tests using temporary config roots, not the host's real config files.
+- [x] All precedence and file-selection rules in A2 have passing tests using temporary config roots, not the host's real config files.
 - [x] Explicit config never discovers or merges another file.
-- [ ] Selected-stage validation is isolated and deterministic.
-- [ ] No credentials are emitted in diagnostics.
-- [ ] RED/GREEN and regression evidence is recorded; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md) is linked.
+- [x] Selected-stage validation is isolated and deterministic.
+- [x] No credentials are emitted in diagnostics.
+- [x] RED/GREEN and regression evidence is recorded; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md) is linked.
 
-## Open decisions and follow-up
+## Follow-up
 
-1. Decide whether nested `$id` values are supported when references remain within the document, or explicitly disallowed as an A3 contract change. Current code disallows them.
-2. Decide whether `referencing`, already installed transitively by `jsonschema`, may be declared as a direct runtime dependency. Current candidate declares it. Neither decision was answered in the clarification request; no approval is inferred.
-3. After those decisions, complete implementation and contract/security review, rerun tests and quality checks, update this record and all acceptance rows, and check B2's summary only when satisfied. B3 and later steps remain unstarted.
+B3 and later steps remain unstarted. B8 owns process CLI integration; C3 owns the Python 3.12 compatibility check.

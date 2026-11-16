@@ -323,11 +323,24 @@ def _strict_json(path):
         raise ValueError
 
     try:
-        return json.loads(
+        result = json.loads(
             path.read_text(encoding="utf-8"),
             object_pairs_hook=pairs,
             parse_constant=invalid_constant,
         )
+        pending = [result]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, str):
+                value.encode("utf-8")
+            elif isinstance(value, float) and not math.isfinite(value):
+                raise ValueError
+            elif isinstance(value, dict):
+                pending.extend(value.keys())
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
+        return result
     except (OSError, UnicodeError, ValueError, RecursionError):
         raise ConfigurationError("Invalid selected schema") from None
 

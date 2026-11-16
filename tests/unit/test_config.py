@@ -1,3 +1,30 @@
+def test_custom_schema_rejects_nonfinite_numbers_and_lone_surrogates(tmp_path):
+    import pytest
+
+    from image_clarus.config import ConfigurationError, _check_schema
+
+    path = tmp_path / "schema.json"
+    for raw in (
+        '{"type":"object","examples":[1e9999]}',
+        '{"type":"object","examples":[-1e9999]}',
+        '{"type":"object","properties":{"\\ud800":{"type":"string"}}}',
+        '{"type":"object","examples":["\\udfff"]}',
+    ):
+        path.write_text(raw, encoding="utf-8")
+        with pytest.raises(ConfigurationError):
+            _check_schema(path)
+
+
+def test_custom_schema_accepts_valid_unicode_and_finite_numbers(tmp_path):
+    from image_clarus.config import _check_schema
+
+    path = tmp_path / "schema.json"
+    path.write_text(
+        '{"type":"object","examples":["\\ud83d\\ude00",1e100]}', encoding="utf-8"
+    )
+    _check_schema(path)
+
+
 def test_selected_stage_resolves_model_and_provider(tmp_path):
     from image_clarus.config import resolve_config
 

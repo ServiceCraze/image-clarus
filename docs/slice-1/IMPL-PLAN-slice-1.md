@@ -2,10 +2,10 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** In progress — Phase A readiness passed; B1 complete with accepted process deviation; B2 partial pending schema/dependency decisions; Phase C not started
+**Status:** In progress — Phase A readiness passed; B1 and B2 complete; Phase C not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
-**Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema`; synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
+**Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
 **Versioning:** Application releases use Semantic Versioning. Slice 1 starts at `0.1.0` and remains on the `0.1.x` line. The generated metadata schema is versioned independently from the application.
 
 ---
@@ -146,7 +146,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 ### Phase B — Build the single-image pipeline
 
 - [x] Step B1 — Bootstrap the installable Python package and test harness [CODE/TEST]
-- [ ] Step B2 — Implement configuration resolution and precedence [CODE/TEST]
+- [x] Step B2 — Implement configuration resolution and precedence [CODE/TEST]
 - [ ] Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
 - [ ] Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
 - [ ] Step B5 — Implement the recoverable sidecar artifact service [CODE/TEST]
@@ -430,11 +430,11 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 **Outputs:** Configuration resolver and tests; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md)
 
 **Acceptance:**
-- [ ] All precedence and file-selection rules in A2 have passing tests using temporary config roots, not the host's real config files.
+- [x] All precedence and file-selection rules in A2 have passing tests using temporary config roots, not the host's real config files.
 - [x] Explicit config never discovers or merges another file.
-- [ ] Selected-stage validation is isolated and deterministic.
-- [ ] No credentials are emitted in diagnostics.
-- [ ] RED/GREEN and regression evidence is recorded; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md) is linked.
+- [x] Selected-stage validation is isolated and deterministic.
+- [x] No credentials are emitted in diagnostics.
+- [x] RED/GREEN and regression evidence is recorded; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md) is linked.
 
 ### Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
 
