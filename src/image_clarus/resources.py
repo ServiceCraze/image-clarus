@@ -14,3 +14,29 @@ def description_prompt():
     if source.is_file():
         return source
     raise FileNotFoundError("Built-in image description prompt is unavailable")
+
+
+def structure_prompt():
+    packaged = files("image_clarus").joinpath(
+        "resources", "prompts", "image-structure.txt"
+    )
+    if packaged.is_file():
+        return packaged
+    source = Path(__file__).resolve().parents[2] / "prompts" / "image-structure.txt"
+    if source.is_file():
+        return source
+    raise FileNotFoundError("Built-in image structure prompt is unavailable")
+
+
+def structure_schema():
+    packaged = files("image_clarus").joinpath(
+        "resources", "schemas", "image-structure.schema.json"
+    )
+    if packaged.is_file():
+        return packaged
+    source = (
+        Path(__file__).resolve().parents[2] / "schemas" / "image-structure.schema.json"
+    )
+    if source.is_file():
+        return source
+    raise FileNotFoundError("Built-in image structure schema is unavailable")

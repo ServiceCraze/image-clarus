@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:image-clarus:metadata-schema:1.0.0",
+  "title": "Image Clarus structured metadata payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subjects",
+    "objects",
+    "actions",
+    "setting",
+    "visual_characteristics",
+    "keywords"
+  ],
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "string_array": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/non_empty_string"
+      },
+      "uniqueItems": true
+    }
+  },
+  "properties": {
+    "subjects": {
+      "description": "Primary subjects or focal entities supported by the description.",
+      "$ref": "#/$defs/string_array"
+    },
+    "objects": {
+      "description": "Other notable objects supported by the description.",
+      "$ref": "#/$defs/string_array"
+    },
+    "actions": {
+      "description": "Visible activities or actions supported by the description.",
+      "$ref": "#/$defs/string_array"
+    },
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "context"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Setting type or category; empty when unsupported."
+        },
+        "context": {
+          "type": "string",
+          "description": "Relevant scene context; empty when unsupported."
+        }
+      }
+    },
+    "visual_characteristics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "colors",
+        "composition",
+        "lighting",
+        "visual_style"
+      ],
+      "properties": {
+        "colors": {
+          "description": "Distinct visible colors; empty when unsupported.",
+          "$ref": "#/$defs/string_array"
+        },
+        "composition": {
+          "type": "string",
+          "description": "Framing or spatial arrangement; empty when unsupported."
+        },
+        "lighting": {
+          "type": "string",
+          "description": "Visible lighting quality; empty when unsupported."
+        },
+        "visual_style": {
+          "type": "string",
+          "description": "Visible medium or style; empty when unsupported."
+        }
+      }
+    },
+    "keywords": {
+      "description": "Unique searchable terms/tags; empty when unsupported.",
+      "$ref": "#/$defs/string_array"
+    }
+  }
+}

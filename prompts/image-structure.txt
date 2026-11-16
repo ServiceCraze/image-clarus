@@ -1,0 +1,3 @@
+Extract structured photo metadata from the persisted description.
+
+Use only facts explicitly stated or directly supported by the description. Do not invent identities, locations, dates, or visual details. When a value is not supported, use the empty string or empty array allowed by the selected schema. Return exactly one JSON object that conforms to the selected JSON Schema. Do not include schema-version or provenance fields, Markdown fences, comments, or surrounding prose. If validation feedback is supplied, use it to correct the output while following the same evidence limits.

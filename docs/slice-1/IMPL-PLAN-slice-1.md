@@ -151,7 +151,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
 - [x] Step B5 — Implement the recoverable sidecar artifact service [CODE/TEST]
 - [x] Step B6 — Implement the description stage [CODE/TEST]
-- [ ] Step B7 — Implement the structured JSON stage [CODE/TEST]
+- [x] Step B7 — Implement the structured JSON stage [CODE/TEST]
 - [ ] Step B8 — Wire the single-image `process` command [CODE/TEST]
 - [ ] Step B9 — Document Slice 1 installation, configuration, and use [DOCS/TEST]
 
@@ -558,14 +558,14 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 **Outputs:** Default JSON prompt/schema, JSON stage, and tests; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md)
 
 **Acceptance:**
-- [ ] `json` consumes the persisted `.desc.txt` and writes exactly `<image>.desc.json`.
-- [ ] Every newly generated output is fully schema-validated, includes the required provenance contract, and covers all required metadata categories.
-- [ ] The output identifies its metadata-schema version independently of the application version, following A3's default/custom-schema rules.
-- [ ] Newly generated output fingerprints the exact persisted description bytes consumed; a structurally valid existing output skips unchanged across selected schema/version changes.
-- [ ] Invalid existing JSON/envelope is not overwritten without explicit regeneration; regenerated output uses current selected inputs/schema and is published only after validation.
-- [ ] Custom schema and prompt replacement work without source changes and follow A3 semantics.
-- [ ] Invalid/missing prerequisites follow the approved result policy; invalid output is never published as complete.
-- [ ] RED/GREEN and regression evidence is recorded; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md) is linked.
+- [x] `json` consumes the persisted `.desc.txt` and writes exactly `<image>.desc.json`.
+- [x] Every newly generated output is fully schema-validated, includes the required provenance contract, and covers all required metadata categories.
+- [x] The output identifies its metadata-schema version independently of the application version, following A3's default/custom-schema rules.
+- [x] Newly generated output fingerprints the exact persisted description bytes consumed; a structurally valid existing output skips unchanged across selected schema/version changes.
+- [x] Invalid existing JSON/envelope is not overwritten without explicit regeneration; regenerated output uses current selected inputs/schema and is published only after validation.
+- [x] Custom schema and prompt replacement work without source changes and follow A3 semantics.
+- [x] Invalid/missing prerequisites follow the approved result policy; invalid output is never published as complete.
+- [x] RED/GREEN and regression evidence is recorded; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md) is linked.
 
 ### Step B8 — Wire the single-image `process` command [CODE/TEST]
 

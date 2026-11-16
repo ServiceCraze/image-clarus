@@ -23,3 +23,5 @@ packages = ["src/image_clarus"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "prompts/image-description.txt" = "image_clarus/resources/prompts/image-description.txt"
+"prompts/image-structure.txt" = "image_clarus/resources/prompts/image-structure.txt"
+"schemas/image-structure.schema.json" = "image_clarus/resources/schemas/image-structure.schema.json"
