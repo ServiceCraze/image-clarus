@@ -73,11 +73,12 @@ _BUILTIN = {
 
 
 def _endpoint(raw):
+    if not isinstance(raw, str):
+        raise ProviderError("configuration")
     try:
         u = urlsplit(raw)
         if (
-            not isinstance(raw, str)
-            or "?" in raw
+            "?" in raw
             or "#" in raw
             or any(c.isspace() or ord(c) < 32 for c in raw)
             or u.scheme not in {"http", "https"}
@@ -288,7 +289,7 @@ class OpenAICompatible:
                 response = client.post(endpoint, json=body, headers=headers)
         except httpx.TimeoutException:
             failure = "network_timeout"
-        except (httpx.HTTPError, ValueError, UnicodeError):
+        except (httpx.HTTPError, OSError, ValueError, UnicodeError):
             failure = "provider_unavailable"
         finally:
             _in_request.reset(token)

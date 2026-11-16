@@ -355,6 +355,16 @@ def test_invalid_urls_no_request(url):
     assert exc.value.category == "configuration"
 
 
+def test_nonstring_endpoint_is_sanitized_without_transport():
+    calls = []
+    a = adapter(lambda request: calls.append(request), {"base_url": 12345})
+    with pytest.raises(ProviderError) as exc:
+        a.image(prompt="p", image_bytes=b"x", suffix=".jpg")
+    assert exc.value.category == "configuration"
+    assert exc.value.__context__ is None
+    assert not calls
+
+
 def test_invalid_httpx_url_is_sanitized_before_transport():
     url = "https://[v1.private-host-sentinel]/secret-path"
     calls = []
@@ -400,6 +410,32 @@ def test_reasoning_mapping_precedence_and_omit():
         a.image(prompt="p", image_bytes=b"x", suffix=".jpg", effort="low")
     assert exc.value.category == "configuration"
     assert len(bodies) == 3
+
+
+def test_missing_tls_ca_file_is_sanitized_before_network(tmp_path, monkeypatch, caplog):
+    import socket
+
+    path = tmp_path / "private-ca-path-sentinel"
+    monkeypatch.setenv("SSL_CERT_FILE", str(path))
+    monkeypatch.setattr(socket.socket, "connect", lambda *args: pytest.fail("network"))
+    a = OpenAICompatible(
+        {"base_url": "https://provider-sentinel.test", "api_key": "dummy-key-sentinel"},
+        {"model_id": "model"},
+    )
+    prompt, image = "prompt-sentinel", b"image-sentinel"
+    with caplog.at_level(logging.DEBUG), pytest.raises(ProviderError) as exc:
+        a.image(prompt=prompt, image_bytes=image, suffix=".jpg")
+    assert exc.value.category == "provider_unavailable"
+    assert exc.value.__context__ is None
+    text = "".join(traceback.format_exception(exc.value)) + caplog.text
+    for sentinel in (
+        "private-ca-path-sentinel",
+        "provider-sentinel",
+        "dummy-key-sentinel",
+        "prompt-sentinel",
+        "image-sentinel",
+    ):
+        assert sentinel not in text
 
 
 def test_env_credential_missing_and_transport_timeout(monkeypatch):
