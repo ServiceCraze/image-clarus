@@ -10,6 +10,7 @@ from copy import deepcopy
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import httpx
 import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
@@ -436,8 +437,16 @@ def _selected(config, stage):
     ):
         _fail()
     provider = config["providers"][provider_alias]
+    raw_url = provider.get("base_url", "")
     try:
-        raw_url = provider.get("base_url", "")
+        httpx.URL(raw_url)
+    except httpx.InvalidURL:
+        invalid_url = True
+    else:
+        invalid_url = False
+    if invalid_url:
+        _fail()
+    try:
         url = urlsplit(raw_url)
         if (
             "?" in raw_url

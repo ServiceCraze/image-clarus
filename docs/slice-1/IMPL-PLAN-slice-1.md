@@ -2,7 +2,7 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** In progress — Phase A readiness passed; B1 and B2 complete; Phase C not started
+**Status:** In progress — Phase A readiness passed; B1–B3 complete; Phase C not started
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -147,7 +147,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 
 - [x] Step B1 — Bootstrap the installable Python package and test harness [CODE/TEST]
 - [x] Step B2 — Implement configuration resolution and precedence [CODE/TEST]
-- [ ] Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
+- [x] Step B3 — Implement the OpenAI-compatible provider adapter [CODE/TEST]
 - [ ] Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
 - [ ] Step B5 — Implement the recoverable sidecar artifact service [CODE/TEST]
 - [ ] Step B6 — Implement the description stage [CODE/TEST]
@@ -454,10 +454,10 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 **Outputs:** Provider adapter and local HTTP-boundary tests; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md)
 
 **Acceptance:**
-- [ ] Both model-driven stages can call the adapter through the contract fixed in A4.
-- [ ] Test coverage proves request construction, success parsing, error handling, capability handling, and secret redaction.
-- [ ] Automated tests use no external service or real credentials.
-- [ ] RED/GREEN and regression evidence is recorded; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md) is linked.
+- [x] Both model-driven stages can call the adapter through the contract fixed in A4.
+- [x] Test coverage proves request construction, success parsing, error handling, capability handling, and secret redaction.
+- [x] Automated tests use no external service or real credentials.
+- [x] RED/GREEN and regression evidence is recorded; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md) is linked.
 
 ### Step B4 — Implement stage results, registry, and coordinator [CODE/TEST]
 

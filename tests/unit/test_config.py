@@ -70,6 +70,30 @@ def test_http_provider_requires_loopback_or_private_address(tmp_path):
                 resolve_config(config_file=path, stages=("desc",))
 
 
+def test_invalid_httpx_url_fails_selected_stage_preflight():
+    import traceback
+
+    import pytest
+
+    from image_clarus.config import ConfigurationError, resolve_config
+
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(
+            discovery_paths=(),
+            stages=("desc",),
+            overrides=[
+                'providers.p.base_url="https://[v1.private-host-sentinel]/secret-path"',
+                "models.m.provider=p",
+                "models.m.model_id=m",
+                "stages.desc.model=m",
+            ],
+        )
+    assert "private-host-sentinel" not in str(exc.value)
+    assert "secret-path" not in str(exc.value)
+    assert "private-host-sentinel" not in "".join(traceback.format_exception(exc.value))
+    assert exc.value.__context__ is None or exc.value.__context__.__context__ is None
+
+
 def test_defaults_are_available_without_a_selected_stage(tmp_path):
     from image_clarus.config import resolve_config
 
