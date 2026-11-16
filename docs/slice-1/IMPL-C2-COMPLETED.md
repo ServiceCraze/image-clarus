@@ -10,6 +10,8 @@
 
 **Files removed:** None.
 
+**Subsequent approved correction:** The original unconditional POSIX-mode checks conflict with expected filesystem coverage. The corrected contract tolerates demonstrably unsupported mode semantics, preserves exact modes where supported, and still fails genuine permission and I/O errors; other safety invariants remain. The [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) reports later tests and the pending test-order disposition. C2's XFS/tmpfs evidence and checked acceptance below are historical; its suite did not run on the `fuseblk` repository. Native Windows is not proven.
+
 ## Safety evidence
 
 All payloads, image bytes and credentials were synthetic. Provider traffic used controlled loopback HTTP stubs; no live provider or personal image was used. Existing artifact and provider tests were rerun alongside new integration tests.

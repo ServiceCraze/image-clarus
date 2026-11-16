@@ -263,7 +263,9 @@ def run_structure(image_path, config, services):
         )
     except ArtifactError as error:
         if not (regenerate and error.category == "invalid_artifact"):
-            return StageResult("json", "failed", error_category=error.category)
+            return StageResult(
+                "json", "failed", error_category=error.category, message=str(error)
+            )
         exists = True
     if exists and not regenerate:
         return StageResult(
@@ -278,7 +280,9 @@ def run_structure(image_path, config, services):
             return StageResult("json", "failed", error_category="invalid_artifact")
         description = description_bytes.decode("utf-8")
     except ArtifactError as error:
-        return StageResult("json", "failed", error_category=error.category)
+        return StageResult(
+            "json", "failed", error_category=error.category, message=str(error)
+        )
     except FileNotFoundError:
         if config["pipeline"]["missing_prerequisite"] == "skip":
             return StageResult("json", "skipped", reason_code="missing_prerequisite")
@@ -373,5 +377,7 @@ def run_structure(image_path, config, services):
             output, data, _valid_envelope, validation_category="configuration"
         )
     except ArtifactError as error:
-        return StageResult("json", "failed", error_category=error.category)
+        return StageResult(
+            "json", "failed", error_category=error.category, message=str(error)
+        )
     return StageResult("json", "completed", output_path=output)

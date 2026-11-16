@@ -175,7 +175,7 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 4. Use the safest available filesystem/OS replacement operation; do not assume the rename is atomic everywhere.
 5. Verify the replacement and remove or retain the backup according to configurable backup-retention policy.
 6. Handle failed/interrupted replacements and stale temporary/backup files safely, without silently discarding recoverable originals.
-7. Preserve appropriate existing permissions and unrelated XMP metadata.
+7. Preserve appropriate existing permissions where supported and unrelated XMP metadata. Attempt private `0600` creation and preservation of existing POSIX mode bits for replacement, backup and recovery. Require exact mode verification where the filesystem supports it; do not reject otherwise valid writes solely because that filesystem cannot represent or enforce those bits. Actual permission denials, storage errors and other unrelated failures remain errors. Warn users that filesystem or mount permissions may expose generated metadata and backups; use a suitably private destination when confidentiality matters.
 
 - Do not implement filesystem-specific branches unless a demonstrated compatibility problem requires them; allow a configurable alternate method if testing warrants it.
 - Expected environments include common Linux filesystems (such as XFS and ext4), NTFS (including FUSE-backed mounts), VFAT removable media, and virtual or memory-backed filesystems.

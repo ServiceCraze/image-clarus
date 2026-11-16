@@ -23,7 +23,9 @@ def run_description(image_path, config, services):
         exists = services.artifacts.recover(output, _valid, retain_backup=regenerate)
     except ArtifactError as error:
         if not (regenerate and error.category == "invalid_artifact"):
-            return StageResult("desc", "failed", error_category=error.category)
+            return StageResult(
+                "desc", "failed", error_category=error.category, message=str(error)
+            )
         exists = True
     if exists and not regenerate:
         return StageResult(
@@ -79,6 +81,6 @@ def run_description(image_path, config, services):
             "desc",
             "failed",
             error_category=error.category,
-            message="Description artifact write failed",
+            message=f"Description artifact write failed: {error}",
         )
     return StageResult("desc", "completed", output_path=output)

@@ -75,6 +75,8 @@ Without `--stages`, both stages run in registry order. The source image is not m
 
 Each selected stage prints a completed, skipped or failed summary on stdout; diagnostics go to stderr. Exit codes are `0` for success/skips, `1` for stage or authentication failure, `2` for usage/configuration errors, `3` for the search stub, and `130`/`143` for SIGINT/SIGTERM. Writes use backup/recovery mechanisms but no application-level locks: concurrent updates can overwrite one another, and filesystem durability varies.
 
+**Filesystem permissions:** Sidecars and backups can contain sensitive metadata. Some filesystems or mount options cannot enforce private POSIX permissions; check the destination's access controls and use a suitably private location. A correction to avoid rejecting valid writes solely for unsupported mode semantics is in progress; current behavior may still fail there. Linux-mounted NTFS/FUSE is expected but not yet verified by that correction; native Windows support is not proven.
+
 ## Current limits
 
 Slice 1 accepts one image path, not directories, glob selection, traversal or batches. `search --help` works, but `search` reports not implemented and exits `3`; there is no search matching yet. XMP processing, ExifTool integration and an internal scheduler are not implemented. External schedulers may invoke the CLI. Linux is the required test platform; other operating systems are desirable but not claimed as fully tested.
