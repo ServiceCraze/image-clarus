@@ -29,4 +29,4 @@ An audit found an HTTPX-invalid URL accepted by both the B2 preflight and B3 end
 
 ## Follow-up
 
-B4 and later steps remain unstarted. B6/B7 own stage integration and C3 owns the Python 3.12 compatibility matrix.
+At B3 closeout, B4 and later steps remained unstarted. B4 has since completed; B5 and later steps remain unstarted. B6/B7 own stage integration and C3 owns the Python 3.12 compatibility matrix.
