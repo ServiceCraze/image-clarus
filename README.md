@@ -3,7 +3,30 @@ Image Clarus is an open-source CLI project for describing images and generating 
 
 ## Install
 
-Use Python 3.12 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/); Python 3.13 is the development baseline. From the project directory:
+Use Python 3.12 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/); Python 3.13 is the development baseline.
+
+### Install as a CLI tool
+
+From the project checkout directory, install the CLI into an isolated uv tool environment:
+
+```sh
+uv tool install --python 3.13 .
+```
+
+Once uv's tool executable directory is on your `PATH`, run the command from any directory without `uv run` or activating a project environment:
+
+```sh
+image-clarus --version
+image-clarus --help
+image-clarus process --help
+image-clarus search --help
+```
+
+If your shell cannot find `image-clarus`, use `uv tool dir --bin` to see the executable directory and add it to `PATH`. Alternatively, `uv tool update-shell` can configure your shell's path; open a new shell afterward. Installing from `.` is not editable: after changing the checkout, run `uv tool install --python 3.13 --force .` from the checkout to reinstall it. Tool installation resolves its own dependencies and does not use the project's locked development environment.
+
+### Run from the project environment
+
+Alternatively, from the project directory:
 
 ```sh
 uv sync --locked
@@ -13,7 +36,7 @@ uv run --locked image-clarus process --help
 uv run --locked image-clarus search --help
 ```
 
-`uv sync` creates the project environment and installs the CLI; it does not require administrator privileges. Use `uv run --locked image-clarus` for the examples below. The equivalent `image-clarus` command is available when the project environment is activated.
+`uv sync` creates the project environment and installs the CLI; it does not require administrator privileges. The bare `image-clarus` command is also available when that project environment is activated. If you use this option without activating it, prefix the processing examples below with `uv run --locked` and run them from the project directory.
 
 ## Configure
 
@@ -31,20 +54,22 @@ The following are **manual provider examples**. They require a configured compat
 
 ```sh
 # Description only: writes photo.jpg.desc.txt.
-uv run --locked image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc
+image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc
 
 # JSON only: reads the existing photo.jpg.desc.txt; does not run desc.
-uv run --locked image-clarus process ./photo.jpg --config ./examples/config.yaml --stages json
+image-clarus process ./photo.jpg --config ./examples/config.yaml --stages json
 
 # Combined: desc then json, with the persisted description as the handoff.
-uv run --locked image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc,json
+image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc,json
 
 # Supply independent prompt and schema replacements.
-uv run --locked image-clarus process ./photo.jpg --config ./examples/config.yaml --desc-prompt ./description.txt --json-prompt ./structure.txt --json-schema ./schema.json
+image-clarus process ./photo.jpg --config ./examples/config.yaml --desc-prompt ./description.txt --json-prompt ./structure.txt --json-schema ./schema.json
 
 # Explicitly replace the selected outputs.
-uv run --locked image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc,json --regenerate
+image-clarus process ./photo.jpg --config ./examples/config.yaml --stages desc,json --regenerate
 ```
+
+These relative paths assume you are in the checkout. From another directory, use paths appropriate to that directory, including an absolute path to your configuration file if needed.
 
 Without `--stages`, both stages run in registry order. The source image is not modified. Sidecars use the complete source filename: `photo.jpg.desc.txt` and `photo.jpg.desc.json`. Existing valid outputs are skipped by default; `--regenerate` permits replacing selected outputs. Changes to the model, prompt or inputs do not automatically trigger regeneration. Selected-stage configuration and credentials are still checked before a skip. A structurally valid existing JSON sidecar can be skipped even if the description is missing or the selected schema changed; its fixed envelope is checked, not the current payload schema. If JSON needs a missing description, the default is failure; `--missing-prerequisite skip` changes that outcome without running `desc` implicitly. Failed or invalid output is not published as complete. A custom schema replaces the metadata payload schema, not the application-owned envelope; external references, nested `$id` and `$dynamicRef` are restricted. See the [A3 contract](docs/slice-1/IMPL-A3-COMPLETED.md) for schema replacement, provenance, and validation details.
 
