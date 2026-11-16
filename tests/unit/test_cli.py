@@ -556,6 +556,51 @@ def test_invalid_stage_lists_are_rejected(tmp_path, selection):
     assert "stage" in result.stderr.lower()
 
 
+@pytest.mark.parametrize("signum", [2, 15])
+@pytest.mark.parametrize("stage", ["desc", "json"])
+def test_interrupted_stage_failure_is_reported_as_skipped(
+    tmp_path, monkeypatch, capsys, signum, stage
+):
+    from image_clarus import cli
+    from image_clarus.results import StageResult
+    from image_clarus.stages import description, structure
+
+    image = tmp_path / "image.png"
+    image.write_bytes(b"synthetic")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        "providers:\n  local:\n    base_url: http://127.0.0.1:1234/v1\n"
+        "models:\n  m:\n    provider: local\n    model_id: synthetic\n"
+        f"stages:\n  {stage}:\n    model: m\n"
+    )
+
+    def interrupted_stage(*args):
+        os.kill(os.getpid(), signum)
+        return StageResult(stage, "failed", error_category="file_io")
+
+    module, name = (
+        (description, "run_description")
+        if stage == "desc"
+        else (structure, "run_structure")
+    )
+    monkeypatch.setattr(module, name, interrupted_stage)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "image-clarus",
+            "process",
+            str(image),
+            "--config",
+            str(config),
+            "--stages",
+            stage,
+        ],
+    )
+    assert cli.main() == 128 + signum
+    assert capsys.readouterr().out == f"{stage}: skipped — reason=interrupted\n"
+
+
 def test_signal_before_artifact_write_prevents_publication(
     tmp_path, monkeypatch, capsys
 ):

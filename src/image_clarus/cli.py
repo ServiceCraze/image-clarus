@@ -201,7 +201,7 @@ def _main(state):
         def stage_wrapper(name, function):
             def run(image_path, stage_config, stage_services):
                 outcome = function(image_path, stage_config, stage_services)
-                if stop.signum is not None and outcome.error_category == "interrupted":
+                if stop.signum is not None and outcome.status != "completed":
                     return StageResult(name, "skipped", reason_code="interrupted")
                 return outcome
 
