@@ -32,4 +32,4 @@ Stop-on-failure produces `stage_not_run_after_failure` records; continue invokes
 
 ## Follow-up
 
-B5 and later steps have not started. Actual stage and CLI integration, OS signals and safe-write behavior are not claimed by these isolated tests.
+At B4 closeout, B5 and later steps had not started. B5 has since implemented and tested the artifact service; B6 and later steps have not started. Actual stage and CLI integration and OS signals are not claimed by the B4 tests.
