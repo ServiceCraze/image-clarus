@@ -2,6 +2,14 @@
 
 **Status: Complete.**
 
+**Scope deviations:** Product Owner approved isolated, bounded schema validation and a documented exception for incomplete historical B7 behavioral RED evidence. Real OS-signal and full-pipeline interruption validation carries forward to [Step C2](IMPL-PLAN-slice-1.md#step-c2--verify-failure-recovery-source-integrity-and-credential-hygiene-test). The original TDD limitation remains described below.
+
+**Files created:** `src/image_clarus/stages/structure.py`, `src/image_clarus/schema_worker.py`, `prompts/image-structure.txt`, `schemas/image-structure.schema.json`, `tests/unit/test_structure_stage.py`, `tests/unit/test_structure_resources.py`, `tests/unit/test_structure_edge_cases.py`, `tests/unit/test_schema_worker.py`, `tests/unit/test_schema_preflight_boundary.py`, `tests/unit/test_schema_offline.py`, `tests/unit/test_boolean_context.py`, and this record.
+
+**Files updated:** `src/image_clarus/config.py`, `src/image_clarus/resources.py`, `pyproject.toml`, and [IMPL-PLAN-slice-1.md](IMPL-PLAN-slice-1.md).
+
+**Files removed:** None. Temporary debugging files created during the step were removed and are not deliverables.
+
 ## Implemented and verified so far
 
 The structured stage, A3 prompt/schema source assets and wheel resource mappings are present. Tests exercise generated output, provenance snapshots, custom inputs, retries, existing-output handling, safe-write recovery and local schema references using synthetic data and an HTTPX mock transport; no live provider was contacted.
@@ -25,6 +33,8 @@ The Product Owner also approved designing and implementing bounded, isolated val
 **Subsequent progress:** Schema preflight and payload validation are routed through a disposable worker with a 10-second wall-clock deadline. A timeout returns a sanitized configuration failure without a model-validation retry or output publication. The focused timeout boundary was observed failing before integration and passing afterward. Worker timeout and exception tests exercise child cleanup; real OS signal and full pipeline interruption validation remains assigned to C2. Four boolean-schema behavior cases initially failed and later passed.
 
 **Further progress:** Boolean-schema feedback and `minContains`/`maxContains` pointer regressions pass. An audit found that nested Draft 7 `dependencies` could bypass the fragment-only reference check and trigger a network fetch. Regression tests using a local HTTP server observed the bug before correction and zero requests afterward; runtime validation uses an offline registry. The first correction overrestricted inactive annotation data; dialect/scope-aware traversal corrected the observed cases. Subsequent audit found invalid schemas activated through local references were not preflight-validated; two new regressions failed before the correction and pass after it. Tested library versions are `jsonschema 4.26.0` and `referencing 0.37.0`; boolean-location instrumentation uses private `jsonschema` internals and must be revalidated on dependency upgrades. These tests are not a proof for every schema/dialect combination.
+
+**Known dependency risk:** `pyproject.toml` does not constrain `jsonschema` to the tested version or a tested compatibility range. A future installation may select an incompatible release, including one that changes the private internals used by boolean-feedback instrumentation. No incompatibility was observed in B7; a tested version bound or a supported public-API replacement remains a maintenance follow-up. The lockfile's tested resolution does not constrain independent package installations.
 
 ## Acceptance
 

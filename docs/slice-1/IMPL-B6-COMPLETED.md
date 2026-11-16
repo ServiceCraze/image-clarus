@@ -35,3 +35,5 @@ An independent audit identified two integration issues corrected in this step. E
 ## Follow-up
 
 B7 and later steps have not started. This does not claim the `process` CLI is wired or that a real provider has been contacted.
+
+**Subsequent progress:** B7 is complete; see [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md). B8 and later work remain open.
