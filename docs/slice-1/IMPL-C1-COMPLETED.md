@@ -39,3 +39,5 @@ All integration tests invoke the public CLI in subprocesses with generated, non-
 - [x] [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md) is complete and linked.
 
 C2 and later steps have not been started as part of C1.
+
+**Subsequent progress:** C2 is complete; see [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md). C3 and later steps remain open.
