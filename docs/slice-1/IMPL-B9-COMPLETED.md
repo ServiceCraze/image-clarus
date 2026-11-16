@@ -29,3 +29,5 @@ Documented installation, provider/model configuration and environment-backed cre
 - [x] Documentation links and commands are validated; [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md) is linked.
 
 B9 does not execute Phase C; C1–C3 remain open.
+
+**Subsequent progress:** C1 is complete; see [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md). C2 and later steps remain open.
