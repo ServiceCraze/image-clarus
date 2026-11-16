@@ -1,7 +1,7 @@
-# Step B1 — Bootstrap the installable Python package and test harness (PARTIAL)
+# Step B1 — Bootstrap the installable Python package and test harness (COMPLETED)
 
-**Status:** Functional review corrections complete; B1 remains partial pending Product Owner disposition of the test-first process deviation.
-**Scope deviations:** None. No pipeline, provider, configuration resolution, or search behavior was implemented. **Process deviation:** the installed-wheel resource/entrypoint test was added after packaging implementation, without observed RED evidence; no exception approval has been recorded.
+**Status:** Complete; the Product Owner accepted the documented test-first process deviation.
+**Scope deviations:** None. No pipeline, provider, configuration resolution, or search behavior was implemented. **Accepted process deviation:** the installed-wheel resource/entrypoint test was added after packaging implementation, without observed RED evidence; the Product Owner accepted this exception and its recorded limitation.
 **Files Created/Updated/Removed:**
 - Created: `.python-version`, `pyproject.toml`, `uv.lock`, `src/image_clarus/__init__.py`, `src/image_clarus/__main__.py`, `src/image_clarus/cli.py`, `src/image_clarus/resources.py`, `tests/unit/test_cli.py`, `tests/unit/test_resources.py`, and this record.
 - Updated: `.gitignore`, `README.md`, and `docs/slice-1/IMPL-PLAN-slice-1.md`.
@@ -31,9 +31,9 @@ Established the Hatchling package, `0.1.0` authoritative static metadata and ins
 - [x] Installed `image-clarus --version` prints the A2-defined version, initially `image-clarus 0.1.0`, from the authoritative package version source.
 - [x] Top-level help lists `process` and `search`; both subcommand help surfaces work, and executing `search` reports not implemented as specified in A2.
 - [x] No external executable is required.
-- [ ] RED and GREEN evidence is recorded and all current tests/quality checks pass.
-- [ ] [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md) is complete and linked.
+- [x] RED and GREEN evidence is recorded and all current tests/quality checks pass.
+- [x] [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md) is complete and linked.
 
 ## Follow-up
 
-The wheel integration test's missing original RED evidence cannot be reconstructed. A Product Owner decision is needed on accepting that process deviation before B1 is marked complete. B2–B9 and Phase C remain unstarted. B8 owns real `process` behavior; C3 owns the Python 3.12 compatibility matrix.
+The wheel integration test's missing original RED evidence cannot be reconstructed; the Product Owner accepted the documented exception. B2 is in progress; B3–B9 and Phase C remain unstarted. B8 owns real `process` behavior; C3 owns the Python 3.12 compatibility matrix.

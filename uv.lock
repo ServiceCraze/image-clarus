@@ -96,6 +96,7 @@ dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "pyyaml" },
+    { name = "referencing" },
 ]
 
 [package.optional-dependencies]
@@ -110,6 +111,7 @@ requires-dist = [
     { name = "jsonschema" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pyyaml" },
+    { name = "referencing" },
     { name = "ruff", marker = "extra == 'dev'" },
 ]
 provides-extras = ["dev"]

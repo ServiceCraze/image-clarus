@@ -57,7 +57,7 @@ A4 added explicitly named reasoning-mapping leaves under the existing provider/m
 
 | Key | Type / default | Contract |
 | --- | --- | --- |
-| `providers.<name>.base_url` | URL; required for a selected model's provider | Absolute `http` or `https` URL; A4 freezes the Chat Completions request path and transport details. |
+| `providers.<name>.base_url` | URL; required for a selected model's provider | Absolute `http` or `https` URL; A4 freezes the Chat Completions request path and transport details, including the B2 Product Owner clarification limiting HTTP to localhost, loopback, and literal private-network IPs. |
 | `providers.<name>.api_key` | Optional non-empty string | Inline credential in a private operator-controlled YAML file; never log or include in results/errors. A configured empty value fails preflight as `authentication`. Mutually exclusive with `api_key_env`. |
 | `providers.<name>.api_key_env` | Optional environment-variable name | Read the value at runtime; if configured, the variable must be set and non-empty or preflight fails as `authentication`. The variable name is non-secret configuration; the resolved value is never logged or returned. Mutually exclusive with `api_key`; if neither key source is configured, omit Authorization. |
 | `providers.<name>.timeout_seconds` | Positive finite number; `60` | Per-request timeout in seconds; A4 may define request-specific application semantics, but not a different key or precedence. |
