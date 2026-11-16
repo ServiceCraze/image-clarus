@@ -1,11 +1,17 @@
 import argparse
 import sys
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
 
 class VersionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        print(f"image-clarus {version('image-clarus')}")
+        try:
+            installed_version = version("image-clarus")
+        except PackageNotFoundError:
+            parser.exit(
+                2, "image-clarus: installation error: version metadata unavailable\n"
+            )
+        print(f"image-clarus {installed_version}")
         parser.exit()
 
 

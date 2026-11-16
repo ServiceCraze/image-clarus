@@ -66,3 +66,22 @@ def test_version_uses_installed_metadata():
         "image-clarus 0.1.0\n",
         "",
     )
+
+
+def test_version_missing_metadata_is_configuration_error(tmp_path):
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "src")
+    result = subprocess.run(
+        [sys.executable, "-S", "-m", "image_clarus", "--version"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert (
+        result.stderr
+        == "image-clarus: installation error: version metadata unavailable\n"
+    )

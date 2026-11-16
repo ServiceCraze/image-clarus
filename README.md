@@ -5,4 +5,4 @@ Image Clarus is an open-source CLI project intended to make photo collections ea
 
 - [Requirements](docs/REQ-image-clarus.md)
 - [High-Level Design](docs/HLD-image-clarus.md)
-- [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — in progress; package bootstrap complete
+- [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — in progress; bootstrap process deviation pending disposition
