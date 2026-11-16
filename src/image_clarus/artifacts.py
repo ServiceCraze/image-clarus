@@ -136,7 +136,7 @@ class ArtifactService:
             raise ArtifactError("file_io")
         if capable and actual_mode != mode:
             raise ArtifactError("file_io", kind + "_mode")
-        return path, data, identity, actual_mode
+        return path, data, identity, actual_mode, capable
 
     def _cleanup(self, owned, *, probe=False):
         primary = sys.exc_info()[0] is not None
@@ -172,13 +172,13 @@ class ArtifactService:
                     original, mode, _ = self._read(destination)
                 except FileNotFoundError:
                     original, mode = None, 0o600
-                staged, data, identity, staged_mode = self._stage(
+                staged, data, identity, staged_mode, mode_capable = self._stage(
                     destination, payload, mode, "output", owned, warned
                 )
                 self._point("output_validate")
                 self._validate(validator, data, validation_category)
                 if original is not None:
-                    copy, _, _, _ = self._stage(
+                    copy, _, _, _, _ = self._stage(
                         backup, original, mode, "backup", owned, warned
                     )
                     self._point("backup_replace")
@@ -198,7 +198,7 @@ class ArtifactService:
                 self._point("destination_read")
                 data, actual_mode, observed = self._read(destination)
                 if observed == identity and (
-                    data != payload or actual_mode != staged_mode
+                    data != payload or (mode_capable and actual_mode != staged_mode)
                 ):
                     raise ArtifactError("file_io")
                 self._point("destination_validate")
@@ -237,7 +237,7 @@ class ArtifactService:
                     except FileNotFoundError:
                         return False
                     self._validate(validator, data, validation_category)
-                    staged, _, identity, staged_mode = self._stage(
+                    staged, _, identity, staged_mode, mode_capable = self._stage(
                         destination, data, mode, "recovery", owned, warned
                     )
                     self._point("recovery_replace")
@@ -245,7 +245,8 @@ class ArtifactService:
                     self._point("destination_read")
                     restored, restored_mode, observed = self._read(destination)
                     if observed == identity and (
-                        restored != data or restored_mode != staged_mode
+                        restored != data
+                        or (mode_capable and restored_mode != staged_mode)
                     ):
                         raise ArtifactError("file_io")
                     data = restored
