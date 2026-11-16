@@ -150,6 +150,8 @@ Provider definitions own endpoint and authentication/connection configuration. N
 
 Slice 1 initially supports **OpenAI-compatible Chat Completions HTTP APIs** for local or remote endpoints; the architecture permits additional adapter types later. Credentials may be inline or obtained via a specifically named environment variable. Do not log secrets. API compatibility does not imply that every endpoint supports identical image, schema, or reasoning controls. Unsupported capabilities must be surfaced clearly, not assumed to work.
 
+Use one shared base-URL validation policy for preflight and the provider boundary: accept standard absolute HTTP and HTTPS URLs with DNS/FQDN names and all IPv4/IPv6 destinations. Reject malformed or non-absolute URLs, unsupported schemes, user-info, query strings, fragments, and an already-appended `/chat/completions` path. Do not resolve hostnames or restrict destinations at application level; DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption; HTTPS is preferable. Configuration errors identify the affected key and an actionable sanitized reason without sensitive values, full endpoint URLs, or raw exception text.
+
 ### 4.3 Reasoning convention
 
 Generic effort choices, ordered from least to most, are:
@@ -322,5 +324,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - Additional provider protocols, optional separate provider configuration files, and broad cross-platform automation.
 
 ### 10.5 Requirements reconciliation
+
+The Product Owner has superseded the earlier B2 HTTP destination restriction: the shared HTTP/HTTPS policy above and the REQ govern; the B2 record preserves the earlier decision as history. Implementation and verification of this change must be established by separate evidence.
 
 The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; application releases use SemVer with Slice 1 starting at `0.1.0`; the CLI exposes `--version`; the JSON schema version is independent; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.

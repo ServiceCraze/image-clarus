@@ -40,7 +40,7 @@ def test_selected_stage_resolves_model_and_provider(tmp_path):
     assert config["providers"]["local"]["timeout_seconds"] == 60
 
 
-def test_http_provider_requires_loopback_or_private_address(tmp_path):
+def test_http_provider_accepts_hostnames_and_ip_addresses(tmp_path):
     import pytest
 
     from image_clarus.config import ConfigurationError, resolve_config
@@ -54,9 +54,9 @@ def test_http_provider_requires_loopback_or_private_address(tmp_path):
         ("172.16.2.3", True),
         ("192.168.2.3", True),
         ("[fd00::1]", True),
-        ("provider.example", False),
-        ("169.254.1.1", False),
-        ("203.0.113.1", False),
+        ("provider.example", True),
+        ("169.254.1.1", True),
+        ("203.0.113.1", True),
     ):
         path.write_text(
             f'providers:\n  p: {{base_url: "http://{host}/v1"}}\n'
@@ -429,22 +429,19 @@ def test_recursive_yaml_is_a_sanitized_configuration_error(tmp_path):
         resolve_config(config_file=path)
 
 
-def test_public_ip_http_endpoint_is_rejected():
-    import pytest
+def test_public_ip_http_endpoint_is_accepted():
+    from image_clarus.config import resolve_config
 
-    from image_clarus.config import ConfigurationError, resolve_config
-
-    with pytest.raises(ConfigurationError):
-        resolve_config(
-            discovery_paths=(),
-            stages=("desc",),
-            overrides=[
-                "providers.p.base_url=http://8.8.8.8/v1",
-                "models.m.provider=p",
-                "models.m.model_id=m",
-                "stages.desc.model=m",
-            ],
-        )
+    resolve_config(
+        discovery_paths=(),
+        stages=("desc",),
+        overrides=[
+            "providers.p.base_url=http://203.0.113.1/v1",
+            "models.m.provider=p",
+            "models.m.model_id=m",
+            "stages.desc.model=m",
+        ],
+    )
 
 
 def test_schema_property_names_and_examples_are_not_schema_keywords(tmp_path):
@@ -782,7 +779,7 @@ def test_invalid_selected_override_reports_redacted_path():
             discovery_paths=(),
             stages=("desc",),
             overrides=[
-                "providers.secret_alias.base_url=http://public.example",
+                "providers.secret_alias.base_url=http://user@public.example",
                 "models.m.provider=secret_alias",
                 "models.m.model_id=m",
                 "stages.desc.model=m",

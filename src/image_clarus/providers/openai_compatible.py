@@ -7,16 +7,15 @@ only prior invalid assistant content and normalized validation feedback.
 
 import base64
 import contextvars
-import ipaddress
 import json
 import logging
 import math
 import os
-from urllib.parse import urlsplit
 
 import httpx
 
 from image_clarus.config import EFFORTS, ConfigurationError, _check_mapping
+from image_clarus.endpoint import validate_base_url
 
 
 class ProviderError(Exception):
@@ -73,32 +72,9 @@ _BUILTIN = {
 
 
 def _endpoint(raw):
-    if not isinstance(raw, str):
-        raise ProviderError("configuration")
     try:
-        u = urlsplit(raw)
-        if (
-            "?" in raw
-            or "#" in raw
-            or any(c.isspace() or ord(c) < 32 for c in raw)
-            or u.scheme not in {"http", "https"}
-            or not u.hostname
-            or u.username is not None
-            or u.password is not None
-            or u.path.rstrip("/").endswith("/chat/completions")
-        ):
-            raise ValueError
-        _ = u.port
-        httpx.URL(raw)
-        if u.scheme == "http" and u.hostname != "localhost":
-            address = ipaddress.ip_address(u.hostname)
-            networks = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
-            if not address.is_loopback and not any(
-                address in ipaddress.ip_network(n) for n in networks
-            ):
-                raise ValueError
-        return raw.rstrip("/") + "/chat/completions"
-    except (ValueError, TypeError, httpx.InvalidURL):
+        return validate_base_url(raw)
+    except ValueError:
         pass
     raise ProviderError("configuration")
 

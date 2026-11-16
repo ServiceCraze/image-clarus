@@ -10,7 +10,9 @@
 
 Implemented a configuration resolver and tests for discovery, precedence, YAML handling, stage preflight, credential-safe errors, path origins, reasoning mappings, and selected schemas. The resolver is not wired to the process CLI; B8 owns that wiring. B3 owns provider use of credentials.
 
-The Product Owner selected HTTP for `localhost`, loopback addresses, and literal private-network IP addresses; other hosts require HTTPS. A2/A4 record this clarification. Private-network HTTP remains unencrypted. A dedicated HTTP-policy test was observed failing before the correction and passing afterward.
+**Historical decision, superseded:** At B2 closeout the Product Owner selected HTTP for `localhost`, loopback addresses, and literal private-network IP addresses, requiring HTTPS for other hosts. A dedicated test of that earlier policy was observed failing before the correction and passing afterward; it does not verify the replacement policy.
+
+**Subsequent Product Owner decision:** The earlier destination restriction is superseded. Standard HTTP and HTTPS endpoints may use DNS/FQDN names or any IPv4/IPv6 destination, with one shared validation policy and no application-level hostname resolution or destination restrictions. DNS and connection failures occur at request time. HTTP does not encrypt credentials or request data. Configuration errors identify the affected key and actionable reason without sensitive values. See [A2](IMPL-A2-COMPLETED.md), [A4](IMPL-A4-COMPLETED.md), and the [correction record](IMPL-CONFIG-NETWORK-CORRECTION-COMPLETED.md) for implementation and test evidence.
 
 Review-driven regression work recorded RED/GREEN for override precedence, schema handling, deep inputs, stage isolation, and sanitized errors. The Product Owner approved declaring `referencing` directly: it was already a transitive dependency of `jsonschema`. The Product Owner also approved rejecting nested `$id` in Slice 1, while supporting local anchors and same-document `$defs` references; this is a supported-subset restriction, not a judgment on JSON Schema validity. Compound-schema support is deferred beyond Slice 1. A3 records the decision.
 

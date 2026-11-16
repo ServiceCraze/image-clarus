@@ -4,6 +4,8 @@
 
 **Status:** In progress — Phase A readiness passed; Phase B complete (B1–B9); Phase C in progress (C1–C3 complete)
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
+**Policy change — implemented:** The Product Owner superseded B2’s HTTP destination restriction. Standard HTTP and HTTPS URLs may use DNS/FQDN names and all IPv4/IPv6 destinations; one shared preflight/provider validation policy must not resolve hostnames or restrict destinations at application level. DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption. Configuration errors identify the affected key and actionable reason without sensitive values. Historical B2 checks below establish the prior policy only; the [correction record](IMPL-CONFIG-NETWORK-CORRECTION-COMPLETED.md) records the replacement implementation, evidence and limitations. No live provider request was made; C4 remains open.
+
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
 **Versioning:** Application releases use Semantic Versioning. Slice 1 starts at `0.1.0` and remains on the `0.1.x` line. The generated metadata schema is versioned independently from the application.
@@ -424,7 +426,7 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 1. Add failing tests for built-in defaults (including `pipeline.backup_retention: remove`), valid `remove`/`retain` overrides, invalid policy values, explicit config suppressing discovery, user-level-before-system-level selection, no user/system merge, CLI-over-file precedence, independent prompt/schema overrides, relative paths, and invalid global configuration.
 2. Verify RED; implement configuration parsing/resolution with the selected YAML library and only the exact keys/precedence from A2, including A5's named leaf under the existing `pipeline` map.
 3. Validate global settings independently from selected-stage settings; do not require an unused provider credential/model for a different selected stage.
-4. Add tests showing CLI generic overrides parse into the types specified in A2 and invalid overrides report a clear path/value error without revealing secrets.
+4. Add tests showing CLI generic overrides parse into the types specified in A2 and invalid overrides identify the configuration key and actionable reason without revealing sensitive values.
 5. Verify GREEN and run the full current suite.
 
 **Outputs:** Configuration resolver and tests; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md)

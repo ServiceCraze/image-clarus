@@ -1,6 +1,5 @@
 """Configuration discovery, layering, and selected-stage preflight."""
 
-import ipaddress
 import json
 import math
 import os
@@ -8,9 +7,7 @@ import re
 import sys
 from copy import deepcopy
 from pathlib import Path
-from urllib.parse import urlsplit
 
-import httpx
 import yaml
 from jsonschema import (
     Draft3Validator,
@@ -34,11 +31,17 @@ from referencing.jsonschema import (
     lookup_recursive_ref,
 )
 
+from image_clarus.endpoint import validate_base_url
+
 
 class ConfigurationError(ValueError):
     """A sanitized preflight failure with a stable category."""
 
     def __init__(self, message, category="configuration"):
+        if category == "configuration" and not message.startswith(
+            ("Invalid configuration", "Cannot load configuration")
+        ):
+            message = f"Invalid configuration: {message}"
         super().__init__(message)
         self.category = category
 
@@ -53,10 +56,14 @@ class UniqueSafeLoader(yaml.SafeLoader):
             key = self.construct_object(key_node, deep=deep)
             try:
                 if key in keys:
-                    raise ConfigurationError("Duplicate YAML key")
+                    raise ConfigurationError(
+                        f"configuration: duplicate YAML key at line {key_node.start_mark.line + 1}, column {key_node.start_mark.column + 1}; remove the duplicate key"
+                    )
                 keys.add(key)
             except TypeError:
-                raise ConfigurationError("Invalid YAML mapping key") from None
+                raise ConfigurationError(
+                    f"configuration: invalid YAML mapping key at line {key_node.start_mark.line + 1}, column {key_node.start_mark.column + 1}; replace it with a scalar key"
+                ) from None
         return super().construct_mapping(node, deep=deep)
 
 
@@ -168,11 +175,29 @@ def _override_path(parts):
     return ".".join(safe)
 
 
-def _mapping(value, fields):
-    if not isinstance(value, dict) or any(
-        not isinstance(k, str) or k not in fields for k in value
-    ):
-        _fail()
+def _with_relevant_overrides(error, override_paths):
+    """Add only override paths overlapping the sanitized diagnostic field."""
+    message = str(error)
+    field = message.removeprefix("Invalid configuration: ").split(":", 1)[0]
+    relevant = [
+        path
+        for path in dict.fromkeys(override_paths)
+        if path == field or path.startswith(field + ".") or field.startswith(path + ".")
+    ]
+    if relevant:
+        return ConfigurationError(
+            f"{message}; override paths: {', '.join(relevant)}", error.category
+        )
+    return error
+
+
+def _mapping(value, fields, path="configuration"):
+    if not isinstance(value, dict):
+        raise ConfigurationError(
+            f"{path}: expected a mapping; replace it with a mapping"
+        )
+    if any(not isinstance(k, str) or k not in fields for k in value):
+        raise ConfigurationError(f"{path}: unknown key; remove the unknown key")
 
 
 def _merge(target, source):
@@ -218,28 +243,42 @@ def _validate_keys(data):
         if isinstance(entries, dict):
             for alias, entry in entries.items():
                 if not isinstance(alias, str) or not ALIAS.fullmatch(alias):
-                    _fail()
+                    raise ConfigurationError(
+                        f"{group}.<name>: invalid alias; set an alias using letters, digits, underscores or hyphens"
+                    )
                 if isinstance(entry, dict):
-                    _mapping(entry, fields)
+                    _mapping(entry, fields, f"{group}.<name>")
                     mapping = entry.get("reasoning_effort_mapping")
                     if isinstance(mapping, dict):
-                        _mapping(mapping, {"parameter", "values"})
+                        _mapping(
+                            mapping,
+                            {"parameter", "values"},
+                            f"{group}.<name>.reasoning_effort_mapping",
+                        )
                         values = mapping.get("values")
                         if isinstance(values, dict):
-                            _mapping(values, EFFORTS - {"default"})
+                            _mapping(
+                                values,
+                                EFFORTS - {"default"},
+                                f"{group}.<name>.reasoning_effort_mapping.values",
+                            )
                             for value in values.values():
                                 if isinstance(value, dict):
-                                    _mapping(value, {"omit"})
+                                    _mapping(
+                                        value,
+                                        {"omit"},
+                                        f"{group}.<name>.reasoning_effort_mapping.values",
+                                    )
     stages = data.get("stages")
     if isinstance(stages, dict):
-        _mapping(stages, DEFAULTS["stages"])
+        _mapping(stages, DEFAULTS["stages"], "stages")
         for stage, values in stages.items():
             if isinstance(values, dict):
-                _mapping(values, DEFAULTS["stages"][stage])
+                _mapping(values, DEFAULTS["stages"][stage], f"stages.{stage}")
     for section in ("pipeline", "logging"):
         values = data.get(section)
         if isinstance(values, dict):
-            _mapping(values, DEFAULTS[section])
+            _mapping(values, DEFAULTS[section], section)
 
 
 def _validate_shape(data):
@@ -247,58 +286,89 @@ def _validate_shape(data):
     for group, fields in (("providers", PROVIDER_FIELDS), ("models", MODEL_FIELDS)):
         entries = data.get(group, {})
         if not isinstance(entries, dict):
-            _fail()
+            raise ConfigurationError(
+                f"{group}: expected a mapping; replace it with a mapping"
+            )
         for alias, entry in entries.items():
             if not isinstance(alias, str) or not ALIAS.fullmatch(alias):
-                _fail()
-            _mapping(entry, fields)
+                raise ConfigurationError(
+                    f"{group}.<name>: invalid alias; set an alias using letters, digits, underscores or hyphens"
+                )
+            _mapping(entry, fields, f"{group}.<name>")
             for key, value in entry.items():
                 if key == "reasoning_effort_mapping":
-                    _mapping(value, {"parameter", "values"})
+                    _mapping(
+                        value,
+                        {"parameter", "values"},
+                        f"{group}.<name>.reasoning_effort_mapping",
+                    )
                     if "parameter" in value and not isinstance(value["parameter"], str):
-                        _fail()
+                        raise ConfigurationError(
+                            f"{group}.<name>.reasoning_effort_mapping.parameter: expected a string; set a string"
+                        )
                     if "values" in value:
                         if not isinstance(value["values"], dict):
-                            _fail()
+                            raise ConfigurationError(
+                                f"{group}.<name>.reasoning_effort_mapping.values: expected a mapping; replace it with a mapping"
+                            )
                         for level, native in value["values"].items():
                             if not isinstance(level, str) or level not in EFFORTS - {
                                 "default"
                             }:
-                                _fail()
+                                raise ConfigurationError(
+                                    f"{group}.<name>.reasoning_effort_mapping.values: unknown effort key; remove the unknown key"
+                                )
                             if isinstance(native, dict):
                                 if (
                                     level != "off"
                                     or native != {"omit": True}
                                     or type(native.get("omit")) is not bool
                                 ):
-                                    _fail()
+                                    raise ConfigurationError(
+                                        f"{group}.<name>.reasoning_effort_mapping.values: invalid omission; set a supported value"
+                                    )
                             elif not isinstance(native, (str, int, float, bool)) or (
                                 isinstance(native, float) and not math.isfinite(native)
                             ):
-                                _fail()
+                                raise ConfigurationError(
+                                    f"{group}.<name>.reasoning_effort_mapping.values: invalid mapped value; set a finite scalar"
+                                )
                 elif key == "timeout_seconds":
                     if isinstance(value, bool) or not isinstance(value, (int, float)):
-                        _fail()
+                        raise ConfigurationError(
+                            f"{group}.<name>.{key}: expected a number; set a numeric value"
+                        )
                 elif not isinstance(value, str):
-                    _fail()
+                    raise ConfigurationError(
+                        f"{group}.<name>.{key}: expected a string; set a string value"
+                    )
     stage_data = data.get("stages", {})
-    _mapping(stage_data, DEFAULTS["stages"])
+    _mapping(stage_data, DEFAULTS["stages"], "stages")
     for stage, values in stage_data.items():
-        _mapping(values, DEFAULTS["stages"][stage])
+        _mapping(values, DEFAULTS["stages"][stage], f"stages.{stage}")
         for key, value in values.items():
             if key == "regenerate":
                 if type(value) is not bool:
-                    _fail()
+                    raise ConfigurationError(
+                        f"stages.{stage}.{key}: expected a boolean; set true or false"
+                    )
             elif key == "validation_retries":
                 if type(value) is not int:
-                    _fail()
+                    raise ConfigurationError(
+                        f"stages.{stage}.{key}: expected an integer; set an integer"
+                    )
             elif value is not None and not isinstance(value, (str, Path)):
-                _fail()
+                raise ConfigurationError(
+                    f"stages.{stage}.{key}: expected a string; set a string"
+                )
     for section in ("pipeline", "logging"):
         values = data.get(section, {})
-        _mapping(values, DEFAULTS[section])
-        if any(not isinstance(value, str) for value in values.values()):
-            _fail()
+        _mapping(values, DEFAULTS[section], section)
+        for key, value in values.items():
+            if not isinstance(value, str):
+                raise ConfigurationError(
+                    f"{section}.{key}: expected a string; set a string"
+                )
 
 
 def _check_mapping(mapping):
@@ -496,100 +566,107 @@ def _selected(config, stage):
     settings = config["stages"][stage]
     alias = settings["model"]
     if not isinstance(alias, str) or alias not in config["models"]:
-        _fail()
+        raise ConfigurationError(
+            f"stages.{stage}.model: model reference is missing or undefined; set it to a configured model"
+        )
     model = config["models"][alias]
     provider_alias = model.get("provider")
-    if (
-        provider_alias not in config["providers"]
-        or not model.get("model_id", "").strip()
-    ):
-        _fail()
+    if provider_alias not in config["providers"]:
+        raise ConfigurationError(
+            "models.<name>.provider: provider reference is missing or undefined; set it to a configured provider"
+        )
+    if not model.get("model_id", "").strip():
+        raise ConfigurationError(
+            "models.<name>.model_id: model ID is missing; set a nonempty model ID"
+        )
     provider = config["providers"][provider_alias]
-    raw_url = provider.get("base_url", "")
     try:
-        httpx.URL(raw_url)
-    except httpx.InvalidURL:
-        invalid_url = True
-    else:
-        invalid_url = False
-    if invalid_url:
-        _fail()
-    try:
-        url = urlsplit(raw_url)
-        if (
-            "?" in raw_url
-            or "#" in raw_url
-            or any(char.isspace() or ord(char) < 32 for char in raw_url)
-            or url.scheme not in {"http", "https"}
-            or not url.hostname
-            or url.username is not None
-            or url.password is not None
-            or url.query
-            or url.fragment
-            or url.path.rstrip("/").endswith("/chat/completions")
-        ):
-            _fail()
-        _ = url.port
-        if url.scheme == "http" and url.hostname != "localhost":
-            try:
-                address = ipaddress.ip_address(url.hostname)
-            except ValueError:
-                raise ConfigurationError("Invalid configuration") from None
-            private_networks = (
-                ipaddress.ip_network("10.0.0.0/8"),
-                ipaddress.ip_network("172.16.0.0/12"),
-                ipaddress.ip_network("192.168.0.0/16"),
-                ipaddress.ip_network("fc00::/7"),
-            )
-            if not address.is_loopback and not any(
-                address in network for network in private_networks
-            ):
-                _fail()
+        validate_base_url(provider.get("base_url", ""))
+        valid_url = True
     except ValueError:
-        _fail()
+        valid_url = False
+    if not valid_url:
+        raise ConfigurationError(
+            "providers.<name>.base_url: invalid URL; set a valid HTTP or HTTPS base URL"
+        )
     timeout = provider["timeout_seconds"]
     try:
-        if not math.isfinite(timeout) or timeout <= 0:
-            _fail()
+        valid_timeout = math.isfinite(timeout) and timeout > 0
     except OverflowError:
-        _fail()
+        valid_timeout = False
+    if not valid_timeout:
+        raise ConfigurationError(
+            "providers.<name>.timeout_seconds: timeout must be finite and positive; set a positive number"
+        )
     if "api_key" in provider and "api_key_env" in provider:
-        _fail()
+        raise ConfigurationError(
+            "providers.<name>: conflicting credential settings; set only one credential source"
+        )
     if "api_key" in provider and not provider["api_key"].strip():
-        raise ConfigurationError("Invalid provider credential", "authentication")
+        raise ConfigurationError(
+            "providers.<name>.api_key: credential is empty; set a nonempty credential",
+            "authentication",
+        )
     if "api_key_env" in provider:
         name = provider["api_key_env"]
         if not ENV_NAME.fullmatch(name):
-            _fail()
+            raise ConfigurationError(
+                "providers.<name>.api_key_env: invalid environment variable name; set a valid name"
+            )
         if not os.environ.get(name, "").strip():
             raise ConfigurationError(
-                "Provider credential unavailable", "authentication"
+                "providers.<name>.api_key_env: credential unavailable; set the configured environment variable",
+                "authentication",
             )
     effort = (
         settings["reasoning_effort"]
         if settings["reasoning_effort"] is not None
         else model["reasoning_effort"]
     )
-    if effort not in EFFORTS or model["reasoning_effort"] not in EFFORTS:
-        _fail()
-    for obj in (provider, model):
+    if model["reasoning_effort"] not in EFFORTS:
+        raise ConfigurationError(
+            "models.<name>.reasoning_effort: invalid effort; set a supported effort"
+        )
+    if effort not in EFFORTS:
+        raise ConfigurationError(
+            f"stages.{stage}.reasoning_effort: invalid effort; set a supported effort"
+        )
+    for group, obj in (("providers", provider), ("models", model)):
         if "reasoning_effort_mapping" in obj:
-            _check_mapping(obj["reasoning_effort_mapping"])
+            parameter = obj["reasoning_effort_mapping"].get("parameter")
+            if parameter in {"model", "messages", "stream", "n", "response_format"}:
+                raise ConfigurationError(
+                    f"{group}.<name>.reasoning_effort_mapping.parameter: reserved parameter; set a non-reserved parameter"
+                )
+            try:
+                _check_mapping(obj["reasoning_effort_mapping"])
+            except ConfigurationError:
+                raise ConfigurationError(
+                    f"{group}.<name>.reasoning_effort_mapping: invalid mapping; set a valid parameter and effort values"
+                ) from None
     mapping = model.get(
         "reasoning_effort_mapping", provider.get("reasoning_effort_mapping")
     )
     if effort != "default" and mapping is not None and effort not in mapping["values"]:
-        _fail()
+        raise ConfigurationError(
+            f"stages.{stage}.reasoning_effort: effort has no mapping; set a mapped effort or update the mapping"
+        )
     if stage == "json" and settings["validation_retries"] not in (0, 1, 2):
-        _fail()
+        raise ConfigurationError(
+            "stages.json.validation_retries: invalid retry count; set 0, 1, or 2"
+        )
     for field in ("prompt_file", "schema_file"):
         path = settings.get(field)
         if path is not None:
             if not isinstance(path, Path):
-                _fail()
+                raise ConfigurationError(
+                    f"stages.{stage}.{field}: invalid file path; set a readable file"
+                )
             try:
                 if not path.is_file():
-                    _fail()
+                    raise ConfigurationError(
+                        f"stages.{stage}.{field}: file unavailable; set a readable file"
+                    )
                 if field == "prompt_file":
                     path.read_text(encoding="utf-8")
                 else:
@@ -600,9 +677,13 @@ def _selected(config, stage):
                         schema_text, timeout=schema_worker.SCHEMA_TIMEOUT_SECONDS
                     )
                     if result.get("status") != "ok":
-                        raise ConfigurationError("Invalid selected schema")
+                        raise ConfigurationError(
+                            f"stages.{stage}.{field}: invalid schema; set a valid local JSON schema"
+                        )
             except (OSError, UnicodeError):
-                raise ConfigurationError("Invalid selected stage file") from None
+                raise ConfigurationError(
+                    f"stages.{stage}.{field}: file unavailable or unreadable; set a readable file"
+                ) from None
 
 
 def resolve_config(
@@ -629,26 +710,50 @@ def resolve_config(
             path = Path(raw_path).expanduser().resolve()
             if config_file is None and not path.exists():
                 continue
-            data = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueSafeLoader)
-        except (yaml.YAMLError, OSError, UnicodeError, ValueError, RuntimeError):
-            raise ConfigurationError("Cannot load configuration") from None
+            text = path.read_text(encoding="utf-8")
+            try:
+                data = yaml.load(text, Loader=UniqueSafeLoader)
+            except ConfigurationError:
+                raise
+            except ValueError:
+                raise ConfigurationError(
+                    "Cannot load configuration: invalid YAML value; correct the YAML value"
+                ) from None
+        except ConfigurationError:
+            raise
+        except yaml.YAMLError as error:
+            mark = getattr(error, "problem_mark", None)
+            location = (
+                f" at line {mark.line + 1}, column {mark.column + 1}" if mark else ""
+            )
+            raise ConfigurationError(
+                f"Cannot load configuration: invalid YAML{location}; correct the YAML syntax"
+            ) from None
+        except (OSError, UnicodeError, ValueError, RuntimeError):
+            raise ConfigurationError(
+                "configuration: cannot load file; set a readable configuration file"
+            ) from None
         _validate_keys(data)
         _normalize_paths(data, path.parent)
         _merge(config, data)
         break
     override_paths = []
+    override_parts = []
     for override in overrides:
         name, separator, value = override.partition("=")
         parts = name.split(".")
         safe_path = _override_path(parts)
         override_paths.append(safe_path)
+        override_parts.append(parts)
         if (
             not separator
             or not value
             or any(not part for part in parts)
             or (len(parts) >= 3 and parts[0] == "providers" and parts[2] == "api_key")
         ):
-            raise ConfigurationError(f"Invalid override: {safe_path}")
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: invalid syntax or forbidden credential; correct the override"
+            )
         # Build an isolated overlay, then validate it against the same schema.
         overlay = {}
         node = overlay
@@ -656,18 +761,28 @@ def resolve_config(
             node = node.setdefault(part, {})
         try:
             node[parts[-1]] = yaml.load(value, Loader=UniqueSafeLoader)
+        except ConfigurationError as error:
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: {error}"
+            ) from None
         except (yaml.YAMLError, ValueError, RecursionError):
-            raise ConfigurationError(f"Invalid override: {safe_path}") from None
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: invalid YAML; correct the override syntax"
+            ) from None
         try:
             _validate_keys(overlay)
-        except ConfigurationError:
-            raise ConfigurationError(f"Invalid override: {safe_path}") from None
+        except ConfigurationError as error:
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: {error}", error.category
+            ) from None
         providers = overlay.get("providers", {})
         if isinstance(providers, dict) and any(
             isinstance(provider, dict) and "api_key" in provider
             for provider in providers.values()
         ):
-            raise ConfigurationError(f"Invalid override: {safe_path}")
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: invalid syntax or forbidden credential; correct the override"
+            )
         _normalize_paths(overlay, Path.cwd())
         target = config
         normalized = overlay
@@ -690,7 +805,12 @@ def resolve_config(
                 config["stages"] = deepcopy(DEFAULTS["stages"])
             if not isinstance(config["stages"].get(stage), dict):
                 config["stages"][stage] = deepcopy(DEFAULTS["stages"][stage])
-            config["stages"][stage][field] = _path(str(value), Path.cwd())
+            try:
+                config["stages"][stage][field] = _path(str(value), Path.cwd())
+            except ConfigurationError:
+                raise ConfigurationError(
+                    f"stages.{stage}.{field}: invalid file path; set a valid readable file path"
+                ) from None
     if regenerate:
         for stage in stages:
             if not isinstance(config["stages"], dict):
@@ -706,13 +826,8 @@ def resolve_config(
         config["pipeline"]["missing_prerequisite"] = missing_prerequisite
     try:
         _validate_shape(config)
-    except ConfigurationError:
-        if override_paths:
-            paths = ", ".join(dict.fromkeys(override_paths))
-            raise ConfigurationError(
-                f"Invalid configuration; override paths: {paths}"
-            ) from None
-        raise
+    except ConfigurationError as error:
+        raise _with_relevant_overrides(error, override_paths) from None
     for section, field, valid in (
         ("pipeline", "missing_prerequisite", {"fail", "skip"}),
         ("pipeline", "on_stage_failure", {"stop", "continue"}),
@@ -721,9 +836,7 @@ def resolve_config(
     ):
         if config[section][field] not in valid:
             path = f"{section}.{field}"
-            if path in override_paths:
-                raise ConfigurationError(f"Invalid override: {path}")
-            _fail()
+            raise ConfigurationError(f"{path}: invalid option; set a supported value")
     for provider in config["providers"].values():
         provider.setdefault("timeout_seconds", 60)
     for model in config["models"].values():
@@ -732,10 +845,15 @@ def resolve_config(
         try:
             _selected(config, stage)
         except ConfigurationError as error:
-            if override_paths:
-                paths = ", ".join(dict.fromkeys(override_paths))
-                raise ConfigurationError(
-                    f"{error}; override paths: {paths}", error.category
-                ) from None
-            raise
+            selected_model = config["stages"].get(stage, {}).get("model")
+            selected_provider = config["models"].get(selected_model, {}).get("provider")
+            relevant_paths = [
+                safe
+                for parts, safe in zip(override_parts, override_paths)
+                if len(parts) < 2
+                or parts[0] not in {"providers", "models"}
+                or parts[1]
+                == (selected_provider if parts[0] == "providers" else selected_model)
+            ]
+            raise _with_relevant_overrides(error, relevant_paths) from None
     return config

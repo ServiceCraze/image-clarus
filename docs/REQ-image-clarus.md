@@ -72,6 +72,8 @@ Given `2023_04_23_15_05_42.jpg`:
 - Support named providers, named models, and independent selection of a model for each model-driven stage.
 - Model selection must be configurable and overridable from the CLI; no particular model or parameter size is required.
 - Model communication uses an HTTP client with provider adapters. Support OpenAI-compatible API endpoints, including locally hosted services. Provider configuration should include endpoint URL, model identifier, and optional credentials; other providers may be added through adapters as needed.
+- Endpoint base URLs must accept standard absolute HTTP and HTTPS URLs with DNS/FQDN hostnames or any IPv4/IPv6 destination. Apply one shared URL-validation policy at configuration preflight and the provider boundary; do not resolve hostnames or restrict destinations at the application level. DNS and connection failures are request-time errors. Preserve the base-URL syntax restrictions specified in the HLD. HTTP does not encrypt credentials or request data; users must authorize the destination and transfer.
+- Configuration errors must identify the affected configuration key and an actionable reason without exposing sensitive values, credentials, full endpoint URLs, or raw exception text.
 - An API key may be configured directly or through an explicitly named environment variable, such as `api_key_env`.
 - Provide built-in default prompts for description and structured generation.
 - The built-in default description prompt is `prompts/image-description.txt`, with the exact text: `Fully describe and explain everything about this image.` No additional instructions are part of this default prompt.

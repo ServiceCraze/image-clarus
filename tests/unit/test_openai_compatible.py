@@ -338,7 +338,6 @@ def test_no_secret_in_errors_or_httpx_logs(caplog):
     "url",
     [
         "relative",
-        "http://example.test/v1",
         "https://user:pass@example.test/v1",
         "https://example.test/v1?",
         "https://example.test/v1#x",
