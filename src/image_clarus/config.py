@@ -338,6 +338,12 @@ def _validate_shape(data):
                         raise ConfigurationError(
                             f"{group}.<name>.{key}: expected a number; set a numeric value"
                         )
+                elif key == "reasoning_effort" and isinstance(value, bool):
+                    raise ConfigurationError(
+                        f"{group}.<name>.reasoning_effort: expected a string, not a boolean; "
+                        "YAML treats unquoted off as a boolean. "
+                        'To disable reasoning, use "off" (with quotes)'
+                    )
                 elif not isinstance(value, str):
                     raise ConfigurationError(
                         f"{group}.<name>.{key}: expected a string; set a string value"
@@ -357,6 +363,12 @@ def _validate_shape(data):
                     raise ConfigurationError(
                         f"stages.{stage}.{key}: expected an integer; set an integer"
                     )
+            elif key == "reasoning_effort" and isinstance(value, bool):
+                raise ConfigurationError(
+                    f"stages.{stage}.reasoning_effort: expected a string, not a boolean; "
+                    "YAML treats unquoted off as a boolean. "
+                    'To disable reasoning, use "off" (with quotes)'
+                )
             elif value is not None and not isinstance(value, (str, Path)):
                 raise ConfigurationError(
                     f"stages.{stage}.{key}: expected a string; set a string"
