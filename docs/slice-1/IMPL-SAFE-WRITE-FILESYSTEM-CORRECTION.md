@@ -1,6 +1,6 @@
 # Slice 1 — Safe-write filesystem compatibility correction
 
-**Status:** Implementation and automated verification complete; Product Owner disposition of the test-order evidence gap is pending. The reported mount's compatibility and the cause of the original failure remain unverified. C4 and C5 remain open.
+**Status:** Implementation and automated verification complete; Product Owner disposition of the test-order evidence gap is pending. A later operator probe passed on the reported mount; the cause of the original failure remains unverified. C4 is complete; C5 remains open.
 
 **Scope:** The Product Owner approved capability-dependent permission handling without filesystem-name exceptions, while retaining artifact integrity, replacement, recovery, cleanup and the documented lock-free concurrency boundary. This corrects the unconditional POSIX-mode requirement previously introduced in A5; it does not revise the history of the original design or its verification.
 
@@ -8,7 +8,7 @@
 
 **Files updated:** `src/image_clarus/artifacts.py`, `src/image_clarus/stages/description.py`, `src/image_clarus/stages/structure.py`, `pyproject.toml`, `uv.lock`, `tests/unit/test_cli.py`, `tests/unit/test_resources.py`, `README.md`, `docs/REQ-image-clarus.md`, `docs/HLD-image-clarus.md`, `docs/slice-1/IMPL-A5-COMPLETED.md`, `docs/slice-1/IMPL-B5-COMPLETED.md`, `docs/slice-1/IMPL-C2-COMPLETED.md`, and `docs/slice-1/IMPL-PLAN-slice-1.md`.
 
-**Files removed:** None. The Product Owner subsequently directed a patch-version increment for each change; the package and lockfile now specify `0.1.3`. No provider request was made.
+**Files removed:** None. The Product Owner subsequently directed a patch-version increment for each change; the correction was delivered as `0.1.3`. No provider request was made during the correction's development verification.
 
 ## Behavior
 
@@ -22,7 +22,7 @@
 - **81 focused tests passed** with temporary paths on a `fuseblk` repository mount. A separate disposable mode check on that mount showed that it accepted `0600` and `0644`; this is not evidence that a mode-ignoring mount works. Ignored, unsupported and partially represented modes and permission-denied/I/O conditions were simulated in automated tests.
 - Before the subsequent version bump, an isolated normal `uv tool` installation reported application version `0.1.2` and successfully wrote synthetic bytes under simulated ignored-mode and post-publication mode-change conditions while emitting a privacy warning. At that point the correction had not incremented the version, so an explicit reinstall and behavior check were required to distinguish it from an earlier installation.
 - Subsequent patch bump: version assertions failed against `0.1.2` before the metadata update and passed against `0.1.3` afterward. The Python 3.13 full suite passed **520 tests**; lint, format, lockfile and build checks passed. An isolated normal `uv tool` installation reported `0.1.3`, and the diagnostic probe completed a synthetic artifact write on the local test filesystem.
-- Tests for the originally reported user mount were not run; the mount was not accessible in the development environment. The actual reported failure and native Windows execution remain unverified. No private photos, credentials, real model calls or mount changes were used.
+- At the time of the development tests, the originally reported mount was unavailable, and no private photos, credentials or real model calls were used. Subsequently, the operator ran the `0.1.3` synthetic create-only probe on the affected Linux NTFS/FUSE mount: it warned about privacy, reported `0777`, and verified the published bytes successfully. This does not independently test replacement or recovery on that mount. The original failure's precise cause and native Windows execution remain unverified. See [C4](IMPL-C4-COMPLETED.md) for the separate operator-reported provider test.
 - RED→GREEN was observed for initial ignored/unsupported-mode handling, diagnostics, cleanup, partial-mode handling, invalid-backup publication and sanitized malformed mode-operation errors. **Test-order evidence gap:** the initial test for a mode-capable probe followed by an ignored actual mode was corrected only after the implementation, so its corrected version lacks an observed pre-fix RED. It passes as supplemental regression coverage; no historical RED is claimed. This requires the Product Owner's explicit disposition under the project's TDD policy.
 - Patch 032 review found that post-publication mode comparison still applied unconditionally. `tests/unit/test_post_publication_modes.py` observed two failing cases (write and recovery on a simulated non-mode-capable filesystem) before the fix and all six cases passing afterward. The remaining four cases verify supported-mode mismatch and content mismatch behavior; they passed before the fix and are supplemental coverage, not additional RED evidence.
 - The historical lock-free design can accept another writer's valid destination at read-back and cannot guarantee a deterministic winner. Backup/cleanup races and filesystem-specific crash durability remain documented limitations.

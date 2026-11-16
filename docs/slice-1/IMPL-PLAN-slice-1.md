@@ -2,13 +2,13 @@
 
 > **For Hermes / implementers:** Execute this plan by phase. Phase A is a design and contract-freeze gate; do not begin production-code work until its acceptance checks pass. For every completed step, create the linked `IMPL-<StepId>-COMPLETED.md` record beside this plan, list files created/updated/removed, record `Scope deviations: None` or an approved deviation with its carry-forward link, and make the same acceptance checkoffs in this plan and the step record. Reviewers should read the step record first. Every code step uses test-first RED → GREEN → REFACTOR; capture the expected failing test before implementation.
 
-**Status:** In progress — Phase A readiness passed; Phase B complete (B1–B9); Phase C in progress (C1–C3 complete)
+**Status:** In progress — Phase A readiness passed; Phase B complete (B1–B9); Phase C in progress (C1–C4 complete; C5 open)
 **Goal:** Deliver a buildable single-image `desc` + `json` CLI pipeline, with independently selectable stages, configurable model/configuration inputs, schema-validated structured metadata with provenance, and recoverable sidecar writes.
-**Policy change — implemented:** The Product Owner superseded B2’s HTTP destination restriction. Standard HTTP and HTTPS URLs may use DNS/FQDN names and all IPv4/IPv6 destinations; one shared preflight/provider validation policy must not resolve hostnames or restrict destinations at application level. DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption. Configuration errors identify the affected key and actionable reason without sensitive values. Historical B2 checks below establish the prior policy only; the [correction record](IMPL-CONFIG-NETWORK-CORRECTION-COMPLETED.md) records the replacement implementation, evidence and limitations. No live provider request was made; C4 remains open.
+**Policy change — implemented:** The Product Owner superseded B2’s HTTP destination restriction. Standard HTTP and HTTPS URLs may use DNS/FQDN names and all IPv4/IPv6 destinations; one shared preflight/provider validation policy must not resolve hostnames or restrict destinations at application level. DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption. Configuration errors identify the affected key and actionable reason without sensitive values. Historical B2 checks below establish the prior policy only; the [correction record](IMPL-CONFIG-NETWORK-CORRECTION-COMPLETED.md) records the replacement implementation, evidence and limitations. Subsequent authorized live-provider testing is recorded in [C4](IMPL-C4-COMPLETED.md).
 
-**Approved safe-write permission correction — implementation verified, disposition pending:** The original A5/B5/C2 unconditional POSIX mode-equality contract conflicts with expected filesystems. Attempt private `0600` creation and preserve source modes for replacement, backup and recovery; require exact modes where supported, but do not fail solely on demonstrably unsupported mode semantics. Genuine permission denials, I/O and other unrelated errors remain failures; never use a filesystem-name allowlist. Byte and stage validation, replacement, backup/recovery, cleanup and lock-free concurrency remain protected; recovery now validates a backup before publication. Sidecars and backups may be exposed by filesystem or mount permissions; use a private destination when needed. The affected Linux NTFS/FUSE mount and native Windows remain unverified. Historical checked steps and results remain evidence of their original scope. See the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md).
+**Approved safe-write permission correction — implementation verified, disposition pending:** The original A5/B5/C2 unconditional POSIX mode-equality contract conflicts with expected filesystems. Attempt private `0600` creation and preserve source modes for replacement, backup and recovery; require exact modes where supported, but do not fail solely on demonstrably unsupported mode semantics. Genuine permission denials, I/O and other unrelated errors remain failures; never use a filesystem-name allowlist. Byte and stage validation, replacement, backup/recovery, cleanup and lock-free concurrency remain protected; recovery now validates a backup before publication. Sidecars and backups may be exposed by filesystem or mount permissions; use a private destination when needed. A subsequent operator probe verified a synthetic create-only write on the affected Linux NTFS/FUSE mount; native Windows remains unverified. Historical checked steps and results remain evidence of their original scope. See the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md).
 
-**Correction follow-up:** Automated tests passed on XFS and a mode-capable `fuseblk` mount, including simulated unsupported modes and failure paths. The affected mount was unavailable. Product Owner disposition of the documented test-order evidence gap remains pending. C4 remains open and independently requires operator authorization.
+**Correction follow-up:** Automated tests passed on XFS and a mode-capable `fuseblk` mount, including simulated unsupported modes and failure paths. The operator subsequently verified create-only publication on the affected mount. Product Owner disposition of the documented test-order evidence gap remains pending; C4 is complete and C5 remains open.
 
 **Architecture:** A small Python CLI resolves configuration once and passes the complete resolved configuration to an ordered stage coordinator. `desc` writes the authoritative `.desc.txt` handoff; `json` reads that persisted artifact and writes `.desc.json`. Shared provider and artifact services handle HTTP communication and safe writes; stages retain ownership of their own input, completion, and policy decisions.
 **Tech stack:** Python 3.12+ (Python 3.13 development baseline, pinned in `.python-version`); Hatchling with static project metadata in `pyproject.toml` and committed `uv.lock`; stdlib `argparse`; PyYAML; `jsonschema` and direct `referencing` dependency (approved in B2); synchronous `httpx`; pytest and Ruff as development tools; `uv` for environment and lock management. A1 records selection separately from actual tool availability.
@@ -166,7 +166,7 @@ Test modules are `tests/unit/test_cli.py`, `test_resources.py`, `test_config.py`
 - [x] Step C1 — Verify independent stage execution and persisted handoff [TEST]
 - [x] Step C2 — Verify failure recovery, source integrity, and credential hygiene [TEST]
 - [x] Step C3 — Run Linux package and quality gates [TEST]
-- [ ] Step C4 — Perform an authorized real-provider quality smoke test [MANUAL/TEST]
+- [x] Step C4 — Perform an authorized real-provider quality smoke test [MANUAL/TEST]
 - [ ] Step C5 — Reconcile acceptance evidence and close Slice 1 [DOCS/TEST]
 
 ---
@@ -705,25 +705,25 @@ For create-only skip, an existing `.desc.json` is structurally valid if strict J
 
 ### Step C4 — Perform an authorized real-provider quality smoke test [MANUAL/TEST]
 
-**Goal:** Confirm the selected compatible provider can produce useful description and schema-valid structured metadata with the actual adapter, without exposing private images or credentials.
+**Goal:** Confirm the selected compatible provider can produce useful description and schema-valid structured metadata with the actual adapter, using operator-authorized data and without copying credentials or private image content into the record.
 
 **Owner:** Operator/user controls endpoint, model, credentials, and any cost/data transfer. Hermes must not request or type a secret.
 
-**Inputs:** A synthetic, non-identifying image; approved endpoint/model; credential already available through the operator's chosen environment variable; A3 schema/prompt contract.
+**Inputs:** Operator-authorized test images; approved endpoint/model; credential already available through the operator's chosen environment variable; A3 schema/prompt contract. The Product Owner superseded the original synthetic-only input criterion for this completed smoke test.
 
 **Actions:**
-1. Do not make a remote request until the operator explicitly authorizes the endpoint, model, synthetic input, and any expected charge/data transfer.
+1. Do not make a remote request until the operator explicitly authorizes the endpoint, model, input images, and any expected charge/data transfer.
 2. Run the documented one-image `desc` and `json` commands using the approved environment variable; never put the credential in command arguments or evidence.
-3. Check description usefulness, schema validity, required metadata categories, provenance, and absence of credentials/private metadata in outputs and logs.
-4. If no authorized endpoint is available, record `NOT SAFELY AVAILABLE` and the exact boundary; do not retry with another endpoint or real photo.
+3. Check description usefulness, schema validity, required metadata categories, provenance, and credential exposure in inspected outputs; record any sensitive source-derived content and whether logs were actually checked.
+4. If no authorized endpoint is available, record `NOT SAFELY AVAILABLE` and the exact boundary; do not retry with another endpoint or image without authorization.
 
 **Outputs:** Sanitized manual result/disposition and operator authorization provenance; [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md)
 
 **Acceptance:**
-- [ ] The approved provider completes both stages with the agreed contract, or the row remains unchecked with `NOT SAFELY AVAILABLE` and a precise blocker.
-- [ ] Only synthetic, non-identifying input is used; no secret is copied into the record.
-- [ ] Manual result is not represented as automated test evidence.
-- [ ] [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md) is complete and linked.
+- [x] The approved provider completes both stages with the agreed contract, or the row remains unchecked with `NOT SAFELY AVAILABLE` and a precise blocker.
+- [x] Operator-authorized test images are used; no secret is copied into the record.
+- [x] Manual result is not represented as automated test evidence.
+- [x] [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md) is complete and linked.
 
 ### Step C5 — Reconcile acceptance evidence and close Slice 1 [DOCS/TEST]
 
@@ -773,7 +773,7 @@ Do not treat a pending approval or deferred runtime check as permission to inven
 
 | Item | Disposition | Resolution / owner |
 | --- | --- | --- |
-| Artifact API details, temp/backup naming, permissions, failure and recovery assertions | Original design resolved in A5; correction implemented, test-order disposition and affected-mount verification pending | See [A5](IMPL-A5-COMPLETED.md) and the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md). |
+| Artifact API details, temp/backup naming, permissions, failure and recovery assertions | Original design resolved in A5; correction implemented, affected-mount create-only probe passed, test-order disposition pending | See [A5](IMPL-A5-COMPLETED.md) and the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md). |
 | A3 Product Owner review of the prompt, metadata fields, envelope/provenance boundary, schema-version rules, existing-output skip behavior, and retry contract | Resolved by explicit acceptance | Erik accepted the A3 contract as documented during A6; no revisions were requested. |
 | Python 3.12/3.13 interpreter availability for the runtime matrix | Explicitly deferred to C3; not a Phase A design blocker | A1 selected the versions and commands. At A6, neither interpreter is installed; `uv` reports 3.12.14 and 3.13.15 available for download. C3 must recheck/provision and leave any unrun compatibility acceptance unchecked. |
 
