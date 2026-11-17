@@ -116,7 +116,7 @@ The samples demonstrate **coexistence**, not a verified writable-field minimum. 
 
 The screenshots showed `auto/bell pepper` from digiKam's classifier and the manually organized `food/pepper`. The Product Owner explicitly rejected treating duplication across roots as a primary concern.
 
-**Agreed direction:** Use the independently controlled configurable root `ai` by default when the setting is omitted, distinct from digiKam's `auto` and user-maintained hierarchies. An explicitly configured empty string (`""`) instead adds no root prefix; in that mode tag updates are additive only and never delete existing tags, regardless of policy. A non-empty root uses the chosen update policy. The root is a **tag hierarchy root**, not an XML namespace.
+**Agreed direction:** Use the independently controlled configurable root `ai` by default when the setting is omitted, distinct from digiKam's `auto` and user-maintained hierarchies. An explicitly configured empty string (`""`) instead adds no root prefix; in that mode `disabled` leaves tags unchanged and `add`, `new`, and `overwrite` each behave as `add`, never deleting existing tags. A non-empty root uses the chosen update policy. The root is a **tag hierarchy root**, not an XML namespace.
 
 Another screenshot showed digiKam auto tags with comma-separated synonym-like labels and one checkbox per displayed item. This is an observation of the UI, **not proof of the underlying synonym model** and not a convention Image Clarus must reproduce.
 
@@ -242,7 +242,7 @@ One historical nuance: Slice 1 A3 described `keywords` as the canonical search-t
 | Tag count | No forced candidate count |
 | Hierarchy | Recommend paths when meaningful; do not require a category |
 | Categories | User-configured preferences; may use multiple applicable categories |
-| Ownership | Omitted root defaults to `ai`; explicit empty string publishes without a prefix and preserves every existing tag through additive-only updates |
+| Ownership | Omitted root defaults to `ai`; explicit empty string publishes without a prefix, uses `add` for `add`/`new`/`overwrite`, and leaves tags unchanged for `disabled` |
 | Duplicate concepts across roots | Acceptable; cross-root deduplication is not a priority |
 | Semantic work | JSON stage; no model inference inside XMP stage |
 | Title | JSON-generated concise title; independent XMP update policy |
@@ -265,7 +265,6 @@ These are **design questions**, not reasons to reopen the completed Slice 1:
 8. **XMP update and recovery:** Merge/preservation validation, existing XMP handling, stage-specific results, recoverable publication, and interaction with the documented lock-free/last-write-wins constraint.
 9. **digiKam refresh:** How are externally written sidecars imported or rescanned so the database/UI displays the result? Verify rather than assuming immediate visibility.
 10. **Validation fixtures:** Create synthetic or sanitized representative XMP samples and run digiKam/ExifTool round-trip checks without publishing original operator data.
-11. **Empty root and policies:** Define non-destructive handling or rejection of `overwrite` and `new` with an explicitly empty root, preserving all existing tags; `disabled` makes no tag changes.
 
 ## 9. Suggested handoff to the Slice 2 REQ
 

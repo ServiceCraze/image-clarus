@@ -153,10 +153,9 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
 ### S2-12 - Generated tag ownership and policies
 
 - The configurable tag-hierarchy root defaults to the built-in `ai` when the setting is omitted. An explicitly configured empty string (`""`) means no added root prefix and permits publication directly into top-level hierarchies. An omitted setting and an explicit empty string must remain distinct through configuration precedence. This root is **not an XML namespace**. Do not use digiKam's `auto` root by default.
-- **Explicit empty-root exception:** With an empty root, every tag update must be additive and must never delete any existing XMP tags, regardless of the configured tag policy. This protection applies to all tag representations touched by the operation. `disabled` still leaves tags unchanged. Title, caption, and author policies remain independent.
-- For an empty root, design must define and test how `overwrite` and `new` are handled without violating the additive-only rule, including whether incompatible policy combinations are rejected or safely handled. Do not silently perform a destructive overwrite.
+- **Explicit empty-root exception:** With an empty root, `disabled` leaves tags unchanged; each of `add`, `new`, and `overwrite` has the effective behavior of `add`. Add recommended assignments without duplicates and never delete existing XMP tags, including in any tag representations touched by the operation. This override applies only to an explicitly empty root; for a non-empty root the selected policy applies normally. Title, caption, and author policies remain independent.
 - Duplication of a concept under other, independently owned roots (for example `auto/bell pepper` versus `ai/food/bell pepper`) is acceptable; cross-root deduplication is not required.
-- Support the established tag policies:
+- Support the established tag policies for a non-empty root:
   - `add` (**default**) - add recommended assignments within the generated root without duplicate assignments;
   - `overwrite` - replace assignments **only within the generated root**;
   - `new` - populate recommendations only when the generated root has no existing tags for the image;
@@ -220,7 +219,7 @@ Acceptance requires automated checks where practical and an explicitly identifie
 | Metadata quality | Human review of a small synthetic or sanitized description set evaluates accurate titles, useful supported captions, search-useful ranking, and meaningful categorization without forced placement; record the examples, criteria, and observed outcomes |
 | Standalone stages | `json` consumes a persisted `.desc.txt`; `xmp` consumes persisted JSON without additional generation; selected-stage ordering and missing-input behavior follow existing contracts |
 | Hierarchical tag semantics | DigiKam recognizes a generated descendant under `ai`; ancestor-based filtering works without independently assigning every parent; other roots remain unchanged |
-| Tag policies | With a non-empty root, `add`, `overwrite`, `new`, and `disabled` act only within that root. With an explicitly empty root, every configured policy preserves all existing tags and any additions are additive; `disabled` makes no tag changes. Test omitted versus explicit empty settings, each policy, top-level publication, and repeated invocation |
+| Tag policies | With a non-empty root, `add`, `overwrite`, `new`, and `disabled` act only within that root. With an explicitly empty root, `add`, `new`, and `overwrite` all behave as `add`, preserving existing tags without duplicate additions; `disabled` makes no tag changes. Test omitted versus explicit empty settings, each policy, top-level publication, and repeated invocation |
 | Title and caption | DigiKam displays and allows editing the generated title/caption; independent `new`, `overwrite`, and `disabled` policies behave as specified |
 | Caption author | With no configured author, existing author metadata is unchanged; with a configured value, each supported update policy behaves as specified |
 | Metadata preservation | Before/after comparison confirms preservation of tags outside a non-empty configured root or all existing tags with an empty root, unrelated and ambiguously owned shared keyword values, XML namespaces, and camera/vendor metadata |
@@ -244,7 +243,6 @@ These questions are **not new functional scope**. They must be resolved explicit
 5. ExifTool field-write mappings required for digiKam hierarchy, title/caption, and optional author; safe handling of ambiguous ownership in shared flat fields and multilingual `x-default` values.
 6. ExifTool/backend validation, field-specific merge behavior, restoration, and result semantics within established artifact-service constraints.
 7. digiKam sidecar import/refresh behavior and selection of publishable synthetic/sanitized test fixtures.
-8. Empty-root handling of `overwrite` and `new`, including any configuration errors or non-destructive policy behavior, while preserving all existing tags and respecting `disabled`.
 
 These decisions should respect the current HLD's default `ai` ownership root, the explicit empty-root exception above, independent stage contracts, optional XMP-only ExifTool dependency, and existing safe-write mechanisms. Reconcile the empty-root exception into the canonical HLD before implementation. Do not silently revise Slice 1 decisions or narrow requirements for future consumers.
 
