@@ -1,15 +1,18 @@
 # Image Clarus Slice 2 - Discovery
 
-**Date:** 2026-11-17  
-**Status:** Discovery record for review; not an implementation plan or an approved replacement for the canonical requirements  
-**Project:** `image-clarus`  
+**Date:** 2026-11-17
+
+**Status:** Discovery record for review; not an implementation plan or an approved replacement for the canonical requirements
+
+**Project:** `image-clarus`
+
 **Intended repository path:** `docs/slice-2/DISCOVERY-slice-2.md`
 
 ## 1. Purpose and evidence boundaries
 
 Record the observations, experiments, discussions, and product decisions leading toward Slice 2: enhancing structured JSON for useful image metadata and publishing selected metadata into digiKam-compatible XMP sidecars. Preserve the distinction between observed application behavior, agreed functional direction, and choices still requiring detailed design.
 
-Slice 1 is closed at application version `0.1.7`. Slice 2 has not yet been implemented. A separate `REQ-slice-2.md` will formalize scope and traceability; a later implementation plan will resolve technical contracts and execution steps.
+Slice 1 is closed at application version `0.1.7`. Slice 2 has not yet been implemented. The proposed [`REQ-slice-2.md`](REQ-slice-2.md) records scope and traceability; a later implementation plan will resolve technical contracts and execution steps.
 
 **Sources consulted**
 
@@ -119,7 +122,7 @@ Another screenshot showed digiKam auto tags with comma-separated synonym-like la
 
 ### 4.4 Preferred categories supplied by the user
 
-The Product Owner's existing manually maintained top-level categories include `equipment`, `food`, `People`, `plant`, `solar`, and `vehicle`, with others possible over time. These are examples of **user preference**, not universal application categories.
+Users may provide their own top-level categories, with others added over time. For example, a fictional taxonomy might include `architecture`, `weather`, and `wildlife`. These are examples of **user preference**, not universal application categories.
 
 **Agreed direction**
 
@@ -129,6 +132,7 @@ The Product Owner's existing manually maintained top-level categories include `e
 - Allow placement in multiple applicable categories when justified, such as a pepper that is both a food and part of a growing plant.
 - The category list should be extensible and should not be hard-coded to this user's taxonomy.
 - JSON, not XMP, makes the semantic categorization decision; the XMP stage applies the resulting recommendations deterministically.
+- JSON recommendations do not include the configured XMP ownership root; the XMP stage applies that root when publishing.
 
 **Not yet decided:** The final configuration key, whether unlisted new categories may be inferred by default, the output representation of multiple assignments, and the details of top-N counting.
 
@@ -205,6 +209,7 @@ The design preserves the established file-in/file-out processing stages:
 - The XMP stage consumes persisted structured metadata without additional model calls. It applies top-N selection and independently configured tag/title/caption/author update policies.
 - The shared artifact service retains responsibility for recoverable writes; ExifTool is the initially selected optional XMP backend per the HLD.
 - XMP is a publication target, not the sole authoritative representation for description, context, or future search consumers.
+- Adding fields to newly generated JSON does not update existing artifacts. Existing valid JSON is skipped by default; explicit regeneration replaces the complete JSON artifact rather than merging individual fields. Older artifacts lacking information required by a selected XMP operation follow the existing missing-prerequisite policy; the single-image default is an actionable failure.
 - The source image is never modified. An existing XMP sidecar may contain manual tags and many unrelated fields that must survive the operation.
 
 The *working names* `title`, `description`, and `tag_candidates` are useful for discussion; the final schema and compatibility contract are **not yet frozen**.
@@ -250,12 +255,12 @@ One historical nuance: Slice 1 A3 described `keywords` as the canonical search-t
 
 These are **design questions**, not reasons to reopen the completed Slice 1:
 
-1. **JSON representation:** What exact structure represents ranked recommendations and full hierarchy paths? Strings, structured items, or another form? How are uncategorized recommendations represented?
+1. **JSON representation:** What exact structure represents ranked recommendations and category paths without the XMP ownership root? Strings, structured items, or another form? How are uncategorized recommendations represented?
 2. **Ranking/counting:** How does top-N behave when one concept appears in multiple categories? Is ranking by concept, final assignment, or both? How are ties, duplicate paths, case variants, and synonyms handled?
 3. **Category configuration:** What exact keys and defaults convey preferred categories to the JSON stage? May the model add new top-level categories not listed by the user, and under what rules?
 4. **Tag validity and safety:** How are invalid/empty values, path separators, control characters, misleading inferences, duplicates, and unsupported hierarchical claims handled?
-5. **Schema evolution:** Versioning the built-in schema, prompt updates, backwards compatibility for existing `.desc.json` sidecars, and behavior with replacement user schemas. Create-if-missing and regeneration policy must remain explicit.
-6. **XMP write targets:** Which properties must ExifTool write for digiKam to display and edit hierarchy correctly? How can shared flat keyword fields be updated without altering unrelated manual terms or other application metadata?
+5. **Schema evolution:** Versioning the built-in schema and defining a process for future releases, including supported readers, older `.desc.json` sidecars, explicit migration or regeneration, and replacement user schemas. Create-if-missing and full-artifact regeneration remain the established behavior.
+6. **XMP write targets:** Which properties must ExifTool write for digiKam to display and edit hierarchy correctly? If a shared flat keyword must be changed, how can ambiguous ownership be handled without removing unrelated values? Preserve ambiguous values; observed coexistence alone does not require writing the property.
 7. **Title/caption/author mappings:** How are `rdf:Alt`/`x-default`, existing localized values, configured caption author, and extra digiKam/vendor representations handled? Which field synchronizations are essential versus observed side effects?
 8. **XMP update and recovery:** Merge/preservation validation, existing XMP handling, stage-specific results, recoverable publication, and interaction with the documented lock-free/last-write-wins constraint.
 9. **digiKam refresh:** How are externally written sidecars imported or rescanned so the database/UI displays the result? Verify rather than assuming immediate visibility.
@@ -263,6 +268,6 @@ These are **design questions**, not reasons to reopen the completed Slice 1:
 
 ## 9. Suggested handoff to the Slice 2 REQ
 
-Create `docs/slice-2/REQ-slice-2.md` to state the **normative** Slice 2 functionality, explicit inclusions/exclusions, acceptance criteria, and traceability to the overall REQ. Use this discovery document as supporting evidence, not as a competing specification. Existing canonical requirements and HLD decisions remain in force unless explicitly revised through the project's normal design process.
+Review `docs/slice-2/REQ-slice-2.md`, which proposes Slice 2 functionality, explicit inclusions/exclusions, acceptance criteria, and traceability to the overall REQ. Use this discovery document as supporting evidence, not as a competing specification. Existing canonical requirements and HLD decisions remain in force unless explicitly revised through the project's normal design process.
 
 Then reconcile architectural decisions into `docs/HLD-image-clarus.md` where they establish durable boundaries. Create `docs/slice-2/IMPL-PLAN-slice-2.md` only after the Slice 2 requirements and relevant high-level design are accepted. The plan should resolve the remaining schema, configuration, field-mapping, compatibility, and verification decisions before implementation.

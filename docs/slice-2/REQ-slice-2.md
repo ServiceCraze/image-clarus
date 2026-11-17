@@ -1,12 +1,19 @@
 # REQ - Image Clarus Slice 2
 
-**Date:** 2026-11-17  
-**Status:** Proposed Slice 2 functional requirements for Product Owner review; not yet an accepted implementation contract  
-**Project:** `image-clarus`  
-**Intended repository path:** `docs/slice-2/REQ-slice-2.md`  
-**Parent requirements:** [`../REQ-image-clarus.md`](../REQ-image-clarus.md)  
-**Architecture:** [`../HLD-image-clarus.md`](../HLD-image-clarus.md)  
-**Discovery:** [`DISCOVERY-slice-2.md`](DISCOVERY-slice-2.md)  
+**Date:** 2026-11-17
+
+**Status:** Proposed Slice 2 functional requirements for Product Owner review; not yet an accepted implementation contract
+
+**Project:** `image-clarus`
+
+**Intended repository path:** `docs/slice-2/REQ-slice-2.md`
+
+**Parent requirements:** [`../REQ-image-clarus.md`](../REQ-image-clarus.md)
+
+**Architecture:** [`../HLD-image-clarus.md`](../HLD-image-clarus.md)
+
+**Discovery:** [`DISCOVERY-slice-2.md`](DISCOVERY-slice-2.md)
+
 **Previous slice closeout:** [`../slice-1/IMPL-C5-COMPLETED.md`](../slice-1/IMPL-C5-COMPLETED.md)
 
 ## 1. Purpose and document authority
@@ -25,7 +32,7 @@ The words **must** and **shall** identify required Slice 2 behavior; **may** den
 - Preserve the existing broad structured metadata and provenance as independently useful information, not merely an XMP input.
 - Implement the independently selectable **`xmp` stage** for one image, using persisted structured JSON to create/update a `.xmp` sidecar compatible with digiKam.
 - Support deterministic tag selection and hierarchy publication, independent policies for tags/title/caption, and an **optional, config-supplied caption author**.
-- Preserve all unrelated metadata and manually maintained tags; use the existing shared recoverable sidecar-writing mechanisms.
+- Preserve unrelated metadata and tags outside the configured generated root; use the existing shared recoverable sidecar-writing mechanisms.
 - Verify the behavior with synthetic/sanitized XMP fixtures, ExifTool round trips, and real digiKam read/edit checks where necessary.
 
 ### 2.2 Not included
@@ -36,7 +43,7 @@ The words **must** and **shall** identify required Slice 2 behavior; **may** den
 - Synchronization with the user's existing manual hierarchy or deduplication across `ai`, `auto`, and manually maintained tag roots.
 - General-purpose reconciliation of prior tags removed from regenerated JSON; only the already defined generated-root `overwrite` policy is in scope.
 - A required centralized image database, job queue, internal scheduler, or new provider protocol.
-- Synchronization of unrelated vendor-specific tag/keyword representations by default; other representations remain subject to the overall REQ's optional extensibility requirements and the HLD's initial digiKam-only release boundary.
+- Synchronization of other applications' tag/keyword representations is outside Slice 2, except where a representation is verified to be necessary for digiKam interoperability. The overall REQ's independently optional mappings remain end-state requirements.
 - Exhaustive operating-system/filesystem compatibility testing or a guarantee of crash-proof persistence.
 
 Slice 2 remains useful through a **single-image CLI invocation**, whether running `desc`, `json`, `xmp`, or a selected combination. Later-slice capabilities remain required by the end-state REQ but are not Slice 2 acceptance conditions.
@@ -103,6 +110,7 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
 ### S2-07 - Hierarchical categorization
 
 - The JSON stage must recommend hierarchical placement for candidates where a meaningful category relationship exists.
+- Recommendations describe categories and tag concepts, not the XMP ownership root. The XMP stage applies the configured root during publication; it is not embedded in JSON tag recommendations.
 - A recommendation must be able to remain **uncategorized** when no useful category applies.
 - A concept must be able to appear in more than one applicable hierarchy when warranted; no rule may force all concepts into a single exclusive category.
 - Category placement must not be fabricated solely to fill a hierarchy. For example, `plant` is appropriate for a depicted growing plant, but should not be automatically inferred as depicted for picked produce on a plate.
@@ -111,7 +119,7 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
 ### S2-08 - Preferred categories as user guidance
 
 - Configuration must allow a user to provide **preferred category names** to guide the JSON stage's semantic categorization.
-- Preferred categories are examples of a user's taxonomy, not built-in mandatory universal top-level categories. Example user categories include `equipment`, `food`, `People`, `plant`, `solar`, and `vehicle`; this list must not be hard-coded as the application's taxonomy.
+- Preferred categories are examples of a user's taxonomy, not built-in mandatory universal top-level categories. A fictional example list might include `architecture`, `weather`, and `wildlife`; it must not be hard-coded as the application's taxonomy.
 - A preferred category must be used only where meaningful, and must not require every candidate to be categorized.
 - Multiple meaningful preferred categories may apply to one image or concept.
 - Design must decide how recommendations can introduce categories not present in the preferred list and how an absent/empty configured list behaves; no mandatory closed taxonomy is implied.
@@ -127,8 +135,10 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
 - Continue supporting an independently configurable JSON prompt and a fully replaceable user JSON payload schema, without requiring source-code changes for custom schemas.
 - Update and independently version the built-in metadata schema when its payload contract changes; do not confuse schema version with application version or the existing envelope format version.
 - Preserve the established application-owned provenance/envelope behavior, including description and prompt identification.
-- Respect existing create-if-missing and explicit-regeneration rules. A schema update must not silently rewrite a previously valid JSON artifact.
-- Define and test deterministic behavior when the XMP stage encounters older `.desc.json` payloads, valid custom-schema payloads, or missing new fields. Do not silently misinterpret arbitrary fields as title, caption, or tag candidates.
+- The enhancement is additive to the built-in payload's information, not an automatic in-place update of existing files. Respect create-if-missing: a structurally valid existing JSON sidecar is skipped by default even if its payload uses an older schema. Explicit JSON regeneration may replace the entire sidecar with newly generated content; it does not promise a field-by-field merge or preservation of manual JSON edits.
+- XMP must not silently regenerate JSON or treat incompatible input as successful publication. When a selected operation needs information missing from an older payload, apply the existing configurable missing-prerequisite policy: the built-in default for explicit single-image input is failure with an actionable diagnostic, including explicit JSON regeneration as an option where appropriate. Do not require fields for disabled operations merely because they exist in the new schema.
+- Define and test which selected operations need which fields, how empty supported values differ from absent or incompatible fields, and how valid custom-schema payloads can be mapped without misinterpreting arbitrary fields. Do not assume that every historical or custom payload is incompatible solely because of its schema identity.
+- Define a documented, independently versioned metadata-schema evolution and compatibility process for future releases, including identification, supported readers, handling older artifacts, and explicit migration or regeneration choices where applicable. Do not require automatic migration or regeneration.
 
 ## 6. XMP publication requirements
 
@@ -148,9 +158,10 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
   - `overwrite` - replace assignments **only within the generated root**;
   - `new` - populate recommendations only when the generated root has no existing tags for the image;
   - `disabled` - do not modify generated tags.
-- Never intentionally alter assignments outside the configured generated root, even when a shared flat keyword property contains both generated and unrelated terms.
+- Never alter assignments outside the configured generated root; all assignments within that root, including manually added ones, are governed by its selected policy.
+- Preserve unrelated values in any shared flat keyword property. A flat value may not carry enough information to establish which hierarchy owns it; define and test safe handling before modifying such a property. Preserve ambiguous values rather than removing unrelated metadata, and do not require writing a representation solely because it was observed.
 - Preserve the distinction between hierarchy ancestors and explicitly assigned tags. A parent category need not be independently assigned merely because a child is assigned.
-- Preserve existing manual and other-system tags. Do not attempt cross-root taxonomy reconciliation.
+- Preserve manual and other-system tags outside the configured root. Do not attempt cross-root taxonomy reconciliation.
 
 ### S2-13 - Ranked top-N publication
 
@@ -203,14 +214,16 @@ Acceptance requires automated checks where practical and an explicitly identifie
 | JSON evolution | Title, concise caption, and ranked recommendations are present in a valid updated built-in JSON payload; original descriptive fields and application provenance remain usable |
 | Description evidence boundary | No unsupported person, place, date, history, or contextual claims introduced by title/caption/tag recommendations in representative samples |
 | Ranking and category guidance | Representative examples cover specific/general tags, uncategorized recommendations, preferred categories, and multiple appropriate hierarchy assignments; truncation follows ranking |
+| Metadata quality | Human review of a small synthetic or sanitized description set evaluates accurate titles, useful supported captions, search-useful ranking, and meaningful categorization without forced placement; record the examples, criteria, and observed outcomes |
 | Standalone stages | `json` consumes a persisted `.desc.txt`; `xmp` consumes persisted JSON without additional generation; selected-stage ordering and missing-input behavior follow existing contracts |
 | Hierarchical tag semantics | DigiKam recognizes a generated descendant under `ai`; ancestor-based filtering works without independently assigning every parent; other roots remain unchanged |
 | Tag policies | `add`, `overwrite`, `new`, and `disabled` act only within the owned root; selected limit and repeated invocation are predictable |
 | Title and caption | DigiKam displays and allows editing the generated title/caption; independent `new`, `overwrite`, and `disabled` policies behave as specified |
 | Caption author | With no configured author, existing author metadata is unchanged; with a configured value, each supported update policy behaves as specified |
-| Metadata preservation | Before/after comparison confirms preservation of manual tags, unrelated keyword data, namespaces, and camera/vendor metadata |
+| Metadata preservation | Before/after comparison confirms preservation of tags outside the configured root, unrelated and ambiguously owned shared keyword values, namespaces, and camera/vendor metadata |
 | Safe-write and failures | Malformed input/XMP, invalid mappings, failed writes, recovery, and unsupported/missing ExifTool have defined outcomes; source-image bytes never change |
-| Compatibility | Historical JSON and custom-schema interactions are explicit and tested; changed built-in schema identity and provenance are coherent |
+| Compatibility | Existing JSON skip and explicit replacement, historical and custom-schema interactions, selected-field prerequisites, actionable failure and configurable policy are tested; schema evolution and provenance are documented |
+| Configuration | CLI overrides selected YAML and built-in defaults for new settings; stage-specific validation does not require unused XMP configuration or ExifTool for `desc`/`json` |
 | Public fixtures | Only synthetic or sanitized files enter the public repository; no raw personal images, unredacted XMP, device metadata, credentials, or private endpoint data |
 
 A digiKam-produced XMP sidecar may contain `digiKam:TagsList`, `lr:hierarchicalSubject`, `dc:subject`, `dc:title`, `dc:description`, `digiKam:CaptionsAuthorNames`, and several other fields. **Observed coexistence does not mandate writing every one of these properties.** The design and verification must determine the minimal compatible write set while preserving unrelated values.
@@ -224,8 +237,8 @@ These questions are **not new functional scope**. They must be resolved explicit
 1. Exact JSON field names, types, ordering representation, hierarchy encoding, and semantics of empty/unsupported title/caption/tag values.
 2. Top-N counting for a concept recommended in multiple hierarchies, ties, deduplication, path validity, and default limit.
 3. Preferred-category configuration format and default behavior; whether and how unlisted categories can be recommended.
-4. Built-in JSON schema version, regeneration rules, historical `.desc.json` handling, and compatibility with arbitrary replacement schemas.
-5. ExifTool field-write mappings required for digiKam hierarchy, title/caption, and optional author; behavior of shared flat fields and multilingual `x-default` values.
+4. Built-in JSON schema version and future evolution process; operation-specific prerequisites, empty-value semantics, historical `.desc.json` handling, and mapping of replacement schemas under the rules in S2-10.
+5. ExifTool field-write mappings required for digiKam hierarchy, title/caption, and optional author; safe handling of ambiguous ownership in shared flat fields and multilingual `x-default` values.
 6. ExifTool/backend validation, field-specific merge behavior, restoration, and result semantics within established artifact-service constraints.
 7. digiKam sidecar import/refresh behavior and selection of publishable synthetic/sanitized test fixtures.
 
