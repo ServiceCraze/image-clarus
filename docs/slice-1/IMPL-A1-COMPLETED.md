@@ -11,7 +11,7 @@
 
 ## Summary
 
-Completed Phase A1 as a design-only step. The Slice 1 package layout, module ownership, build backend, runtime/development dependencies, application-version source, bundled-asset strategy, fixture policy, and verification commands are now fixed in the plan. No production code, tests, package metadata, lockfile, or examples were created. Step A2 has not started.
+Completed Phase A1 as a design-only step. The Slice 1 package layout, module ownership, build backend, runtime/development dependencies, application-version source, bundled-asset strategy, fixture policy, and verification commands are now fixed in the plan. No production code, tests, package metadata, lockfile, or examples were created. At A1 closeout, Step A2 had not started.
 
 ## Decision record
 
@@ -104,4 +104,6 @@ The formatter write command is run only when formatting changes are needed. C3 r
 ## Follow-ups
 
 - At A1 closeout, Step A2 had not started; it was completed subsequently in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md).
-- B1 must create `.python-version` containing `3.13`, `pyproject.toml`, `uv.lock`, the package scaffold and resource lookup, tests, and `.gitignore` entries for `.venv/`, `dist/`, `build/`, `*.egg-info/`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` while preserving existing ignore patterns. The repository owner commits `uv.lock` with the implementation work.
+- B1 was tasked with creating `.python-version` containing `3.13`, `pyproject.toml`, `uv.lock`, the package scaffold and resource lookup, tests, and `.gitignore` entries for `.venv/`, `dist/`, `build/`, `*.egg-info/`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` while preserving existing ignore patterns. The repository owner commits `uv.lock` with implementation work.
+
+**Subsequent progress:** Steps A2–A6, B1–B9, and C1–C5 are complete; the final acceptance crosswalk and current lock/version verification are in [C5](IMPL-C5-COMPLETED.md). Commit state remains repository-owner-controlled and was not inspected.

@@ -49,4 +49,6 @@ The Product Owner also approved designing and implementing bounded, isolated val
 
 B8 has not been started as part of B7. The B7 test-order exception above remains documented and explicitly accepted; it does not convert missing historical RED into observed evidence.
 
-**Subsequent progress:** B8 is complete; see [IMPL-B8-COMPLETED.md](IMPL-B8-COMPLETED.md). B9 and Phase C remain open.
+At B7 closeout, B8 was the next step; B9 and Phase C had not yet been completed.
+
+**Subsequent progress:** B8–B9 and C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for the final Slice 1 evidence crosswalk.

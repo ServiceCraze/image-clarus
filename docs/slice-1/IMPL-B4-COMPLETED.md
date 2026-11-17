@@ -32,4 +32,6 @@ Stop-on-failure produces `stage_not_run_after_failure` records; continue invokes
 
 ## Follow-up
 
-At B4 closeout, B5 and later steps had not started. B5 has since implemented and tested the artifact service; B6 and later steps have not started. Actual stage and CLI integration and OS signals are not claimed by the B4 tests.
+At B4 closeout, B5 and later steps had not started. B5 subsequently implemented and tested the artifact service; B6 and later steps were still open at that point. Actual stage and CLI integration and OS signals are not claimed by the B4 tests.
+
+**Subsequent progress:** B6–B9 and C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for the final Slice 1 evidence crosswalk.

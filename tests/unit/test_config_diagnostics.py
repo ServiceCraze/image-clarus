@@ -372,3 +372,63 @@ def test_different_provider_override_is_not_blame_for_selected_provider(tmp_path
     text = str(exc.value).lower()
     assert "providers.<name>.timeout_seconds" in text and "positive" in text
     assert "override paths:" not in text
+
+
+def test_direct_api_key_control_characters_are_actionable(tmp_path):
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        "providers:\n  p:\n    base_url: http://localhost\n"
+        '    api_key: "SYNTHETIC_KEY_SENTINEL\\r\\nX-Probe: 1"\n'
+        "models:\n  m:\n    provider: p\n    model_id: sample-model\n"
+        "stages:\n  desc:\n    model: m\n"
+    )
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(config_file=path, stages=("desc",))
+    text = str(exc.value).lower()
+    assert exc.value.category == "configuration"
+    assert "providers.<name>.api_key" in text
+    assert "header" in text and "set" in text
+    assert "synthetic_key_sentinel" not in text and "x-probe" not in text
+
+
+def test_environment_api_key_control_characters_are_actionable(monkeypatch):
+    monkeypatch.setenv(
+        "SYNTHETIC_PROVIDER_KEY",
+        "SYNTHETIC_KEY_SENTINEL\r\nX-Probe: 1",
+    )
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(
+            discovery_paths=(),
+            stages=("desc",),
+            overrides=[
+                "providers.p.base_url=http://localhost",
+                "providers.p.api_key_env=SYNTHETIC_PROVIDER_KEY",
+                "models.m.provider=p",
+                "models.m.model_id=sample-model",
+                "stages.desc.model=m",
+            ],
+        )
+    text = str(exc.value).lower()
+    assert exc.value.category == "configuration"
+    assert "providers.<name>.api_key_env" in text
+    assert "header" in text and "set" in text
+    assert "synthetic_key_sentinel" not in text and "x-probe" not in text
+
+
+def test_unpaired_surrogate_model_id_is_actionable():
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(
+            discovery_paths=(),
+            stages=("desc",),
+            overrides=[
+                "providers.p.base_url=http://localhost",
+                "models.m.provider=p",
+                'models.m.model_id="\\uD800"',
+                "stages.desc.model=m",
+            ],
+        )
+    text = str(exc.value).lower()
+    assert exc.value.category == "configuration"
+    assert "models.<name>.model_id" in text
+    assert "utf-8" in text and "set" in text
+    assert "d800" not in text

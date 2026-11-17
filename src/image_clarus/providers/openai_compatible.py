@@ -14,7 +14,13 @@ import os
 
 import httpx
 
-from image_clarus.config import EFFORTS, ConfigurationError, _check_mapping
+from image_clarus.config import (
+    EFFORTS,
+    ConfigurationError,
+    _check_mapping,
+    _valid_header_credential,
+    _valid_utf8_text,
+)
 from image_clarus.endpoint import validate_base_url
 
 
@@ -193,6 +199,7 @@ class OpenAICompatible:
         if (
             not isinstance(self.model.get("model_id"), str)
             or not self.model["model_id"].strip()
+            or not _valid_utf8_text(self.model["model_id"])
         ):
             raise ProviderError("configuration")
         if "api_key" in self.provider and "api_key_env" in self.provider:
@@ -204,6 +211,8 @@ class OpenAICompatible:
             not isinstance(key, str) or not key.strip()
         ):
             raise ProviderError("authentication")
+        if key is not None and not _valid_header_credential(key):
+            raise ProviderError("configuration")
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if key is not None:
             headers["Authorization"] = "Bearer " + key

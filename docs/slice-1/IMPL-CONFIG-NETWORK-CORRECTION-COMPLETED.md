@@ -1,6 +1,6 @@
 # Slice 1 — Configuration diagnostics and endpoint correction
 
-**Status:** Complete. C4 and C5 remain open.
+**Status:** Complete. C4 and C5 were subsequently completed; see their linked completion records.
 
 **Product Owner decision:** The earlier B2 restriction on HTTP destinations is superseded. Syntactically valid HTTP and HTTPS base URLs support DNS names, localhost, IPv4, and IPv6, without application-level destination restrictions or preflight hostname resolution. DNS and connection failures occur during requests. HTTP does not encrypt credentials or request data; HTTPS is preferred. Configuration diagnostics identify a safe configuration key and actionable reason without echoing sensitive values. This is a correction to an earlier accepted policy, not a claim that the earlier policy was never accepted.
 
@@ -25,4 +25,4 @@
 
 - YAML merge-key duplicate handling was not changed; an explicit override of an anchored mapping can still be rejected as a duplicate. That behavior predates this correction and was not assessed as a supported YAML compatibility contract.
 - When several provider or model aliases have the same schema-owned path, sanitized override context for shape errors cannot always distinguish the aliases. Values and aliases are deliberately not disclosed.
-- This does not establish actual-provider compatibility, model quality, external DNS, or real-user installation state. C4 remains open and requires its own authorized provider, model, data-transfer and cost boundary.
+- At this correction's closeout, actual-provider compatibility, model quality and real-user installation had not been established. The operator subsequently completed the separately authorized provider smoke test; see [C4](IMPL-C4-COMPLETED.md). This correction does not establish external DNS behavior beyond its controlled tests.

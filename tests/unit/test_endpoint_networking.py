@@ -54,6 +54,25 @@ def test_backslash_in_authority_is_rejected(raw, tmp_path):
     assert_rejected_by_config_and_adapter(raw, tmp_path)
 
 
+@pytest.mark.parametrize(
+    "raw",
+    [
+        r"http://service.test/v1\path",
+        "http://service.test/v1|path",
+        "http://service.test/v1/%GG",
+        "http://service%GG.test/v1",
+    ],
+)
+def test_malformed_uri_characters_are_rejected_by_config_and_adapter(raw, tmp_path):
+    assert_rejected_by_config_and_adapter(raw, tmp_path)
+
+
+def test_percent_encoded_chat_endpoint_alias_is_rejected(tmp_path):
+    assert_rejected_by_config_and_adapter(
+        "http://service.test/v1/%63hat/completions", tmp_path
+    )
+
+
 def test_http_dns_hostname_reaches_transport():
     requests = []
 

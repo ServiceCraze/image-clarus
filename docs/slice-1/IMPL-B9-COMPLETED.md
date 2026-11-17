@@ -30,4 +30,6 @@ Documented installation, provider/model configuration and environment-backed cre
 
 B9 does not execute Phase C; C1–C3 remain open.
 
-**Subsequent progress:** C1 is complete; see [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md). C2 and later steps remain open.
+At B9 closeout, Phase C remained unstarted.
+
+**Subsequent progress:** C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for final reconciliation.

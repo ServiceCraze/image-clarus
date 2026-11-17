@@ -177,4 +177,6 @@ The `json`-only example assumes `./photos/peppers.jpg.desc.txt` already exists. 
 
 ## Follow-ups
 
-- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3–A5 have since completed; Erik accepted A3 as documented during A6, and the Phase A readiness gate has passed. A5's later `pipeline.backup_retention` addition is documented above and in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). Phase B/C implementation remains unstarted.
+- At A2 closeout, Step A3 was next and A3–A6 were unchecked. Steps A3–A5 have since completed; Erik accepted A3 as documented during A6, and the Phase A readiness gate has passed. A5's later `pipeline.backup_retention` addition is documented above and in [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md). At that closeout, Phase B/C implementation remained unstarted.
+
+**Subsequent progress:** B1–B9 and C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for final evidence and deferred scope.

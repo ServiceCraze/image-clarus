@@ -1,6 +1,6 @@
 # Step A6 — Pass the Phase A readiness gate (COMPLETED)
 
-**Status:** Complete; Phase A readiness gate **PASSED**. Phase B/C implementation has not started.
+**Status:** Complete; Phase A readiness gate **PASSED**. At A6 closeout, Phase B/C implementation had not started.
 **Scope deviations:** None. No implementation, architecture, configuration, or Slice 1 scope was added.
 **Files Created/Updated/Removed:**
 - Created: `docs/slice-1/IMPL-A6-COMPLETED.md` (this readiness assessment and disposition).
@@ -75,4 +75,6 @@ No further path, dependency, architecture, or command decision is required of an
 
 ## Follow-up
 
-- The A3 Product Owner acceptance is recorded and the A6 gate has passed. B1 remains unchecked; no Phase B/C implementation was started during this readiness closeout.
+- The A3 Product Owner acceptance is recorded and the A6 gate has passed. B1 remained unchecked at that time; no Phase B/C implementation was started during this readiness closeout.
+
+**Subsequent progress:** B1–B9 and C1–C5 are complete. The final acceptance crosswalk and later-slice carry-forward are in [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md).

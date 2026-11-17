@@ -10,7 +10,7 @@
 
 **Files removed:** None.
 
-**Subsequent approved correction:** The original unconditional POSIX-mode checks conflict with expected filesystem coverage. The corrected contract tolerates demonstrably unsupported mode semantics, preserves exact modes where supported, and still fails genuine permission and I/O errors; other safety invariants remain. The [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) reports later tests and the pending test-order disposition. C2's XFS/tmpfs evidence and checked acceptance below are historical; its suite did not run on the `fuseblk` repository. Native Windows is not proven.
+**Subsequent approved correction:** The original unconditional POSIX-mode checks conflict with expected filesystem coverage. The corrected contract tolerates demonstrably unsupported mode semantics, preserves exact modes where supported, and still fails genuine permission and I/O errors; other safety invariants remain. The [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) reports later automated and operator evidence; the Product Owner accepted its test-order exception. C2's XFS/tmpfs evidence and checked acceptance below are historical; its suite did not run on the `fuseblk` repository. Native Windows is not proven.
 
 ## Safety evidence
 
@@ -45,4 +45,6 @@ All payloads, image bytes and credentials were synthetic. Provider traffic used 
 
 C3 and later steps have not been started as part of C2.
 
-**Subsequent progress:** C3 is complete; see [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md). C4 and later steps remain open.
+At C2 closeout, C3 was next; C4 and C5 had not yet started.
+
+**Subsequent progress:** C3–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for final reconciliation. The Product Owner accepted the safe-write test-order exception in the correction record.

@@ -36,4 +36,6 @@ Established the Hatchling package, `0.1.0` authoritative static metadata and ins
 
 ## Follow-up
 
-The wheel integration test's missing original RED evidence cannot be reconstructed; the Product Owner accepted the documented exception. B2 is in progress; B3–B9 and Phase C remain unstarted. B8 owns real `process` behavior; C3 owns the Python 3.12 compatibility matrix.
+At B1 closeout, the wheel integration test's missing original RED evidence could not be reconstructed; the Product Owner accepted that documented exception. B2 was in progress and B3–B9 and Phase C remained unstarted. B8 owned real `process` behavior; C3 owned the Python 3.12 compatibility matrix.
+
+**Subsequent progress:** B2–B9 and C1–C5 are complete. The final Slice 1 evidence crosswalk is in [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md); the accepted B1 RED exception remains distinct from the safe-write test-order exception.

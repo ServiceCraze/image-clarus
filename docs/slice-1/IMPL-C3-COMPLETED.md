@@ -2,7 +2,7 @@
 
 **Status:** Complete.
 
-**Scope deviations:** None. The authorized real-provider quality smoke test remains [C4](IMPL-PLAN-slice-1.md#step-c4--perform-an-authorized-real-provider-quality-smoke-test-manualtest).
+**Scope deviations:** None. At C3 closeout, the authorized real-provider quality smoke test remained [C4](IMPL-PLAN-slice-1.md#step-c4--perform-an-authorized-real-provider-quality-smoke-test-manualtest); it was completed later.
 
 **Files created:** `docs/slice-1/IMPL-C3-COMPLETED.md` (this record).
 
@@ -41,4 +41,4 @@ The installed wheel also ran both stages against a synthetic local HTTP provider
 - [x] No external executable is required for Slice 1.
 - [x] [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md) is complete and linked.
 
-C4 and later steps have not been started as part of C3.
+C4 and C5 had not started as part of C3. **Subsequent progress:** C4 and C5 are complete; see [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md) and [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md).

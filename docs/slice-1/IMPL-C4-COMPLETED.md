@@ -17,7 +17,7 @@
 - Independent stage execution and skipping existing outputs were successful. Artifact publication succeeded on Linux and Linux-mounted NTFS/FUSE, including the corrected permission handling. Earlier transient provider failures did not recur in the final tests.
 - Separately, the operator ran a synthetic create-only artifact probe with installed version `0.1.3` on the affected NTFS/FUSE mount. It emitted the expected privacy warning, reported mode `0777`, and verified the published bytes. It did not exercise replacement or recovery on that mount; native Windows execution is not established.
 - The operator reported that inspected generated artifacts contained no API credentials. A screenshot's metadata contained contact information visible in its source; those details are not reproduced here. Logs were **not independently checked for sensitive information**, so no conclusion about their contents is claimed. The observed privacy warning also means access to artifacts depends on filesystem and mount controls, including ACLs.
-- The original write failure's precise cause was not independently established. Ranked tag candidates are a separate schema-design consideration, not a C4 blocker. C5 and the separate safe-write test-order disposition remain open.
+- The original write failure's precise cause was not independently established. Ranked tag candidates are a separate schema-design consideration, not a C4 blocker. The Product Owner subsequently accepted the separate safe-write test-order exception; see the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) and the completed [C5 closeout](IMPL-C5-COMPLETED.md). This later disposition does not change what was known at C4 closeout.
 
 ## Acceptance
 

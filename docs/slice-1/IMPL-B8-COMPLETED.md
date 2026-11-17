@@ -35,4 +35,6 @@ SIGINT/SIGTERM are captured with signal-priority exit codes. Tests cover cancell
 
 B9 and Phase C have not been started as part of B8.
 
-**Subsequent progress:** B9 is complete; see [IMPL-B9-COMPLETED.md](IMPL-B9-COMPLETED.md). Phase C remains open.
+At B8 closeout, B9 was the next step and Phase C had not yet started.
+
+**Subsequent progress:** B9 and C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for the final Slice 1 evidence crosswalk.

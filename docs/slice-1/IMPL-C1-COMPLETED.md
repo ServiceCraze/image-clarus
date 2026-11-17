@@ -40,4 +40,6 @@ All integration tests invoke the public CLI in subprocesses with generated, non-
 
 C2 and later steps have not been started as part of C1.
 
-**Subsequent progress:** C2 is complete; see [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md). C3 and later steps remain open.
+At C1 closeout, C2 was next; C3–C5 had not yet started.
+
+**Subsequent progress:** C2–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for final reconciliation.

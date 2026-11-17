@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import stat
 
 import pytest
@@ -123,6 +124,36 @@ def test_faults_preserve_recoverable_original(tmp_path, point):
     else:
         assert dest.read_bytes() == b"valid:old"
         assert backup.read_bytes() == b"prior backup"
+
+
+def test_failed_write_does_not_publish_original_that_fails_validation(
+    tmp_path, monkeypatch
+):
+    dest = tmp_path / "image.desc.txt"
+    backup = tmp_path / "image.desc.txt.bak"
+    original = b"invalid-original"
+    dest.write_bytes(original)
+    real_replace = os.replace
+    failed = False
+
+    def fail_after_removing_destination(source, target):
+        nonlocal failed
+        if target == dest and not failed:
+            failed = True
+            dest.unlink()
+            raise OSError("simulated replacement failure")
+        return real_replace(source, target)
+
+    monkeypatch.setattr(
+        "image_clarus.artifacts.os.replace", fail_after_removing_destination
+    )
+    with pytest.raises(ArtifactError) as error:
+        ArtifactService("retain").write(dest, b"valid:new", valid)
+
+    assert error.value.category == "file_io"
+    assert failed
+    assert not dest.exists()
+    assert backup.read_bytes() == original
 
 
 def writer(dest, barrier, payload, queue):

@@ -121,6 +121,26 @@ PATH_FIELDS = {
 }
 
 
+def _valid_utf8_text(value):
+    if not isinstance(value, str):
+        return False
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _valid_header_credential(value):
+    if not isinstance(value, str):
+        return False
+    try:
+        encoded = value.encode("latin-1")
+    except UnicodeEncodeError:
+        return False
+    return all(byte >= 32 and byte != 127 for byte in encoded)
+
+
 def discovery_locations(platform=None, environ=None, home=None):
     """Return OS-specific user and system config paths without touching them."""
     platform = sys.platform if platform is None else platform
@@ -591,6 +611,10 @@ def _selected(config, stage):
         raise ConfigurationError(
             "models.<name>.model_id: model ID is missing; set a nonempty model ID"
         )
+    if not _valid_utf8_text(model["model_id"]):
+        raise ConfigurationError(
+            "models.<name>.model_id: model ID must be valid UTF-8; set a valid text value"
+        )
     provider = config["providers"][provider_alias]
     try:
         validate_base_url(provider.get("base_url", ""))
@@ -619,6 +643,10 @@ def _selected(config, stage):
             "providers.<name>.api_key: credential is empty; set a nonempty credential",
             "authentication",
         )
+    if "api_key" in provider and not _valid_header_credential(provider["api_key"]):
+        raise ConfigurationError(
+            "providers.<name>.api_key: credential is not safe for an HTTP header; set a header-safe value"
+        )
     if "api_key_env" in provider:
         name = provider["api_key_env"]
         if not ENV_NAME.fullmatch(name):
@@ -629,6 +657,10 @@ def _selected(config, stage):
             raise ConfigurationError(
                 "providers.<name>.api_key_env: credential unavailable; set the configured environment variable",
                 "authentication",
+            )
+        if not _valid_header_credential(os.environ[name]):
+            raise ConfigurationError(
+                "providers.<name>.api_key_env: credential is not safe for an HTTP header; set a header-safe value"
             )
     effort = (
         settings["reasoning_effort"]

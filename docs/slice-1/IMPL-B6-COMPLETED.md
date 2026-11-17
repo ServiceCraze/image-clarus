@@ -34,6 +34,8 @@ An independent audit identified two integration issues corrected in this step. E
 
 ## Follow-up
 
-B7 and later steps have not started. This does not claim the `process` CLI is wired or that a real provider has been contacted.
+At B6 closeout, B7 and later steps had not started. This does not claim the `process` CLI was wired or that a real provider had been contacted at that time.
 
-**Subsequent progress:** B7 is complete; see [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md). B8 and later work remain open.
+At B6 closeout, B7 was the next step; later phases had not yet been completed.
+
+**Subsequent progress:** B7–B9 and C1–C5 are complete; see [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md) for the final Slice 1 evidence crosswalk.

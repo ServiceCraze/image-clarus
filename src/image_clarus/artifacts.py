@@ -190,7 +190,10 @@ class ArtifactService:
                     if original is not None and not destination.exists():
                         try:
                             ArtifactService("retain", self.checkpoint).recover(
-                                destination, lambda data: data == original
+                                destination,
+                                validator,
+                                validation_category=validation_category,
+                                retain_backup=True,
                             )
                         except ArtifactError:
                             pass  # Preserve the backup and the original failure.

@@ -1,9 +1,13 @@
 # HLD - Image Clarus
 
-**Status:** Draft for review  
-**Date:** 2026-11-14  
-**Project:** `image-clarus`  
-**Requirements:** `docs/REQ-image-clarus.md`  
+**Status:** Slice 1 design baseline; Slice 1 implementation and closeout are complete. Later-slice capabilities remain outside the completed slice.
+
+**Date:** 2026-11-14
+
+**Project:** `image-clarus`
+
+**Requirements:** `docs/REQ-image-clarus.md`
+
 **Delivery process:** Requirements → High-Level Design → Implementation Plan → Implementation
 
 ## 1. Purpose and scope
@@ -150,7 +154,7 @@ Provider definitions own endpoint and authentication/connection configuration. N
 
 Slice 1 initially supports **OpenAI-compatible Chat Completions HTTP APIs** for local or remote endpoints; the architecture permits additional adapter types later. Credentials may be inline or obtained via a specifically named environment variable. Do not log secrets. API compatibility does not imply that every endpoint supports identical image, schema, or reasoning controls. Unsupported capabilities must be surfaced clearly, not assumed to work.
 
-Use one shared base-URL validation policy for preflight and the provider boundary: accept standard absolute HTTP and HTTPS URLs with DNS/FQDN names and all IPv4/IPv6 destinations. Reject malformed or non-absolute URLs, unsupported schemes, user-info, query strings, fragments, and an already-appended `/chat/completions` path. Do not resolve hostnames or restrict destinations at application level; DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption; HTTPS is preferable. Configuration errors identify the affected key and an actionable sanitized reason without sensitive values, full endpoint URLs, or raw exception text.
+Use one shared base-URL validation policy for preflight and the provider boundary: accept standard absolute HTTP and HTTPS URLs with DNS/FQDN names and all IPv4/IPv6 destinations. Reject malformed or non-absolute URLs, unsupported schemes, user-info, query strings, fragments, and an already-appended `/chat/completions` path. Reject malformed percent escapes and invalid raw ASCII characters in the authority or path. Before checking for the already-appended endpoint, normalize dot segments and percent-encoded unreserved path characters; leave encoded reserved characters distinct. Do not resolve hostnames or restrict destinations at application level; DNS and connection failures occur at request time. HTTP exposes credentials and request data without transport encryption; HTTPS is preferable. Configuration errors identify the affected key and an actionable sanitized reason without sensitive values, full endpoint URLs, or raw exception text.
 
 ### 4.3 Reasoning convention
 
@@ -250,9 +254,9 @@ For any stage-owned sidecar:
 5. Replace the destination using the safest available filesystem operation, verifying the result and retaining appropriate permissions where feasible.
 6. Remove the backup after verified success unless retention is configured; clean up disposable temporary files when safe.
 
-**Recovery defaults:** If the destination is missing but its `.bak` exists, automatically restore the backup. If both exist, the destination is authoritative; never overwrite it automatically with `.bak`. When creating a new backup, overwrite the previous backup using the current destination. Leftover temporary files are **disposable** and never used as recovery sources; only clean up files established as stale to avoid deleting another active process's temporary work.
+**Recovery defaults:** If the destination is missing but its `.bak` exists, validate the backup with the selected stage's validator before restoring it. If validation fails, preserve the backup and do not publish it as the destination. If both destination and backup exist, the destination is authoritative; never overwrite it automatically with `.bak`. When creating a new backup, overwrite the previous backup using the current destination. Leftover temporary files are **disposable** and never used as recovery sources; only clean up files established as stale to avoid deleting another active process's temporary work. Failed-write fallback recovery uses the same stage validator.
 
-Attempt `0600` for new sidecars and preserve existing mode bits for replacement, backup and recovery; verify exact mode where the filesystem supports it. A demonstrated inability to represent or enforce POSIX modes must not by itself defeat a valid transaction, but permission denials, I/O errors and other unrelated failures remain errors. Do not use a filesystem-name allowlist as a capability test. Mode limitations may expose sidecars and backups; users must choose a suitably private filesystem or mount when confidentiality matters. Linux-mounted NTFS/FUSE is an expected environment, not a claim of verified compatibility; native Windows support is not proven. This approved correction supersedes A5's original unconditional mode-equality rule; implementation and verification are ongoing.
+Attempt `0600` for new sidecars and preserve existing mode bits for replacement, backup and recovery; verify exact mode where the filesystem supports it. A demonstrated inability to represent or enforce POSIX modes must not by itself defeat a valid transaction, but permission denials, I/O errors and other unrelated failures remain errors. Do not use a filesystem-name allowlist as a capability test. Mode limitations may expose sidecars and backups; users must choose a suitably private filesystem or mount when confidentiality matters. The approved correction supersedes A5's original unconditional mode-equality rule. Automated tests cover supported and simulated unsupported modes; the operator reported successful artifact publication and a synthetic create-only probe on Linux-mounted NTFS/FUSE. The probe reported mode `0777` and emitted the privacy warning. This does not establish crash durability or native Windows execution; see the [Slice 1 C5 closeout](slice-1/IMPL-C5-COMPLETED.md).
 
 The service must account for filesystems on which replacement or durability is not guaranteed atomic. Do not claim crash-proof behavior across ext4, XFS, NTFS/FUSE, VFAT, or virtual filesystems. Add filesystem-specific behavior only if a concrete compatibility issue is demonstrated.
 
@@ -315,8 +319,8 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 ### 10.3 Open for implementation planning
 
 - **Phase A design handoff (historical readiness gate):** The Slice 1 plan records A1 package/runtime/dependency/version-source choices; A2 CLI, configuration, typed `--set`, result, failure, and exit contracts; A3 JSON schema/prompt/provenance and artifact-validity rules; A4 Chat Completions request, reasoning mapping, transport, and security rules; and A5 safe-write transaction, backup-retention (`pipeline.backup_retention`), recovery, and concurrency rules. A4 limits Slice 1 generation controls to reasoning effort, deferring HLD §4.2's broader generation-parameter capability without removing that end-state requirement; its provider-path redaction preserves A2's intentional result-path reporting. See [IMPL-PLAN-slice-1.md](slice-1/IMPL-PLAN-slice-1.md) and its linked completion records. Erik accepted the A3 Product Owner review during A6; the Phase A readiness gate has passed. At that handoff Phase B/C implementation had not started; later work is recorded in the plan.
-- Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3; runtime verification remains assigned to the implementation/test steps.
-- A5 freezes artifact-service transaction/state/fault semantics and the backup-retention config leaf in [IMPL-A5-COMPLETED.md](slice-1/IMPL-A5-COMPLETED.md). B5 implemented the original service and C2/C3 recorded historical behavior/environment; the approved mode correction in §7.1 is implemented with automated evidence and a pending test-order disposition as recorded in the [correction record](slice-1/IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md). Do not add filesystem-specific branches or claim crash-proof writes without observed evidence.
+- Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3 and exercised in Slice 1; see the [C5 evidence crosswalk](slice-1/IMPL-C5-COMPLETED.md). Later-slice behavior remains unimplemented.
+- A5 freezes artifact-service transaction/state/fault semantics and the backup-retention config leaf in [IMPL-A5-COMPLETED.md](slice-1/IMPL-A5-COMPLETED.md). B5 implemented the original service; the approved mode correction has automated evidence and an operator-reported NTFS/FUSE probe. The Product Owner accepted the documented test-order evidence exception. See the [correction record](slice-1/IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md). Do not add filesystem-specific branches or claim crash-proof writes without observed evidence.
 - Exact JSON-to-XMP mappings and which observed digiKam-compatible XMP fields require writing remain the responsibility of the XMP slice plan.
 
 ### 10.4 Deferred without narrowing the end-state requirements

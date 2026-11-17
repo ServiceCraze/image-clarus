@@ -172,6 +172,35 @@ def test_unknown_image_fails_before_request():
     assert exc.value.category == "unsupported_image"
 
 
+@pytest.mark.parametrize("invalid", ["api_key", "api_key_env", "model_id"])
+def test_invalid_header_or_model_text_fails_before_transport(invalid, monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json=response())
+
+    provider = {"base_url": "https://service.test/v1"}
+    model = {"model_id": "sample-model"}
+    if invalid == "api_key":
+        provider["api_key"] = "SYNTHETIC_KEY_SENTINEL\r\nX-Probe: 1"
+    elif invalid == "api_key_env":
+        monkeypatch.setenv(
+            "SYNTHETIC_PROVIDER_KEY",
+            "SYNTHETIC_KEY_SENTINEL\r\nX-Probe: 1",
+        )
+        provider["api_key_env"] = "SYNTHETIC_PROVIDER_KEY"
+    else:
+        model["model_id"] = "\ud800"
+
+    with pytest.raises(ProviderError) as exc:
+        adapter(handler, provider=provider, model=model).image(
+            prompt="p", image_bytes=b"x", suffix=".jpg"
+        )
+    assert exc.value.category == "configuration"
+    assert not calls
+
+
 @pytest.mark.parametrize(
     ("status", "error", "category"),
     [
