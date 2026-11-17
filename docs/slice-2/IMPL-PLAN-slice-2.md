@@ -51,7 +51,7 @@ The delivery unit is **Slice 2**; Phases A, B, C and their step IDs are internal
 8. Retain the Slice 1 artifact transaction, current-original backup refresh, validation before publication and backup recovery, filesystem-capability-dependent permission handling, no application locks, and last-successful-replacement-wins limitations. `pipeline.backup_retention` remains the existing policy. Concurrency can lose edits; do not claim conflict detection or crash durability.
 9. Runtime, selected-stage configuration validation, credentials/redaction, CLI > selected YAML > built-ins, source-prompt overrides, application SemVer, independent metadata-schema SemVer, custom-schema replacement, fixed envelope provenance, and Linux test platform are inherited unless explicitly refined in the approved design.
 
-**HLD reconciliation required:** The current HLD §6.3 describes a nonempty generated-root ownership boundary and does not yet state the explicit empty-root product exception. Phase A must reconcile this and JSON/XMP inference/publishing separation, without weakening the original preservation guarantee. The HLD's initial digiKam-only scope and parent REQ's later optional non-digiKam mappings are a **delivery allocation**, not permission to implement other mappings now.
+**Canonical reconciliation required:** The parent REQ and HLD §6.3 do not yet state the explicitly approved empty-root product exception. Phase A must align both with this decision and the JSON/XMP inference/publishing separation without weakening preservation; this is not permission to reconsider the accepted behavior. The HLD's initial digiKam-only scope and parent REQ's later optional non-digiKam mappings are a **delivery allocation**, not permission to implement other mappings now. A field's presence in digiKam output alone does not authorize writing it; escalate any mapping that would cross the parent REQ's default/optional representation boundary for Product Owner reconciliation.
 
 ## Verified repository layout and implementation touchpoints
 
@@ -97,8 +97,8 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ### Phase B — Implementation
 
-- [ ] Step B1 — Extend structured JSON generation and packaged resources [CODE/TEST]
-- [ ] Step B2 — Extend configuration and selected-stage validation [CODE/TEST]
+- [ ] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
+- [ ] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [ ] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
@@ -128,16 +128,16 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Actions:**
 1. Compare every S2-01–S2-18 requirement with the parent REQ and HLD. Record inherited behavior, true Slice 2 refinements, exclusions and any actual conflict. Obtain Product Owner acceptance of the proposed Slice 2 REQ; leave the gate pending if not obtained.
-2. Reconcile HLD §§3–4, 6, 8–10 for the additive JSON information product, JSON inference versus deterministic XMP publishing, the default `ai` root and the **explicit empty-root effective-policy override**. Preserve the root-independent JSON paths, field defaults and ownership invariants.
-3. Preserve the HLD's original ExifTool/digiKam-only initial backend scope and parent REQ's later optional vendor mappings; avoid a second competing Slice 2 HLD.
+2. Reconcile the parent REQ and HLD §§3–4, 6, 8–10 for the additive JSON information product, JSON inference versus deterministic XMP publishing, the default `ai` root and the **explicit empty-root effective-policy override**. Record the existing Product Owner decision as authoritative, not a reopened decision. Preserve the root-independent JSON paths, field defaults and ownership invariants.
+3. Preserve the HLD's original ExifTool/digiKam-only initial backend scope and parent REQ's later optional vendor mappings; avoid a second competing Slice 2 HLD. If an empirically necessary mapping would cross the parent REQ's representation boundary, escalate for Product Owner reconciliation; observation alone is not authorization.
 4. Confirm the current repository layout, tests, CLI/config behavior, artifact API, installation commands, application version and published asset paths. Identify actual design gaps rather than assuming the Slice 1 environment is unchanged.
 5. Record any genuine conflict and its Product Owner disposition; do not use implementation convenience to narrow or split the authorized slice.
 
-**Outputs:** Reconciled `docs/HLD-image-clarus.md` if accepted; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
+**Outputs:** Reconciled `docs/REQ-image-clarus.md` and `docs/HLD-image-clarus.md` reflecting the approved exception; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
 
 **Acceptance:**
 - [ ] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
-- [ ] HLD reflects the actual JSON/XMP separation and empty-root product decision without contradicting parent REQ preservation.
+- [ ] Parent REQ and HLD reflect the actual JSON/XMP separation and already-decided empty-root product behavior without weakening preservation or reopening that decision.
 - [ ] Current paths, executable toolchain and inherited contracts are verified; necessary changes are distinguished from deferred capabilities.
 - [ ] A1 completion record lists files created, updated and removed, decisions, evidence and deviations; its link and plan checkoffs are synchronized.
 
@@ -234,28 +234,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Entry:** A5 gate accepted. Use the exact frozen contracts; work is bounded to existing services and the new stage/backend. If the contract changes, stop for review rather than silently amending it. Every CODE/TEST step documents observed RED, GREEN, refactor and applicable regression evidence.
 
-### Step B1 — Extend structured JSON generation and packaged resources [CODE/TEST]
-
-**Goal:** Make newly generated built-in JSON provide validated title, caption and ranked hierarchy candidates without changing the existing descriptive or provenance contracts.
-
-**Inputs:** A2/A4 frozen JSON and configuration contracts; `prompts/image-structure.txt`, `schemas/image-structure.schema.json`, `src/image_clarus/stages/structure.py`, `resources.py`, `pyproject.toml`; existing `tests/unit/test_structure_stage.py`, `test_structure_resources.py`, `test_schema_worker.py`.
-
-**Actions:**
-1. Add focused tests first for new schema fields, valid supported/empty outputs, rank order, uncategorized and multi-category recommendations, absence of XMP root, candidate validity, configured category guidance in the JSON request, strict validation and packaging. Run them and record observed RED.
-2. Evolve the built-in schema with the A2-frozen independent ID/version and update the JSON prompt. Preserve unchanged six descriptive fields, current envelope/provenance, strict JSON parsing, custom-schema full replacement and exact description/prompt fingerprints.
-3. Pass resolved category guidance to JSON generation through the approved request path; ensure custom prompt/schema behavior remains independent and no provider changes occur without an A2-approved need. Do not add XMP semantics to the provider or JSON artifact.
-4. Test structural-only skip of an existing old-version JSON artifact, invalid existing envelope failure, explicit entire-artifact regeneration, failure preservation, and a custom replacement schema that omits built-in publication fields.
-5. Achieve GREEN, refactor if needed, run appropriate current unit/integration regressions and check installed resource lookup where the frozen contract requires it.
-
-**Outputs:** Enhanced schema/prompt/JSON generation and focused tests; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md).
-
-**Acceptance:**
-- [ ] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
-- [ ] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
-- [ ] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
-- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
-
-### Step B2 — Extend configuration and selected-stage validation [CODE/TEST]
+### Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
 
 **Goal:** Support every approved Slice 2 configuration value with correct precedence, type validation, selected-stage isolation and no model requirement for XMP.
 
@@ -264,17 +243,38 @@ These paths were inspected as existing in the repository at planning time. They 
 **Actions:**
 1. Add focused config tests and demonstrate RED for omitted versus explicitly empty root, all tag/title/caption/author policies, optional author, top-N, category guidance, unknown keys, typed `--set`, CLI-over-YAML precedence and malformed selected settings.
 2. Extend existing configuration resolution/validation where appropriate. Reuse existing defaults, merge rules, key/path normalization and redaction. Do not require an XMP model or ExifTool for JSON-only/description-only selection; unused XMP settings must not make those runs fail.
-3. Test that JSON-only selects/validates its own category guidance and model independently, whereas XMP-only needs no model credentials, provider endpoint or JSON schema file preflight unless the frozen consumer contract explicitly requires it.
+3. Test that JSON-only selects/validates its own category guidance and model independently, whereas XMP-only needs no model credentials, provider endpoint or JSON schema file preflight unless the frozen consumer contract explicitly requires it. Exercise the XMP configuration/preflight boundary in isolation; executable XMP stage integration belongs to B5.
 4. Keep old `--regenerate` semantics for the JSON/description stages; do not translate it to an unconditional destructive XMP update.
 5. Achieve GREEN and run current config, CLI and regression suites.
 
-**Outputs:** Configuration extension and tests; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md).
+**Outputs:** Configuration extension and tests; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md).
 
 **Acceptance:**
-- [ ] Configuration precedence and omitted/explicit-empty root behavior pass exact policy examples.
-- [ ] `desc`/`json` do not depend on XMP-specific preflight or ExifTool; `xmp` does not require model/provider selection.
-- [ ] Optional author and empty/missing metadata cannot accidentally trigger destructive XMP behavior through config.
+- [ ] Configuration precedence and omitted/explicit-empty root values and policy settings pass resolution/validation examples.
+- [ ] `desc`/`json` do not depend on XMP-specific preflight or ExifTool; isolated XMP preflight does not require model/provider selection.
+- [ ] Optional author and policy settings resolve without inventing destructive overrides; B4/B5 verify actual XMP behavior.
 - [ ] Observed RED/GREEN, regression and completion record evidence are linked.
+
+### Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
+
+**Goal:** Make newly generated built-in JSON provide validated title, caption and ranked hierarchy candidates without changing the existing descriptive or provenance contracts.
+
+**Inputs:** A2/A4 frozen JSON and configuration contracts; B1 resolved category configuration; `prompts/image-structure.txt`, `schemas/image-structure.schema.json`, `src/image_clarus/stages/structure.py`, `resources.py`, `pyproject.toml`; existing `tests/unit/test_structure_stage.py`, `test_structure_resources.py`, `test_schema_worker.py`.
+
+**Actions:**
+1. Add focused tests first for new schema fields, valid supported/empty outputs, rank order, uncategorized and multi-category recommendations, absence of XMP root, candidate validity, configured category guidance in the JSON request, strict validation and packaging. Run them and record observed RED.
+2. Evolve the built-in schema with the A2-frozen independent ID/version and update the JSON prompt. Preserve unchanged six descriptive fields, current envelope/provenance, strict JSON parsing, custom-schema full replacement and exact description/prompt fingerprints.
+3. Pass B1's resolved category guidance to JSON generation through the approved request path; ensure custom prompt/schema behavior remains independent and no provider changes occur without an A2-approved need. Do not add XMP semantics to the provider or JSON artifact.
+4. Test structural-only skip of an existing old-version JSON artifact, invalid existing envelope failure, explicit entire-artifact regeneration, failure preservation, and a custom replacement schema that omits built-in publication fields.
+5. Achieve GREEN, refactor if needed, run appropriate current unit/integration regressions and check installed resource lookup where the frozen contract requires it.
+
+**Outputs:** Enhanced schema/prompt/JSON generation and focused tests; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md).
+
+**Acceptance:**
+- [ ] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
+- [ ] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
+- [ ] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
+- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
 
 ### Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 
@@ -324,7 +324,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Goal:** Make the `xmp` stage independently usable and composable with `desc` and `json`, publishing complete XMP through the existing recoverable artifact service.
 
-**Inputs:** B2–B4; `src/image_clarus/cli.py`, `pipeline.py`, `results.py`, `artifacts.py`, `stages/`; current CLI/registry/integration tests; A4 stage-result contract.
+**Inputs:** B1–B4; `src/image_clarus/cli.py`, `pipeline.py`, `results.py`, `artifacts.py`, `stages/`; current CLI/registry/integration tests; A4 stage-result contract.
 
 **Actions:**
 1. Add failing tests for `--stages=xmp`, `json,xmp`, `desc,json,xmp`, default full registry, `desc`/`json` only, missing artifact `fail`/`skip`, no model call from XMP, ExifTool absence selected versus unselected, stage order, CLI output, exit codes and interruption behavior.
@@ -398,7 +398,7 @@ These paths were inspected as existing in the repository at planning time. They 
 1. Compare complete before/after XMP data for nonempty-root tag policies, empty-root every policy, manual/auto tags, hierarchy ancestors, shared flat keyword overlap, unrelated namespaces/camera/vendor fields and localized title/caption data. Verify `overwrite` never escapes a nonempty root and empty root never deletes an existing tag.
 2. Exercise `new`, `overwrite`, `disabled` on populated and empty title/caption/author, unconfigured author preservation, absent JSON optional fields and repeated no-change publication. Confirm other valid field updates still proceed independently.
 3. Inject ExifTool missing/timeout/nonzero/malformed output; invalid existing XMP; invalid JSON; temporary-output, backup-refresh, publication, read-back and cleanup failures. Reuse the existing artifact service's genuine permission/I/O and simulated unsupported-mode tests; verify preserved recoverable original/backups, proper category/exit and no false completion.
-4. Test recovery when `.xmp` is absent but `.bak` exists, destination-plus-backup authority and invalid backup rejection. Include separate-process overlapping XMP writers if the XMP safe-write/merge path changes the race surface; assert complete valid output rather than a deterministic winner. Document lost-update risk.
+4. Test recovery when `.xmp` is absent but `.bak` exists, destination-plus-backup authority and invalid backup rejection. Run a barrier-controlled overlap of separate OS processes performing XMP read–merge–write against the same sidecar; assert complete valid output rather than a deterministic winner. Document lost-update and backup/cleanup race risks without claiming serialized merges.
 5. Record actual scratch filesystem and any ExifTool availability/permission limitations. Do not claim full crash/OS durability or conflict detection.
 
 **Outputs:** Preservation diff/test matrix, failure/recovery evidence and [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md).
@@ -407,6 +407,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [ ] Tag preservation invariant passes for nonempty and empty roots, including ambiguous shared fields.
 - [ ] Existing unrelated XMP metadata and language alternatives are preserved to the frozen A3 contract; all configured field policies pass.
 - [ ] Invalid/failing writes do not report success and retain recoverable artifacts, with existing filesystem mode limitations respected.
+- [ ] Separate OS processes overlap XMP read–merge–write; resulting artifacts are complete and valid, with no deterministic winner asserted and lost-update risk documented.
 - [ ] Actual tested environments and lock-free limitations are documented; record and plan checkoffs align.
 
 ### Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
@@ -419,7 +420,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Actions:**
 1. With a safe synthetic/sanitized image/XMP sample, publish under `ai`, import/refresh XMP in digiKam, confirm hierarchical leaf assignment, ancestor-based filtering without redundant parent assignment, title/caption visibility and editing, and optional caption author. Record **exact UI version, metadata-read/refresh steps, operator observations** and actual resulting XMP changes.
-2. Validate edit preservation: add or edit manual tags/title/caption in digiKam, rerun Image Clarus under `new`/`overwrite`/`disabled` as relevant, and confirm unrelated metadata remains. Repeat a top-level additive example with explicit empty root, no tag deletions. Do not use unsanitized samples in public evidence.
+2. Edit a generated hierarchical tag in digiKam, save the change, read back the persisted XMP and refresh/reload in digiKam to verify the edit and preservation of unrelated manual tags. Separately add or edit manual tags/title/caption, rerun Image Clarus under `new`/`overwrite`/`disabled` as relevant, and confirm unrelated metadata remains. Repeat a top-level additive example with explicit empty root, no tag deletions. Do not use unsanitized samples in public evidence.
 3. Review a small, varied synthetic/sanitized description set using the A2 rubric, checking generated title/caption factual support/usefulness, tag retrieval relevance, ranking and category appropriateness including uncategorized/multiple categories. Record examples, outcome per criterion and limitations; distinguish human judgment from hard validation.
 4. Where real model inference is required, use only an explicitly operator-approved endpoint, model and inputs/cost. If no authorized provider or digiKam is available, record the exact blocker and leave the affected acceptance unchecked; never claim manual verification occurred from schema inspection alone.
 5. Report any interoperability gap as an in-scope blocker for mapping correction, not as grounds to broaden the XMP vendor scope.
@@ -427,7 +428,7 @@ These paths were inspected as existing in the repository at planning time. They 
 **Outputs:** Sanitized operator findings, digiKam UI/round-trip procedure, metadata-quality rubric results and [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md).
 
 **Acceptance:**
-- [ ] A real digiKam read/edit/refresh path is observed and recorded; hierarchy, title, caption, optional author and preservation meet S2-18.
+- [ ] A real digiKam read/edit/refresh path is observed and recorded; a generated tag is edited and saved, its XMP is read back and refreshed, and hierarchy, title, caption, optional author and preservation meet S2-18.
 - [ ] Human-reviewed metadata examples and outcomes are recorded with limitations; no unsupported claims pass as evidence.
 - [ ] External provider/data/cost permission is documented if used; manual evidence is not represented as automated testing.
 - [ ] Blockers remain unchecked rather than silently converted to success; completion record links to evidence.
@@ -474,27 +475,47 @@ These paths were inspected as existing in the repository at planning time. They 
 - [ ] Plan, summary/detail checkboxes, completion records, HLD and public documentation agree.
 - [ ] Product Owner closeout decision and deviations/carry-forward are recorded; C5 record linked.
 
+## Parent requirements-to-slice allocation
+
+This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; Slice 2 work and checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
+
+| Parent REQ area | Slice 1 baseline | Slice 2 allocation | Later candidates and goals | Prerequisites and verification |
+| --- | --- | --- | --- | --- |
+| Purpose, platform, runtime, packaging, license and delivery approach (Purpose; Guiding requirements; Runtime and external dependencies; Delivery approach and scope; Known non-goals) | Python 3.12+, 3.13 baseline, Linux, `uv`, package, version CLI and license | Preserve and verify the installed CLI, package, locked dependencies and application version | Publication timing uncommitted; non-Linux portability desirable, exhaustive OS CI not required | Slice 1 A1/B1/C3; Slice 2 A1, C4–C5 |
+| Stage artifacts, source integrity, create-only and regeneration (Guiding requirements; Processing stages and artifacts) | Single-image `desc`/`json`, adjacent sidecars, explicit regeneration | Preserve contracts and add policy-governed XMP | Broader selection remains later | Slice 1 A2/B6–B8; Slice 2 A1/A4, B2/B5, C1–C2 |
+| Input selection and traversal (Input selection and traversal) | One image path | Remain single-image | Directory, patterns, recursion, allowlist and batch candidates; exclusions and expanded formats later goals | Slice 2 C1 verifies single input; future selection plan owns traversal and input tests |
+| Stage prerequisites and composition (Stage dependencies) | Persisted `.desc.txt`; independent JSON; single-image prerequisite policy | Independently selectable XMP consumes persisted JSON, respects missing-artifact policy and optional fields | Directory/pattern skip-and-continue with later selection/batch work | Slice 1 A2/C1; Slice 2 A4, B5, C1 |
+| Providers, prompts, model selection, reasoning and validation retry (Model providers and prompts) | OpenAI-compatible adapter, named per-stage models, prompt/schema overrides, reasoning and bounded opt-in validation retry | Preserve model behavior; evolve JSON prompt/category guidance; XMP makes no model call | Additional providers are future candidates | Slice 1 A3–A4/B3/B6–B7; Slice 2 A2/A4, B1–B2, C1/C3 |
+| Structured metadata and provenance (Structured metadata expectations) | Default descriptive payload, replaceable schema, envelope/provenance and independent schema version | Add title, caption, ranked category recommendations and future schema-evolution policy | Further schema evolution subject to its own version/compatibility policy | Slice 1 A3/B7; Slice 2 A2/A4, B2, C1/C3 |
+| XMP and preservation (XMP metadata integration) | Not implemented | ExifTool, digiKam mappings, root and field policies, source/XMP preservation, real interoperability | Other representations independently optional in later work; no release commitment | Slice 2 A1/A3–A4, B1/B3–B5, C1–C3/C5 |
+| Search (Search) | Help-visible search stub | Preserve stub without functional search | Deterministic text/JSON search and outputs are candidates; embeddings a later goal, not Release 1 requirement | Slice 1 B1/B8; Slice 2 B5/C4; future search plan owns matching tests |
+| Configuration and precedence (Configuration and precedence) | Single selected YAML, CLI precedence, stage validation and prompt/schema overrides | Add category and XMP settings, explicit-empty root and selected-stage isolation | Later selection/search settings belong to owning plans | Slice 1 A2/B2; Slice 2 A4, B1, C1/C4 |
+| Failure policies, retries, logging and summaries (Failure policies, retries and logging) | Single-image results, zero default request retry, bounded schema retry, redacted diagnostics | Preserve defaults and add XMP-specific failures and results | General category actions/retries, batch continuation/summaries and configurable log destinations remain later | Slice 1 A2/A4; Slice 2 A4, B1/B5, C1–C2/C4 |
+| External scheduling, stop, resume and concurrency (External scheduling, stop and resume) | Independent processes, no scheduler, lock-free contract | Preserve CLI composition and test overlapping XMP writes; document lost edits | Multi-image rescan, batch stop and external run bounds remain later candidates | Slice 1 C1–C2; Slice 2 B5, C1–C2; later operational plan owns batch checks |
+| Safe writes and recovery (Safe-write requirements) | Shared sidecar service, backup/recovery and filesystem-capability handling | Reuse for validated XMP, including failures, recovery and overlapping processes | Additional filesystem/OS evidence as warranted; no crash-proof promise | Slice 1 A5/B5/C2 and correction; Slice 2 A3, B3/B5, C2/C4 |
+| Requirements-to-design handoff (Requirements-to-design handoff) | Slice 1 Phase A froze relevant CLI/config/provider/schema/write decisions | Reconcile parent REQ/HLD and freeze JSON, XMP mapping, configuration and safety contracts before implementation | Selection/search and batch contracts belong to later plans | Slice 1 A1–A6; Slice 2 A1–A5 readiness and requirement/evidence matrices |
+
 ## Slice 2 requirements-to-steps traceability
 
 The matrix covers each numbered Slice 2 requirement. Phase A owns contract decisions, Phase B implements them, Phase C verifies them. A step assignment does not imply the step has been executed.
 
 | Requirement | Contract/design | Implementation | Verification/closeout |
 | --- | --- | --- | --- |
-| S2-01 Persisted handoffs, independent stages | A1, A4 | B1, B5 | C1, C4, C5 |
+| S2-01 Persisted handoffs, independent stages | A1, A4 | B2, B5 | C1, C4, C5 |
 | S2-02 Artifacts and source integrity | A1, A3 | B3, B5 | C1, C2, C5 |
-| S2-03 Additive JSON information | A2 | B1 | C1, C3, C5 |
-| S2-04 Useful supported title | A2 | B1, B4 | C3, C5 |
-| S2-05 Useful supported caption | A2 | B1, B4 | C3, C5 |
-| S2-06 Human-search-oriented ranked candidates | A2 | B1, B4 | C1, C3, C5 |
-| S2-07 Hierarchical categorization | A2, A3 | B1, B3–B4 | C1–C3, C5 |
+| S2-03 Additive JSON information | A2 | B2 | C1, C3, C5 |
+| S2-04 Useful supported title | A2 | B2, B4 | C3, C5 |
+| S2-05 Useful supported caption | A2 | B2, B4 | C3, C5 |
+| S2-06 Human-search-oriented ranked candidates | A2 | B2, B4 | C1, C3, C5 |
+| S2-07 Hierarchical categorization | A2, A3 | B2, B3–B4 | C1–C3, C5 |
 | S2-08 Preferred category guidance | A2, A4 | B1–B2 | C1, C3, C5 |
-| S2-09 Inference versus publication | A1–A3 | B1, B3–B5 | C1, C5 |
-| S2-10 Schema, prompt and historical JSON compatibility | A2, A4 | B1, B4, B6 | C1–C2, C4–C5 |
+| S2-09 Inference versus publication | A1–A3 | B2, B3–B5 | C1, C5 |
+| S2-10 Schema, prompt and historical JSON compatibility | A2, A4 | B2, B4, B6 | C1–C2, C4–C5 |
 | S2-11 Deterministic digiKam publication | A3 | B3–B5 | C1–C3, C5 |
-| S2-12 Tag ownership and policies incl. empty root | A1, A3–A4 | B2, B4–B5 | C1–C3, C5 |
-| S2-13 Ranked top-N XMP selection | A2, A4 | B2, B4 | C1, C3, C5 |
+| S2-12 Tag ownership and policies incl. empty root | A1, A3–A4 | B1, B4–B5 | C1–C3, C5 |
+| S2-13 Ranked top-N XMP selection | A2, A4 | B1, B4 | C1, C3, C5 |
 | S2-14 Independent title/caption policies | A3–A4 | B3–B4 | C1–C3, C5 |
-| S2-15 Optional config-only caption author | A3–A4 | B2–B4 | C1–C3, C5 |
+| S2-15 Optional config-only caption author | A3–A4 | B1, B3–B4 | C1–C3, C5 |
 | S2-16 Existing XMP, write safety and failure | A1, A3–A4 | B3–B5 | C2, C4–C5 |
 | S2-17 Config precedence and stage-specific behavior | A1, A4 | B1–B2, B5–B6 | C1, C4–C5 |
 | S2-18 Required acceptance evidence | A1–A5 | B1–B6 | C1–C5 |
@@ -505,19 +526,19 @@ Each row is an **unverified obligation** until cited completion records demonstr
 
 | Outcome | Required evidence owner | Status |
 | --- | --- | --- |
-| JSON output extension, old descriptive fields and provenance | B1, C1, C5 | Pending |
+| JSON output extension, old descriptive fields and provenance | B2, C1, C5 | Pending |
 | Evidence-bound title/caption/tag claims | A2 rubric, C3, C5 | Pending |
 | Ranking, preferred/multiple/uncategorized paths, top-N | A2, B4, C1/C3, C5 | Pending |
 | Human-reviewed metadata quality | A2, C3, C5 | Pending |
 | Standalone stages and persisted handoffs | B5, C1, C5 | Pending |
-| digiKam hierarchy recognition and ancestor filtering | A3, C3, C5 | Pending |
+| digiKam hierarchy recognition, generated-tag edit/readback and ancestor filtering | A3, C3, C5 | Pending |
 | Nonempty/empty root policy and idempotence | B4, C1–C2, C5 | Pending |
 | Editable title/caption, independent policies | B3–B4, C3, C5 | Pending |
-| Optional author, no-author preservation, all policies | B2–B4, C2–C3, C5 | Pending |
+| Optional author, no-author preservation, all policies | B1, B3–B4, C2–C3, C5 | Pending |
 | Existing XMP preservation including flat keywords | A3, C2–C3, C5 | Pending |
 | Safe writes, failures, ExifTool optionality, no image edits | B3–B5, C1–C2/C4, C5 | Pending |
-| Historical/custom JSON handling, schema/version evolution | A2/A4, B1/B4/B6, C1, C5 | Pending |
-| CLI-over-YAML precedence, selected-stage isolation | A4, B2, C1/C4, C5 | Pending |
+| Historical/custom JSON handling, schema/version evolution | A2/A4, B2/B4/B6, C1, C5 | Pending |
+| CLI-over-YAML precedence, selected-stage isolation | A4, B1, C1/C4, C5 | Pending |
 | Public synthetic/sanitized fixtures | A3, B3, B6, C2–C5 | Pending |
 
 ## Consolidated Phase A decisions and gates
@@ -526,13 +547,13 @@ These are **not** permission to revisit locked product requirements. Each is a g
 
 | Unresolved contract | Owner | Must be fixed before |
 | --- | --- | --- |
-| Slice 2 REQ acceptance and HLD reconciliation (especially empty root and JSON/XMP boundary) | A1; Product Owner for acceptance | A5 readiness gate |
-| New JSON field/item shape, optional/empty semantics, ranking, category guidance, path normalization, evidence-quality rubric | A2 | B1, B4; A5 readiness gate |
-| Top-N default and count for multiple paths; invalid/duplicate handling | A2, A4 | B2, B4; A5 readiness gate |
-| Built-in schema SemVer and evolution/reader compatibility for old/custom JSON | A2, A4 | B1, B4; A5 readiness gate |
+| Slice 2 REQ acceptance and parent REQ/HLD reconciliation (especially the accepted empty-root decision and JSON/XMP boundary) | A1; Product Owner for acceptance | A5 readiness gate |
+| New JSON field/item shape, optional/empty semantics, ranking, category guidance, path normalization, evidence-quality rubric | A2 | B2, B4; A5 readiness gate |
+| Top-N default and count for multiple paths; invalid/duplicate handling | A2, A4 | B1, B4; A5 readiness gate |
+| Built-in schema SemVer and evolution/reader compatibility for old/custom JSON | A2, A4 | B2, B4; A5 readiness gate |
 | Minimum ExifTool/digiKam writable field mapping, localization, hierarchy leaf assignment and flat-field preservation | A3 | B3–B4; A5 readiness gate |
 | XMP backend subprocess and artifact validation; fixture/GUI refresh process | A3 | B3, C3; A5 readiness gate for field mapping |
-| Exact XMP/config keys, source-availability semantics, policy/no-op outcome, CLI and stage result/exit behavior | A4 | B2, B4–B5; A5 readiness gate |
+| Exact XMP/config keys, source-availability semantics, policy/no-op outcome, CLI and stage result/exit behavior | A4 | B1, B4–B5; A5 readiness gate |
 
 **Already decided, not an open design question:** `ai` when omitted; explicitly `""` means rootless, `disabled` is no-op, all other tag policies behave as additive `add`; nonempty-root policies retain their normal meanings; no namespace prefix in JSON; XMP optional fields never clear data merely because absent/empty; caption author only from optional config; JSON default skip/explicit whole-file regeneration; deterministic XMP with no model calls.
 
