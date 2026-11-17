@@ -116,7 +116,7 @@ The samples demonstrate **coexistence**, not a verified writable-field minimum. 
 
 The screenshots showed `auto/bell pepper` from digiKam's classifier and the manually organized `food/pepper`. The Product Owner explicitly rejected treating duplication across roots as a primary concern.
 
-**Agreed direction:** Keep Image Clarus tags under the independently controlled configurable root `ai` by default, distinct from digiKam's `auto` and user-maintained hierarchies. The `ai` root is a **tag hierarchy root**, not an XML namespace.
+**Agreed direction:** Use the independently controlled configurable root `ai` by default when the setting is omitted, distinct from digiKam's `auto` and user-maintained hierarchies. An explicitly configured empty string (`""`) instead adds no root prefix; in that mode tag updates are additive only and never delete existing tags, regardless of policy. A non-empty root uses the chosen update policy. The root is a **tag hierarchy root**, not an XML namespace.
 
 Another screenshot showed digiKam auto tags with comma-separated synonym-like labels and one checkbox per displayed item. This is an observation of the UI, **not proof of the underlying synonym model** and not a convention Image Clarus must reproduce.
 
@@ -132,7 +132,7 @@ Users may provide their own top-level categories, with others added over time. F
 - Allow placement in multiple applicable categories when justified, such as a pepper that is both a food and part of a growing plant.
 - The category list should be extensible and should not be hard-coded to this user's taxonomy.
 - JSON, not XMP, makes the semantic categorization decision; the XMP stage applies the resulting recommendations deterministically.
-- JSON recommendations do not include the configured XMP ownership root; the XMP stage applies that root when publishing.
+- JSON recommendations do not include the configured XMP ownership root; the XMP stage applies a non-empty root when publishing, or no prefix for an explicitly empty root.
 
 **Not yet decided:** The final configuration key, whether unlisted new categories may be inferred by default, the output representation of multiple assignments, and the details of top-N counting.
 
@@ -209,7 +209,7 @@ The design preserves the established file-in/file-out processing stages:
 - The XMP stage consumes persisted structured metadata without additional model calls. It applies top-N selection and independently configured tag/title/caption/author update policies.
 - The shared artifact service retains responsibility for recoverable writes; ExifTool is the initially selected optional XMP backend per the HLD.
 - XMP is a publication target, not the sole authoritative representation for description, context, or future search consumers.
-- Adding fields to newly generated JSON does not update existing artifacts. Existing valid JSON is skipped by default; explicit regeneration replaces the complete JSON artifact rather than merging individual fields. Older artifacts lacking information required by a selected XMP operation follow the existing missing-prerequisite policy; the single-image default is an actionable failure.
+- Adding fields to newly generated JSON does not update existing artifacts. Existing valid JSON is skipped by default; explicit regeneration replaces the complete JSON artifact rather than merging individual fields. A missing JSON artifact follows the established missing-prerequisite policy; absent or supported empty optional publication fields leave their XMP fields unchanged. Invalid or incompatible structured input is a validation or compatibility failure.
 - The source image is never modified. An existing XMP sidecar may contain manual tags and many unrelated fields that must survive the operation.
 
 The *working names* `title`, `description`, and `tag_candidates` are useful for discussion; the final schema and compatibility contract are **not yet frozen**.
@@ -242,7 +242,7 @@ One historical nuance: Slice 1 A3 described `keywords` as the canonical search-t
 | Tag count | No forced candidate count |
 | Hierarchy | Recommend paths when meaningful; do not require a category |
 | Categories | User-configured preferences; may use multiple applicable categories |
-| Ownership | Configurable `ai` hierarchy root by default; separate from `auto` and manual tags |
+| Ownership | Omitted root defaults to `ai`; explicit empty string publishes without a prefix and preserves every existing tag through additive-only updates |
 | Duplicate concepts across roots | Acceptable; cross-root deduplication is not a priority |
 | Semantic work | JSON stage; no model inference inside XMP stage |
 | Title | JSON-generated concise title; independent XMP update policy |
@@ -265,6 +265,7 @@ These are **design questions**, not reasons to reopen the completed Slice 1:
 8. **XMP update and recovery:** Merge/preservation validation, existing XMP handling, stage-specific results, recoverable publication, and interaction with the documented lock-free/last-write-wins constraint.
 9. **digiKam refresh:** How are externally written sidecars imported or rescanned so the database/UI displays the result? Verify rather than assuming immediate visibility.
 10. **Validation fixtures:** Create synthetic or sanitized representative XMP samples and run digiKam/ExifTool round-trip checks without publishing original operator data.
+11. **Empty root and policies:** Define non-destructive handling or rejection of `overwrite` and `new` with an explicitly empty root, preserving all existing tags; `disabled` makes no tag changes.
 
 ## 9. Suggested handoff to the Slice 2 REQ
 
