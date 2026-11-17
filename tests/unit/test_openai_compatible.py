@@ -172,7 +172,16 @@ def test_unknown_image_fails_before_request():
     assert exc.value.category == "unsupported_image"
 
 
-@pytest.mark.parametrize("invalid", ["api_key", "api_key_env", "model_id"])
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        "api_key",
+        "api_key_env",
+        "api_key_non_ascii",
+        "api_key_env_non_ascii",
+        "model_id",
+    ],
+)
 def test_invalid_header_or_model_text_fails_before_transport(invalid, monkeypatch):
     calls = []
 
@@ -189,6 +198,11 @@ def test_invalid_header_or_model_text_fails_before_transport(invalid, monkeypatc
             "SYNTHETIC_PROVIDER_KEY",
             "SYNTHETIC_KEY_SENTINEL\r\nX-Probe: 1",
         )
+        provider["api_key_env"] = "SYNTHETIC_PROVIDER_KEY"
+    elif invalid == "api_key_non_ascii":
+        provider["api_key"] = "SYNTHETIC_KEY_é"
+    elif invalid == "api_key_env_non_ascii":
+        monkeypatch.setenv("SYNTHETIC_PROVIDER_KEY", "SYNTHETIC_KEY_é")
         provider["api_key_env"] = "SYNTHETIC_PROVIDER_KEY"
     else:
         model["model_id"] = "\ud800"

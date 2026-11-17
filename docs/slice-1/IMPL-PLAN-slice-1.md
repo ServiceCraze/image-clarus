@@ -775,7 +775,7 @@ The following Slice 1 planning decisions and runtime gates are resolved. Deferre
 | --- | --- | --- |
 | Artifact API details, temp/backup naming, permissions, failure and recovery assertions | Resolved for Slice 1 with the approved capability-dependent correction; operator-reported NTFS/FUSE publication and create-only probe passed; Product Owner accepted the test-order exception. The original failure's precise cause remains unknown and is not claimed as diagnosed. | See [A5](IMPL-A5-COMPLETED.md), the [correction record](IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md), and [C5](IMPL-C5-COMPLETED.md). |
 | A3 Product Owner review of the prompt, metadata fields, envelope/provenance boundary, schema-version rules, existing-output skip behavior, and retry contract | Resolved by explicit acceptance | Erik accepted the A3 contract as documented during A6; no revisions were requested. |
-| Python 3.12/3.13 interpreter availability for the runtime matrix | Resolved in C3 and reverified in C5; 534 tests pass on each supported Linux interpreter. | A1 selected the versions; see [C3](IMPL-C3-COMPLETED.md) and [C5](IMPL-C5-COMPLETED.md). |
+| Python 3.12/3.13 interpreter availability for the runtime matrix | Resolved in C3 and reverified in C5; 539 tests pass on each supported Linux interpreter. | A1 selected the versions; see [C3](IMPL-C3-COMPLETED.md) and [C5](IMPL-C5-COMPLETED.md). |
 
 ## Source documents and planning basis
 

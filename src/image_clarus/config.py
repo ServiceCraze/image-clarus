@@ -135,10 +135,10 @@ def _valid_header_credential(value):
     if not isinstance(value, str):
         return False
     try:
-        encoded = value.encode("latin-1")
+        encoded = value.encode("ascii")
     except UnicodeEncodeError:
         return False
-    return all(byte >= 32 and byte != 127 for byte in encoded)
+    return all(0x20 <= byte <= 0x7E for byte in encoded)
 
 
 def discovery_locations(platform=None, environ=None, home=None):
@@ -645,7 +645,7 @@ def _selected(config, stage):
         )
     if "api_key" in provider and not _valid_header_credential(provider["api_key"]):
         raise ConfigurationError(
-            "providers.<name>.api_key: credential is not safe for an HTTP header; set a header-safe value"
+            "providers.<name>.api_key: credential must be printable ASCII for an HTTP header; set a printable ASCII value"
         )
     if "api_key_env" in provider:
         name = provider["api_key_env"]
@@ -660,7 +660,7 @@ def _selected(config, stage):
             )
         if not _valid_header_credential(os.environ[name]):
             raise ConfigurationError(
-                "providers.<name>.api_key_env: credential is not safe for an HTTP header; set a header-safe value"
+                "providers.<name>.api_key_env: credential must be printable ASCII for an HTTP header; set a printable ASCII value"
             )
     effort = (
         settings["reasoning_effort"]

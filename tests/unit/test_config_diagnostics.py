@@ -415,6 +415,43 @@ def test_environment_api_key_control_characters_are_actionable(monkeypatch):
     assert "synthetic_key_sentinel" not in text and "x-probe" not in text
 
 
+@pytest.mark.parametrize("source", ["direct", "environment"])
+def test_non_ascii_api_key_is_rejected_during_preflight(tmp_path, monkeypatch, source):
+    key = "SYNTHETIC_KEY_é"
+    if source == "direct":
+        path = tmp_path / "config.yaml"
+        path.write_text(
+            "providers:\n  p:\n    base_url: http://localhost\n"
+            f'    api_key: "{key}"\n'
+            "models:\n  m:\n    provider: p\n    model_id: sample-model\n"
+            "stages:\n  desc:\n    model: m\n"
+        )
+        options = {"config_file": path, "stages": ("desc",)}
+        field = "providers.<name>.api_key"
+    else:
+        monkeypatch.setenv("SYNTHETIC_PROVIDER_KEY", key)
+        options = {
+            "discovery_paths": (),
+            "stages": ("desc",),
+            "overrides": [
+                "providers.p.base_url=http://localhost",
+                "providers.p.api_key_env=SYNTHETIC_PROVIDER_KEY",
+                "models.m.provider=p",
+                "models.m.model_id=sample-model",
+                "stages.desc.model=m",
+            ],
+        }
+        field = "providers.<name>.api_key_env"
+
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(**options)
+    text = str(exc.value).lower()
+    assert exc.value.category == "configuration"
+    assert field in text
+    assert "ascii" in text and "header" in text and "set" in text
+    assert key.lower() not in text
+
+
 def test_unpaired_surrogate_model_id_is_actionable():
     with pytest.raises(ConfigurationError) as exc:
         resolve_config(
