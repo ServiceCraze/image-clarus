@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) and B1–B4 are complete. The Product Owner accepted B2's documented historical RED-evidence gap. B5 is implemented but remains open on an unexplained signal-test timeout observed once; B6 and Phase C remain open. Actual digiKam interoperability is not claimed.
+**Status:** In progress — Phase A (A1–A5) and B1–B5 are complete. The Product Owner accepted B2's documented historical RED-evidence gap. B6 and Phase C remain open. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -101,7 +101,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [x] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [x] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
-- [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
+- [x] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
 - [ ] Step B6 — Document Slice 2 configuration, behavior, and compatibility [DOCS/TEST]
 
 ### Phase C — Verification and closeout
@@ -351,12 +351,12 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Integrated XMP stage, registry/CLI updates and tests; [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md).
 
-**B5 progress:** The stage and CLI are integrated and both supported Python full suites passed with real ExifTool. A single SIGTERM-during-description-request test timed out once; later repetitions and full-suite reruns passed, but its cause is unverified. The interruption acceptance row and B5 summary remain open; the completion record preserves the actual evidence.
+**B5 result:** The stage and CLI are integrated; both supported Python full suites and focused signal tests passed with real ExifTool. Following review, the held-provider test deadline increased to 10 seconds while retaining the requirement to exit before provider release. The completion record preserves the single earlier four-second timeout and its unknown cause.
 
 **Acceptance:**
 - [x] Default and explicit stage combinations follow `desc,json,xmp` order and require no automatic prerequisite expansion.
 - [x] XMP stage works alone with persisted JSON and requires ExifTool only when selected; source image bytes remain unchanged.
-- [ ] Recoverable sidecar publishing, stage outcomes, exit codes, interruption and config precedence match the frozen contracts.
+- [x] Recoverable sidecar publishing, stage outcomes, exit codes, interruption and config precedence match the frozen contracts.
 - [x] Existing `desc`/`json`, search stub and artifact behavior regressions pass; obsolete code/fixtures are reviewed.
 - [x] Observed RED/GREEN, regression and completion record evidence are linked.
 

@@ -2,7 +2,7 @@
 
 **Status:** Complete for the deterministic policy-planning boundary. B5 stage/CLI integration and C3 actual digiKam interoperability remain open.
 
-**Subsequent progress:** B5 stage/CLI integration has been implemented but B5 remains open on an unexplained interruption-test timeout observed once; see [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md). Actual digiKam interoperability remains C3.
+**Subsequent progress:** B5 stage/CLI integration is complete; see [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md) for the historical interruption-test timeout and review follow-up. Actual digiKam interoperability remains C3.
 
 ## Changes
 

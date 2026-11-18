@@ -141,7 +141,9 @@ def test_signal_cancels_inflight_request_before_provider_releases(tmp_path, sign
             assert entered.wait(15), "CLI did not reach provider"
             process.send_signal(signum)
             try:
-                stdout, stderr = process.communicate(timeout=4)
+                # The provider remains held; the deadline is test-harness slack,
+                # not a product latency guarantee.
+                stdout, stderr = process.communicate(timeout=10)
             except subprocess.TimeoutExpired:
                 pytest.fail(
                     "CLI did not exit while the provider response remained held"
