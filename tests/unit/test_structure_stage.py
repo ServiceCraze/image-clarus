@@ -411,12 +411,15 @@ def test_builtin_resources(context):
                     "visual_style": "",
                 },
                 "keywords": [],
+                "title": "",
+                "caption": "",
+                "tag_candidates": [],
             }
         )
     ]
     assert run(c).status == "completed"
     result = json.loads(c.output.read_bytes())
-    assert result["schema_version"] == "1.0.0"
+    assert result["schema_version"] == "2.0.0"
     assert result["provenance"]["prompt_id"] == "builtin:image-structure"
     assert (
         result["provenance"]["prompt_sha256"]

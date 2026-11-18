@@ -40,3 +40,20 @@ def structure_schema():
     if source.is_file():
         return source
     raise FileNotFoundError("Built-in image structure schema is unavailable")
+
+
+def structure_schema_v1():
+    """Return the historical 1.0.0 built-in schema resource."""
+    packaged = files("image_clarus").joinpath(
+        "resources", "schemas", "image-structure-v1.schema.json"
+    )
+    if packaged.is_file():
+        return packaged
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "schemas"
+        / "image-structure-v1.schema.json"
+    )
+    if source.is_file():
+        return source
+    raise FileNotFoundError("Built-in image structure schema v1 is unavailable")

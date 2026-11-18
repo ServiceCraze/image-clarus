@@ -31,6 +31,9 @@ METADATA = {
         "visual_style": "",
     },
     "keywords": ["synthetic"],
+    "title": "Blue square",
+    "caption": "A blue square.",
+    "tag_candidates": [["shape", "square"], ["color", "blue"]],
 }
 
 
@@ -192,8 +195,8 @@ def check_envelope(r, description, model="text-model"):
         "metadata",
     }
     assert result["format_version"] == 1
-    assert result["schema_id"] == "urn:image-clarus:metadata-schema:1.0.0"
-    assert result["schema_version"] == "1.0.0"
+    assert result["schema_id"] == "urn:image-clarus:metadata-schema:2.0.0"
+    assert result["schema_version"] == "2.0.0"
     assert result["provenance"]["model_id"] == model
     assert (
         result["provenance"]["description_sha256"]

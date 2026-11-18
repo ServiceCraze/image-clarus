@@ -98,7 +98,7 @@ These paths were inspected as existing in the repository at planning time. They 
 ### Phase B — Implementation
 
 - [x] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
-- [ ] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
+- [x] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [ ] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
@@ -283,10 +283,10 @@ These paths were inspected as existing in the repository at planning time. They 
 **Outputs:** Enhanced schema/prompt/JSON generation and focused tests; [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md).
 
 **Acceptance:**
-- [ ] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
-- [ ] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
-- [ ] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
-- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
+- [x] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
+- [x] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
+- [x] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
+- [x] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
 
 ### Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "image-clarus"
-version = "0.1.20"
+version = "0.1.21"
 description = "Image descriptions and structured metadata"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,3 +25,4 @@ packages = ["src/image_clarus"]
 "prompts/image-description.txt" = "image_clarus/resources/prompts/image-description.txt"
 "prompts/image-structure.txt" = "image_clarus/resources/prompts/image-structure.txt"
 "schemas/image-structure.schema.json" = "image_clarus/resources/schemas/image-structure.schema.json"
+"schemas/image-structure-v1.schema.json" = "image_clarus/resources/schemas/image-structure-v1.schema.json"

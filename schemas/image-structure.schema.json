@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:image-clarus:metadata-schema:1.0.0",
+  "$id": "urn:image-clarus:metadata-schema:2.0.0",
   "title": "Image Clarus structured metadata payload",
   "type": "object",
   "additionalProperties": false,
@@ -10,7 +10,10 @@
     "actions",
     "setting",
     "visual_characteristics",
-    "keywords"
+    "keywords",
+    "title",
+    "caption",
+    "tag_candidates"
   ],
   "$defs": {
     "non_empty_string": {
@@ -23,6 +26,18 @@
         "$ref": "#/$defs/non_empty_string"
       },
       "uniqueItems": true
+    },
+    "tag_segment": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!\\s)(?!.*\\s$)[^/|\\u0000-\\u001F\\u007F-\\u009F]+$"
+    },
+    "tag_path": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/tag_segment"
+      }
     }
   },
   "properties": {
@@ -87,6 +102,22 @@
     "keywords": {
       "description": "Unique searchable terms/tags; empty when unsupported.",
       "$ref": "#/$defs/string_array"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short identification; empty when unsupported."
+    },
+    "caption": {
+      "type": "string",
+      "description": "Concise supported caption; empty when unsupported."
+    },
+    "tag_candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tag_path"
+      },
+      "uniqueItems": true,
+      "description": "Search-useful tag paths, ordered most useful first; empty when unsupported."
     }
   }
 }

@@ -313,6 +313,9 @@ def run_structure(image_path, config, services):
     retries = settings["validation_retries"]
     if type(retries) is not int or retries not in (0, 1, 2):
         return StageResult("json", "failed", error_category="configuration")
+    preferred_categories = settings.get("preferred_categories", [])
+    if not isinstance(preferred_categories, list):
+        return StageResult("json", "failed", error_category="configuration")
     history = []
     metadata = None
     for attempt in range(retries + 1):
@@ -325,6 +328,7 @@ def run_structure(image_path, config, services):
                 schema=schema,
                 effort=settings["reasoning_effort"],
                 history=history,
+                preferred_categories=preferred_categories,
             )
         except ProviderError as error:
             return StageResult("json", "failed", error_category=error.category)
@@ -348,10 +352,10 @@ def run_structure(image_path, config, services):
         "format_version": 1,
         "schema_id": "urn:image-clarus:custom-metadata-schema"
         if settings["schema_file"]
-        else "urn:image-clarus:metadata-schema:1.0.0",
+        else "urn:image-clarus:metadata-schema:2.0.0",
         "schema_version": "custom-sha256:" + _hash(schema_bytes)
         if settings["schema_file"]
-        else "1.0.0",
+        else "2.0.0",
         "metadata": metadata,
         "provenance": {
             "provider_alias": provider_alias,

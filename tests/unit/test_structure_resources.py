@@ -13,12 +13,12 @@ ASSETS = (
     (
         "structure_prompt",
         "prompts/image-structure.txt",
-        "15b5dd95690fbaf9dae7f485628a80eff2ac7a12945e7c19281456359f30a683",
+        "282bf0bd58c65aff44979f90d4e98f53bdf718a8ecc85c06e262c88d17f8beff",
     ),
     (
         "structure_schema",
         "schemas/image-structure.schema.json",
-        "9d90dd0aa3722535fe4f79eb1770b50900dcfe61ce376e4ce54fee03b43877f0",
+        "b37f6895ec6f41ed738bde22795a50a733f9a64f9ed1a208e09bd168ef813c21",
     ),
 )
 
