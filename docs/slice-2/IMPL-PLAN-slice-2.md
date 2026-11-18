@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** This plan is in progress, not permission to start Phase B implementation. The Product Owner accepted the Slice 2 REQ; the Phase A contract/readiness gate must also be accepted before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — A1–A3 design work complete and Slice 2 REQ accepted; A4–A5 and Phases B/C are pending. No Slice 2 implementation or digiKam interoperability verification is claimed.
+**Status:** In progress — A1–A4 design work complete and Slice 2 REQ accepted; A5 and Phases B/C are pending. No Slice 2 implementation or digiKam interoperability verification is claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -92,7 +92,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
 - [x] Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
 - [x] Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
-- [ ] Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
+- [x] Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
 - [ ] Step A5 — Pass the Phase A readiness gate [DESIGN]
 
 ### Phase B — Implementation
@@ -135,7 +135,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Reconciled `docs/REQ-image-clarus.md` and `docs/HLD-image-clarus.md` reflecting the approved exception; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
 
-**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2 and A3 are complete as design work; A4–A5 and the Phase A readiness gate remain pending.
+**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2–A4 are complete as design work; A5 and the Phase A readiness gate remain pending.
 
 **Acceptance:**
 - [x] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
@@ -209,12 +209,14 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Exact config/CLI/compatibility/policy/result contracts and test matrix in [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md); plan and HLD updated where appropriate.
 
+**A4 frozen design:** `stages.json.preferred_categories` defaults to `[]`; `stages.xmp` defines tag root `ai`, top-N `10`, tag policy `add`, independent `new` title/caption/author policies, null author and explicit custom metadata property mappings. Existing YAML-valued `--set` controls them; an explicit empty root uses `--set 'stages.xmp.tag_root=""'`. Only selected-stage values and ExifTool requirements are validated; unknown keys remain globally rejected. Built-in versions use exact paired validators; custom publication uses explicit literal property mapping. No-change is `skipped/no_change`; `--regenerate` affects only desc/json. The linked record contains full policies, compatibility, diagnostics and tests.
+
 **Acceptance:**
-- [ ] Config defaults, override parsing, key-level validation and policy truth tables are exact and match the Slice 2 REQ without reopening product choices.
-- [ ] Missing artifact, absent/empty optional fields and malformed/incompatible JSON have distinct specified outcomes; old/custom JSON mapping is safe and explicit.
-- [ ] Stage `xmp` has no model dependency; unused XMP configuration/ExifTool cannot block unrelated selected stages.
-- [ ] Title/caption/author updates and `--regenerate` interactions are defined without accidental deletion or inferred identity.
-- [ ] A4 completion record and plan checkoffs are synchronized.
+- [x] Config defaults, override parsing, key-level validation and policy truth tables are exact and match the Slice 2 REQ without reopening product choices.
+- [x] Missing artifact, absent/empty optional fields and malformed/incompatible JSON have distinct specified outcomes; old/custom JSON mapping is safe and explicit.
+- [x] Stage `xmp` has no model dependency; unused XMP configuration/ExifTool cannot block unrelated selected stages.
+- [x] Title/caption/author updates and `--regenerate` interactions are defined without accidental deletion or inferred identity.
+- [x] A4 completion record and plan checkoffs are synchronized.
 
 ### Step A5 — Pass the Phase A readiness gate [DESIGN]
 

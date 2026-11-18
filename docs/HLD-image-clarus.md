@@ -235,7 +235,9 @@ Title and description are independent XMP fields, each supporting `new`, `overwr
 - `overwrite` replaces the current field value.
 - `disabled` leaves the field unchanged.
 
-The specific structured-JSON-to-title/description/tag mapping is deferred until the structured schema is evaluated; not every JSON field must be exported. Under the accepted Slice 2 requirements, absent or supported empty optional source values leave the corresponding destination unchanged, even under `overwrite`. An optional config-supplied caption author has separate `new`, `overwrite`, and `disabled` policies; absent configuration leaves author metadata unchanged. Exact mappings and localized-value handling remain design and interoperability work.
+Not every structured JSON field is exported to XMP. Under the accepted Slice 2 requirements, absent or supported empty optional source values leave the corresponding destination unchanged, even under `overwrite`. An optional config-supplied caption author has separate `new`, `overwrite`, and `disabled` policies; absent configuration leaves author metadata unchanged. A3 and A4 define the preliminary mappings and localized-value handling; actual interoperability remains C3 work.
+
+Slice 2 A4 defines `new` as writing only when all language alternatives for the field are absent or empty, and `overwrite` as updating only `x-default`; other languages remain intact. The [A4 record](slice-2/IMPL-A4-COMPLETED.md) defines exact configuration, custom-schema mappings, selected-stage validation and stage outcomes. It is a design contract, not evidence that the XMP stage is implemented.
 
 ### 6.5 Validation and public fixtures
 

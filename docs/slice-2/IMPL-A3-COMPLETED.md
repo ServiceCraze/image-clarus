@@ -2,6 +2,8 @@
 
 **Status:** Design complete. Actual digiKam interoperability remains a C3 acceptance obligation. No implementation or successful digiKam interoperability is claimed.
 
+**Subsequent progress:** A4 has frozen configuration, localized-field policy and no-change outcomes; see [IMPL-A4-COMPLETED.md](IMPL-A4-COMPLETED.md).
+
 **Scope deviations:** None. The Product Owner directed the A3/A5 plan correction: use discovery and synthetic ExifTool evidence for preliminary design and require actual digiKam interoperability in C3; product requirements are unchanged.
 
 ## Files created, updated, and removed

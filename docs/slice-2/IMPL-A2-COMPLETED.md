@@ -4,7 +4,7 @@
 
 **Scope deviations:** None. This record freezes the A2 design; A3–A5 and Phase B/C have not been started.
 
-**Subsequent progress:** A3 design is complete; see [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md). DigiKam interoperability is verified in C3, not a prerequisite for A3. A4–A5 and Phase B/C remain pending.
+**Subsequent progress:** A3 and A4 designs are complete; see [A3](IMPL-A3-COMPLETED.md) and [A4](IMPL-A4-COMPLETED.md). DigiKam interoperability is verified in C3, not a prerequisite for A3. A5 and Phase B/C remain pending.
 
 ## Files created, updated, and removed
 
