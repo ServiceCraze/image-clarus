@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) and B1–B3 are complete. The Product Owner accepted B2's documented historical RED-evidence gap; B4–B6 and Phase C remain open. XMP stage integration and digiKam interoperability are not claimed.
+**Status:** In progress — Phase A (A1–A5) and B1–B4 are complete. The Product Owner accepted B2's documented historical RED-evidence gap; B5–B6 and Phase C remain open. XMP stage integration and digiKam interoperability are not claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -100,7 +100,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
 - [x] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [x] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
-- [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
+- [x] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
 - [ ] Step B6 — Document Slice 2 configuration, behavior, and compatibility [DOCS/TEST]
 
@@ -327,12 +327,14 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Deterministic XMP selection and field-policy implementation/tests; [IMPL-B4-COMPLETED.md](IMPL-B4-COMPLETED.md).
 
+**B4 result:** The standalone planner validates compatible persisted JSON, derives deterministic policy-governed updates and effective tag policy, and reports missing/invalid/no-change outcomes without a model call. The completion record distinguishes observed RED from supplemental coverage. B5 owns stage integration, recovery and publication; C3 owns actual digiKam interoperability.
+
 **Acceptance:**
-- [ ] Top-N selection is reproducible and follows persisted order without semantic reranking.
-- [ ] Empty-root and nonempty-root policy truth tables pass, with verified no-deletion guarantees.
-- [ ] Title, caption and author fields follow independent policies; unavailable source data never deletes XMP values.
-- [ ] Older/custom JSON behavior, malformed input and no-op results match A4; XMP logic makes no model call.
-- [ ] Observed RED/GREEN, regression and completion record evidence are linked.
+- [x] Top-N selection is reproducible and follows persisted order without semantic reranking.
+- [x] Empty-root and nonempty-root policy truth tables pass, with verified no-deletion guarantees.
+- [x] Title, caption and author fields follow independent policies; unavailable source data never deletes XMP values.
+- [x] Older/custom JSON behavior, malformed input and no-op results match A4; XMP logic makes no model call.
+- [x] Observed RED/GREEN, regression and completion record evidence are linked.
 
 ### Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
 

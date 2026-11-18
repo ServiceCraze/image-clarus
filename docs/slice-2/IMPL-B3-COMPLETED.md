@@ -2,6 +2,8 @@
 
 **Status:** Complete for the B3 backend boundary. Actual digiKam interoperability is a separate C3 obligation. B4 selection and policy and B5 stage integration/publication have not been implemented by B3.
 
+**Subsequent progress:** B4 selection and policy planning are complete; see [IMPL-B4-COMPLETED.md](IMPL-B4-COMPLETED.md). Stage integration and publication remain B5.
+
 ## Changes
 
 - Created `src/image_clarus/xmp_backend.py` and `tests/unit/test_xmp_backend.py`.
