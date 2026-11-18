@@ -2,6 +2,8 @@
 
 **Status:** Complete. B6 and actual digiKam interoperability in C3 remain open. One historical test timeout and its unknown cause remain documented below; the test deadline was adjusted following the review and both full suites passed.
 
+**Subsequent progress:** B6 documentation and example checks are complete; see [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md). Actual digiKam interoperability remains C3.
+
 ## Changes
 
 - Integrated `run_xmp` in `src/image_clarus/stages/xmp.py`: source/sidecar/backup alias guards, persisted JSON and XMP recovery, policy planning, ExifTool transformation and recoverable publication. No-change still performs required recovery and backup cleanup. Selected XMP does not invoke a model; errors and timeout are categorized without raw metadata or tool output.

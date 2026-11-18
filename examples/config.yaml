@@ -1,23 +1,39 @@
-# Replace the endpoint and model IDs with values supported by your provider.
+# Fictional placeholders: replace endpoint and model IDs before provider use.
 # Set IMAGE_CLARUS_API_KEY in your environment; do not put credentials here.
 providers:
-  local:
-    base_url: http://127.0.0.1:1234/v1
+  example:
+    base_url: https://provider.example/v1
     api_key_env: IMAGE_CLARUS_API_KEY
     timeout_seconds: 60
 models:
   vision:
-    provider: local
-    model_id: replace-with-vision-model-id
+    provider: example
+    model_id: example-vision-model
   text:
-    provider: local
-    model_id: replace-with-text-model-id
+    provider: example
+    model_id: example-text-model
 stages:
   desc:
     model: vision
   json:
     model: text
     validation_retries: 0
+    # Optional guidance, not a required taxonomy. [] means no preference.
+    preferred_categories: []
+  xmp:
+    # Omit for the same default; "" means no prefix and no tag deletions.
+    tag_root: ai
+    tag_limit: 10
+    tag_policy: add
+    title_policy: new
+    caption_policy: new
+    # Set a value only if you want to publish a caption author.
+    caption_author: null
+    caption_author_policy: new
+    # Optional literal top-level metadata property names for custom schemas.
+    custom_title_property: null
+    custom_caption_property: null
+    custom_tags_property: null
 pipeline:
   missing_prerequisite: fail
   on_stage_failure: stop

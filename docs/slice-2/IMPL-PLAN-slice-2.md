@@ -1,8 +1,8 @@
 # Slice 2 Implementation Plan
 
-> **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
+> **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) and B1–B5 are complete. The Product Owner accepted B2's documented historical RED-evidence gap. B6 and Phase C remain open. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
+**Status:** In progress — Phase A (A1–A5) and Phase B (B1–B6) are complete; Phase C remains open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -102,7 +102,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [x] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [x] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
-- [ ] Step B6 — Document Slice 2 configuration, behavior, and compatibility [DOCS/TEST]
+- [x] Step B6 — Document Slice 2 configuration, behavior, and compatibility [DOCS/TEST]
 
 ### Phase C — Verification and closeout
 
@@ -375,11 +375,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Updated user documentation/configuration examples, compatibility notes and [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md).
 
+**B6 result:** The README and fictional configuration describe the implemented surface, safety and compatibility boundaries; isolated installation, packaged resources, selected-stage config and synthetic provider-free XMP examples were checked. Actual digiKam verification remains C3.
+
 **Acceptance:**
-- [ ] Documented commands and configuration keys match the implemented surface or are explicitly marked pending manual validation.
-- [ ] Scope, safety defaults, optional author and schema evolution/regeneration behavior are explained accurately.
-- [ ] Examples contain no private identifiers or unverified interoperability promises.
-- [ ] Documentation check evidence and completion record are linked.
+- [x] Documented commands and configuration keys match the implemented surface or are explicitly marked pending manual validation.
+- [x] Scope, safety defaults, optional author and schema evolution/regeneration behavior are explained accurately.
+- [x] Examples contain no private identifiers or unverified interoperability promises.
+- [x] Documentation check evidence and completion record are linked.
 
 ## Phase C — Verification and closeout
 
@@ -561,7 +563,7 @@ Each row is an **unverified obligation** until cited completion records demonstr
 
 ## Consolidated Phase A decisions and gates
 
-The Phase A design decisions are complete. These contracts do not change locked product requirements; implementation and evidence remain assigned to later steps.
+The Phase A design decisions are complete and Phase B implementation is complete. These contracts do not change locked product requirements; slice-wide verification remains assigned to Phase C.
 
 | Contract | Design disposition | Implementation / verification |
 | --- | --- | --- |
@@ -577,7 +579,7 @@ The Phase A design decisions are complete. These contracts do not change locked 
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** B2–B6 implementation and Phase C verification remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** Phase C verification remains pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 
