@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import selectors
 import shutil
 import subprocess
@@ -15,6 +16,7 @@ RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 XML = "http://www.w3.org/XML/1998/namespace"
 DC = "http://purl.org/dc/elements/1.1/"
 DK = "http://www.digikam.org/ns/1.0/"
+MICROSOFT_PHOTO = "http://ns.microsoft.com/photo/1.0"
 R = "{" + RDF + "}"
 LANG = "{" + XML + "}lang"
 FIELDS = {
@@ -42,6 +44,19 @@ def _value(element):
     if any((child.tail or "").strip() for child in children):
         raise XmpBackendError("unsupported XMP structure")
     if children:
+        if element.attrib == {R + "parseType": "Resource"}:
+            members = {}
+            for child in children:
+                if (
+                    not child.tag.startswith("{")
+                    or child.tag.startswith((R, "{" + XML + "}"))
+                    or child.tag in members
+                    or child.attrib
+                    or list(child)
+                ):
+                    raise XmpBackendError("unsupported XMP structure")
+                members[child.tag] = child.text or ""
+            return ("structured-attributes", tuple(sorted(members.items())))
         if attrs:
             raise XmpBackendError("unsupported XMP structure")
         if len(children) != 1 or children[0].tag not in (
@@ -72,7 +87,12 @@ def _value(element):
             values.sort(key=repr)
         return (container.tag, tuple(values))
     if set(element.attrib) - {LANG}:
-        raise XmpBackendError("unsupported XMP structure")
+        if text.strip() or any(
+            not name.startswith("{") or name.startswith((R, "{" + XML + "}"))
+            for name in element.attrib
+        ):
+            raise XmpBackendError("unsupported XMP structure")
+        return ("structured-attributes", attrs)
     return ("literal", attrs, text)
 
 
@@ -163,6 +183,29 @@ def _typed(props):
                 raise XmpBackendError("unsupported XMP field")
             result[key] = dict(value[1]).get("x-default")
     return result
+
+
+def _restore_microsoft_photo_namespace(snapshot, candidate):
+    """Undo ExifTool's namespace correction only when unambiguous.
+
+    The normal preservation comparison still validates every resulting property.
+    """
+    if snapshot is None:
+        return candidate
+    old = ET.fromstring(snapshot)
+    namespaces = set()
+    for element in old.iter():
+        for name in (element.tag, *element.attrib):
+            if isinstance(name, str) and name.startswith("{"):
+                namespaces.add(name[1:].split("}", 1)[0])
+    if MICROSOFT_PHOTO + "/" not in namespaces or MICROSOFT_PHOTO in namespaces:
+        return candidate
+    return re.sub(
+        rb'(\sxmlns(?::[\w.-]+)?\s*=\s*["\'])'
+        rb'http://ns\.microsoft\.com/photo/1\.0(["\'])',
+        rb"\g<1>http://ns.microsoft.com/photo/1.0/\2",
+        candidate,
+    )
 
 
 class ExifToolBackend:
@@ -269,7 +312,7 @@ class ExifToolBackend:
             with os.fdopen(fd, "wb") as stream:
                 stream.write(EMPTY if snapshot is None else snapshot)
             self._run([*args, "-overwrite_original", "--", str(path)])
-            candidate = path.read_bytes()
+            candidate = _restore_microsoft_photo_namespace(snapshot, path.read_bytes())
             after = self.read(candidate)
             for key, expected in updates.items():
                 if after[key] != expected:

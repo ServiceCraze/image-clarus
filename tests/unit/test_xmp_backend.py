@@ -107,7 +107,7 @@ def test_unrepresentable_updates_are_rejected_without_tool(tmp_path, value):
 
 def test_unsafe_rdf_structures_are_rejected(tmp_path):
     backend = ExifToolBackend(tmp_path)
-    packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail>Keep</f:detail></f:node></rdf:Description></rdf:RDF>"""
+    packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail><f:nested>Keep</f:nested></f:detail></f:node></rdf:Description></rdf:RDF>"""
     with pytest.raises(XmpBackendError, match="unsupported"):
         backend.transform(packet, {"title": "New"})
 
@@ -116,7 +116,7 @@ def test_recovery_accepts_valid_untransformable_xmp(tmp_path):
     from image_clarus.artifacts import ArtifactService
 
     backend = ExifToolBackend(tmp_path)
-    packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail>Keep</f:detail></f:node></rdf:Description></rdf:RDF>"""
+    packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail><f:nested>Keep</f:nested></f:detail></f:node></rdf:Description></rdf:RDF>"""
     target = tmp_path / "example.xmp"
     backup = tmp_path / "example.xmp.bak"
     backup.write_bytes(packet)

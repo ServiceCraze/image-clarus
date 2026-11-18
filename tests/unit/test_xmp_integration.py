@@ -154,7 +154,7 @@ def test_structurally_valid_foreign_backup_restores_but_transform_fails_closed(
     _, _, output, backup = sidecars(image)
     foreign = (
         b'<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fictional">'
-        b'<rdf:Description rdf:about=""><f:complex rdf:parseType="Resource"><f:nested>value</f:nested>'
+        b'<rdf:Description rdf:about=""><f:complex rdf:parseType="Resource"><f:nested><f:deep>value</f:deep></f:nested>'
         b"</f:complex></rdf:Description></rdf:RDF>"
     )
     backup.write_bytes(foreign)
