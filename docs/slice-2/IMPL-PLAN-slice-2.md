@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** This plan is in progress, not permission to start Phase B implementation. The Product Owner accepted the Slice 2 REQ; the Phase A contract/readiness gate must also be accepted before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — A1 and A2 design work complete and Slice 2 REQ accepted; A3–A5 and Phases B/C are pending. A2 design review and the readiness gate remain separate; no Slice 2 implementation or interoperability verification is claimed.
+**Status:** In progress — A1 and A2 design work complete and Slice 2 REQ accepted; A3 design is in progress; A4–A5 and Phases B/C are pending. A2 design review and the readiness gate remain separate; no Slice 2 implementation or digiKam interoperability verification is claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -47,7 +47,7 @@ The delivery unit is **Slice 2**; Phases A, B, C and their step IDs are internal
 4. Omitted XMP tag-root configuration uses `ai`. An explicitly configured `""` means no prefix. **With `""`: `disabled` performs no tag writes; `add`, `new`, and `overwrite` all behave as `add`, without deleting any existing tags.** With a non-empty root, the configured policy applies within that root only, including to manually assigned tags under that root. Default tag policy is `add`. No cross-root deduplication or reconciliation.
 5. XMP title and caption independently support `new` (**default**), `overwrite`, and `disabled`. A missing or supported empty source title/caption/tag list never clears XMP, including when `overwrite` is configured. Caption author comes **only from optional configuration**, never model inference. When unconfigured, do not modify author metadata; when provided, the author independently supports `new` (default), `overwrite`, and `disabled`.
 6. A missing required `.desc.json` file uses the inherited configurable missing-prerequisite policy (single-file default `fail`). Optional fields absent from otherwise compatible JSON are not missing-file failures. Invalid/incompatible structured inputs must not be reported as successful publication. XMP cannot silently regenerate JSON.
-7. XMP writes must preserve all unrelated XML properties and tag assignments outside a nonempty generated root; an empty root preserves **all** existing tag assignments. A flat keyword representation that loses hierarchy must not lead to destructive changes. ExifTool is required **only** when XMP is selected. Only verified digiKam-compatible representations are written in this slice.
+7. XMP writes must preserve all unrelated XML properties and tag assignments outside a nonempty generated root; an empty root preserves **all** existing tag assignments. A flat keyword representation that loses hierarchy must not lead to destructive changes. ExifTool is required **only** when XMP is selected. A3 selects evidence-supported digiKam mapping candidates; actual digiKam interoperability must be verified in C3 before Slice 2 acceptance.
 8. Retain the Slice 1 artifact transaction, current-original backup refresh, validation before publication and backup recovery, filesystem-capability-dependent permission handling, no application locks, and last-successful-replacement-wins limitations. `pipeline.backup_retention` remains the existing policy. Concurrency can lose edits; do not claim conflict detection or crash durability.
 9. Runtime, selected-stage configuration validation, credentials/redaction, CLI > selected YAML > built-ins, source-prompt overrides, application SemVer, independent metadata-schema SemVer, custom-schema replacement, fixed envelope provenance, and Linux test platform are inherited unless explicitly refined in the approved design.
 
@@ -170,25 +170,27 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ### Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
 
-**Goal:** Establish the **minimum empirically supported** ExifTool write targets and a non-destructive XMP merge/validation contract.
+**Goal:** Freeze evidence-supported preliminary ExifTool write targets and a non-destructive XMP merge/validation contract, with actual digiKam interoperability verified in C3.
 
 **Inputs:** S2-11–S2-16 and S2-18; HLD §6 and §7; discovery §§4–5; Slice 1 A5/B5/C2 and filesystem correction; sanitized or synthetic XMP fixture candidates; A2 JSON contract.
 
 **Actions:**
 1. Using synthetic/sanitized fixtures, inspect digiKam-compatible representations for hierarchical leaf assignments, title, caption and optional caption author. Record the distinction between **observed** fields (`digiKam:TagsList`, `lr:hierarchicalSubject`, `dc:subject`, `dc:title`, `dc:description`, `digiKam:CaptionsAuthorNames`, etc.) and fields actually needed/writable. Do not assume vendor duplicates must be synchronized.
-2. Test, where tools are available, ExifTool sidecar create/read/update round trips and the minimum field set that digiKam can import/edit. Confirm hierarchy path encoding, ancestor-versus-leaf assignments, XML language alternatives (`x-default`), author handling and field availability. Record exact command/fixture evidence; if a necessary test cannot run, keep the mapping gate open.
+2. Test ExifTool sidecar create/read/update with synthetic fixtures where available, including hierarchy serialization, XML language alternatives (`x-default`), author handling and field availability. Record exact evidence and distinguish ExifTool results, observed digiKam output and unverified assumptions. Use this evidence to select preliminary mappings; actual digiKam import/edit and the minimum interoperable field set are mandatory C3 checks, not A3 prerequisites.
 3. Freeze read/transform/validate/write interface shape for an optional ExifTool backend, subprocess timeout/error/sanitization boundary, path handling, dependency detection, and the staging arrangement that **never sends the source image as a write target**. Select the exact XMP module paths during this step.
 4. Freeze preservation assertions for unrelated camera/vendor/namespace data, manual and `auto` tags, root-scoped overwrite, empty-root additive-only operations, shared flat keyword values with ambiguous ownership, and existing language alternatives. No change to a shared flat field is allowed to delete ambiguous unrelated data.
-5. Decide whether to leave an empirically non-required representation untouched; how to report a mapping that cannot satisfy preservation; whether a no-change result is `skipped` or `completed`; and how to validate entire candidate XMP before publication and read-back after publication.
+5. Decide which representations to leave untouched based on the available evidence; how to report a mapping that cannot satisfy preservation; whether a no-change result is `skipped` or `completed`; and how to validate entire candidate XMP before publication and read-back after publication. C3 may require a mapping correction without expanding vendor scope.
 6. Define sanitized positive/negative fixture matrix including existing XMP, absent sidecar, malformed sidecar, duplicate/overlapping names, no title/caption/author, hierarchy parent/child, explicit empty root, and preserved foreign metadata. Record the digiKam refresh/import steps to validate later in C3 rather than asserting immediate database refresh.
 
 **Outputs:** Exact XMP mapping and backend contract, synthetic/sanitized fixture requirements and evidence, preservation/round-trip assertions and [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md); HLD mapping clarifications where durable.
 
+**A3 progress:** The linked partial record distinguishes synthetic ExifTool and Exiv2 evidence from digiKam interoperability. DigiKam access is not an A3 prerequisite; design decisions remain to be completed. C3 retains mandatory import/edit/save verification.
+
 **Acceptance:**
 - [ ] An explicit ExifTool field-read/write/validation contract and source-image protection strategy are documented, with observed and verified mappings distinguished.
-- [ ] Mappings respect verified digiKam compatibility, preserve all unrelated metadata and never rely on cross-root taxonomy comparisons.
+- [ ] Preliminary mappings are grounded in available evidence, specify preservation of all unrelated metadata and never rely on cross-root taxonomy comparisons; unverified digiKam behavior is assigned to C3.
 - [ ] Empty-root non-deletion and nonempty-root ownership have concrete positive/negative fixture cases, including flat-keyword ambiguity.
-- [ ] The required preliminary mapping evidence is recorded or a blocking validation gap is explicit; no untested field-write assumption is promoted to fact.
+- [x] Preliminary mapping evidence and remaining interoperability uncertainty are recorded; no untested field-write assumption is promoted to fact.
 - [ ] A3 completion record and plan checkoffs are synchronized.
 
 ### Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
@@ -222,7 +224,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Actions:**
 1. Audit all A1–A4 contracts for contradictions, incomplete mappings or unfrozen options. Ensure JSON schema version/field shape, top-N semantics, config keys, ExifTool field writes and preservation, results, fixtures and commands are explicit.
-2. Obtain required Product Owner review and disposition of changes affecting architecture or product behavior; mark each open decision resolved, explicitly deferred **without losing scope**, or blocked. Do not treat an unverified required digiKam mapping as accepted.
+2. Obtain required Product Owner review and disposition of changes affecting architecture or product behavior; mark each open decision resolved, explicitly deferred **without losing scope**, or blocked. Review the evidence-supported preliminary mapping as a design, not as verified interoperability. DigiKam import/edit/save verification remains mandatory in C3 and is not an A5 prerequisite.
 3. Recheck every Phase B candidate path/test command against the repository; update them to the actual approved design. Preserve all 18 S2 requirements in the traceability matrix and the original REQ's later-slice allocations.
 4. Confirm no Phase B production code was introduced before gate approval. Record any blocker and leave this step unchecked until resolved.
 
@@ -289,14 +291,14 @@ These paths were inspected as existing in the repository at planning time. They 
 **Actions:**
 1. Add focused tests using synthetic/sanitized XMP and, for process-boundary tests, a controlled fake ExifTool executable or equivalent boundary. Observe RED for absent backend, sidecar creation/read, verified writable fields, unchanged unrelated properties, malformed output, missing executable, nonzero exit, timeout and safe error redaction.
 2. Implement or extend the A3-approved XMP backend interface with ExifTool as its sole initial implementation. Keep ExifTool optional for unrelated stages and do not invoke it on the source image as a write target.
-3. Implement verified field mapping for hierarchical assignments, title/caption and optional author. Preserve any observed but unnecessary vendor representations; handle XML language alternatives and flat keyword values according to the frozen non-destructive field contract.
+3. Implement the evidence-supported preliminary field mapping for hierarchical assignments, title/caption and optional author. Preserve any observed but unnecessary vendor representations; handle XML language alternatives and flat keyword values according to the frozen non-destructive field contract. C3 verifies actual digiKam interoperability.
 4. Test ExifTool round-trip behavior where executable availability permits; keep real-tool results distinct from stubbed subprocess tests. Validate transformed XMP before handing complete candidate bytes to the artifact service.
 5. Achieve GREEN and run current relevant regressions. If a real required mapping fails its fixture test, stop and revise A3 with the Product Owner rather than adopting an unsafe write.
 
 **Outputs:** Approved XMP backend module(s), sanitized fixtures and tests; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md).
 
 **Acceptance:**
-- [ ] Backend operates on XMP sidecars and never writes image bytes; actual read/write targets match verified A3 mapping.
+- [ ] Backend operates on XMP sidecars and never writes image bytes; actual read/write targets match the preliminary A3 mapping. Actual digiKam interoperability remains a separate C3 obligation.
 - [ ] Subprocess failures, tool absence, malformed XMP and unexpected field mutation fail with actionable, nonsecret outcomes.
 - [ ] Required real-ExifTool mapping checks and hermetic backend tests have recorded results; unmet required mapping remains unchecked.
 - [ ] Observed RED/GREEN, changed-file inventory and completion record are linked.
