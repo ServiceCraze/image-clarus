@@ -1,12 +1,12 @@
 # Slice 2 Implementation Plan
 
-> **For implementers and reviewers:** This is a proposed plan, not permission to start implementation. The Product Owner must accept the Slice 2 REQ and the Phase A contract/readiness gate before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
+> **For implementers and reviewers:** This plan is in progress, not permission to start Phase B implementation. The Product Owner accepted the Slice 2 REQ; the Phase A contract/readiness gate must also be accepted before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** Proposed — all Phase A, B, and C work pending; no Slice 2 implementation or verification claimed.
+**Status:** In progress — A1 complete and Slice 2 REQ accepted; A2–A5 and Phases B/C are pending. The plan's remaining design/readiness decisions are not yet approved; no Slice 2 implementation or interoperability verification is claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
-**Governing requirements:** [Overall REQ](../REQ-image-clarus.md), [Slice 2 REQ](REQ-slice-2.md) (currently proposed), [HLD](../HLD-image-clarus.md). [Slice 2 discovery](DISCOVERY-slice-2.md) is supporting evidence, not a competing specification. [Slice 1 implementation plan](../slice-1/IMPL-PLAN-slice-1.md) and its completion records establish the working implementation and execution conventions.
+**Governing requirements:** [Overall REQ](../REQ-image-clarus.md), [Slice 2 REQ](REQ-slice-2.md) (accepted), [HLD](../HLD-image-clarus.md). [Slice 2 discovery](DISCOVERY-slice-2.md) is supporting evidence, not a competing specification. [Slice 1 implementation plan](../slice-1/IMPL-PLAN-slice-1.md) and its completion records establish the working implementation and execution conventions.
 
 **Repository baseline inspected:** The current repository already contains the Python 3.12+ package, two registered stages (`desc`, `json`), a single-image `process` CLI, an OpenAI-compatible provider, configuration resolution, structured JSON generation, and a shared artifact service. At planning inspection, `pyproject.toml` reported version `0.1.10`; this is a snapshot, **not** a prescribed Slice 2 version or a claim that tests were run for this plan. The existing payload schema is `1.0.0` with envelope `format_version: 1`. Phase A must recheck paths and behavior against the then-current checkout before editing.
 
@@ -51,7 +51,7 @@ The delivery unit is **Slice 2**; Phases A, B, C and their step IDs are internal
 8. Retain the Slice 1 artifact transaction, current-original backup refresh, validation before publication and backup recovery, filesystem-capability-dependent permission handling, no application locks, and last-successful-replacement-wins limitations. `pipeline.backup_retention` remains the existing policy. Concurrency can lose edits; do not claim conflict detection or crash durability.
 9. Runtime, selected-stage configuration validation, credentials/redaction, CLI > selected YAML > built-ins, source-prompt overrides, application SemVer, independent metadata-schema SemVer, custom-schema replacement, fixed envelope provenance, and Linux test platform are inherited unless explicitly refined in the approved design.
 
-**Canonical reconciliation required:** The parent REQ and HLD §6.3 do not yet state the explicitly approved empty-root product exception. Phase A must align both with this decision and the JSON/XMP inference/publishing separation without weakening preservation; this is not permission to reconsider the accepted behavior. The HLD's initial digiKam-only scope and parent REQ's later optional non-digiKam mappings are a **delivery allocation**, not permission to implement other mappings now. A field's presence in digiKam output alone does not authorize writing it; escalate any mapping that would cross the parent REQ's default/optional representation boundary for Product Owner reconciliation.
+**Canonical reconciliation progress:** A1 aligned the parent REQ and HLD §6.3 with the explicitly approved empty-root decision and documented the JSON/XMP separation without weakening preservation. The Product Owner accepted the Slice 2 REQ on 2026-11-17. The HLD's initial digiKam-only scope and parent REQ's later optional non-digiKam mappings are a **delivery allocation**, not permission to implement other mappings now. A field's presence in digiKam output alone does not authorize writing it; escalate any mapping that would cross the parent REQ's default/optional representation boundary for Product Owner reconciliation.
 
 ## Verified repository layout and implementation touchpoints
 
@@ -89,7 +89,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ### Phase A — Discovery and contract freeze
 
-- [ ] Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
+- [x] Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
 - [ ] Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
 - [ ] Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
 - [ ] Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
@@ -118,7 +118,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Phase A — Discovery and contract freeze
 
-**Entry:** The governing Slice 2 REQ is proposed. Obtain Product Owner acceptance or record unresolved revisions before the Phase A readiness gate. No production-code changes in Phase A. Small non-production ExifTool/digiKam fixture experiments are permitted when necessary to freeze a mapping; record what actually ran and sanitize any publishable results.
+**Entry:** The Product Owner accepted the governing Slice 2 REQ on 2026-11-17. No production-code changes in Phase A. Small non-production ExifTool/digiKam fixture experiments are permitted when necessary to freeze a mapping; record what actually ran and sanitize any publishable results.
 
 ### Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
 
@@ -135,11 +135,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Reconciled `docs/REQ-image-clarus.md` and `docs/HLD-image-clarus.md` reflecting the approved exception; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
 
+**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2–A5 and the Phase A readiness gate remain pending.
+
 **Acceptance:**
-- [ ] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
-- [ ] Parent REQ and HLD reflect the actual JSON/XMP separation and already-decided empty-root product behavior without weakening preservation or reopening that decision.
-- [ ] Current paths, executable toolchain and inherited contracts are verified; necessary changes are distinguished from deferred capabilities.
-- [ ] A1 completion record lists files created, updated and removed, decisions, evidence and deviations; its link and plan checkoffs are synchronized.
+- [x] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
+- [x] Parent REQ and HLD reflect the actual JSON/XMP separation and already-decided empty-root product behavior without weakening preservation or reopening that decision.
+- [x] Current paths, executable toolchain and inherited contracts are verified; necessary changes are distinguished from deferred capabilities.
+- [x] A1 completion record lists files created, updated and removed, decisions, evidence and deviations; its link and plan checkoffs are synchronized.
 
 ### Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
 
@@ -547,7 +549,7 @@ These are **not** permission to revisit locked product requirements. Each is a g
 
 | Unresolved contract | Owner | Must be fixed before |
 | --- | --- | --- |
-| Slice 2 REQ acceptance and parent REQ/HLD reconciliation (especially the accepted empty-root decision and JSON/XMP boundary) | A1; Product Owner for acceptance | A5 readiness gate |
+| Further durable design reconciliation, if identified in A2–A4; A1's parent REQ/HLD reconciliation and REQ acceptance are complete | A2–A4; Product Owner for decisions where required | A5 readiness gate |
 | New JSON field/item shape, optional/empty semantics, ranking, category guidance, path normalization, evidence-quality rubric | A2 | B2, B4; A5 readiness gate |
 | Top-N default and count for multiple paths; invalid/duplicate handling | A2, A4 | B1, B4; A5 readiness gate |
 | Built-in schema SemVer and evolution/reader compatibility for old/custom JSON | A2, A4 | B2, B4; A5 readiness gate |
@@ -561,7 +563,7 @@ These are **not** permission to revisit locked product requirements. Each is a g
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 blockers:** Product Owner acceptance of the proposed Slice 2 REQ and A1–A5 contract gates; do not describe these normal pending design steps as test failures. Any newly discovered contradiction or unavailable required mapping evidence must be recorded and escalated before Phase B.
+**Open Slice 2 gates:** A2–A5 contract decisions and the Phase A readiness gate remain pending; do not describe these normal pending design steps as test failures. Any newly discovered contradiction or unavailable required mapping evidence must be recorded and escalated before Phase B.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 

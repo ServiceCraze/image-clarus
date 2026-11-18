@@ -12,7 +12,7 @@
 
 Record the observations, experiments, discussions, and product decisions leading toward Slice 2: enhancing structured JSON for useful image metadata and publishing selected metadata into digiKam-compatible XMP sidecars. Preserve the distinction between observed application behavior, agreed functional direction, and choices still requiring detailed design.
 
-Slice 1 is closed at application version `0.1.7`. Slice 2 has not yet been implemented. The proposed [`REQ-slice-2.md`](REQ-slice-2.md) records scope and traceability; a later implementation plan will resolve technical contracts and execution steps.
+Slice 1 is closed at application version `0.1.7`. Slice 2 has not yet been implemented. The accepted [`REQ-slice-2.md`](REQ-slice-2.md) records scope and traceability; its implementation plan assigns the remaining technical contracts and execution steps.
 
 **Sources consulted**
 
@@ -268,6 +268,6 @@ These are **design questions**, not reasons to reopen the completed Slice 1:
 
 ## 9. Suggested handoff to the Slice 2 REQ
 
-Review `docs/slice-2/REQ-slice-2.md`, which proposes Slice 2 functionality, explicit inclusions/exclusions, acceptance criteria, and traceability to the overall REQ. Use this discovery document as supporting evidence, not as a competing specification. Existing canonical requirements and HLD decisions remain in force unless explicitly revised through the project's normal design process.
+The Product Owner accepted `docs/slice-2/REQ-slice-2.md` on 2026-11-17; it states Slice 2 functionality, explicit inclusions/exclusions, acceptance criteria, and traceability to the overall REQ. Use this discovery document as supporting evidence, not as a competing specification. Existing canonical requirements and HLD decisions remain in force unless explicitly revised through the project's normal design process.
 
-Then reconcile architectural decisions into `docs/HLD-image-clarus.md` where they establish durable boundaries. Create `docs/slice-2/IMPL-PLAN-slice-2.md` only after the Slice 2 requirements and relevant high-level design are accepted. The plan should resolve the remaining schema, configuration, field-mapping, compatibility, and verification decisions before implementation.
+The [Slice 2 implementation plan](IMPL-PLAN-slice-2.md) assigns remaining schema, configuration, field-mapping, compatibility, and verification decisions to Phase A. Reconcile durable architectural decisions into `docs/HLD-image-clarus.md` and pass the readiness gate before implementation.

@@ -99,18 +99,19 @@ The generated metadata format must be versioned independently from the applicati
 
 ## XMP metadata integration
 
-- Integrate with existing digiKam-compatible `.xmp` sidecar files; preserve all unrelated XMP data, including camera/exposure metadata and manual tags.
+- Integrate with existing digiKam-compatible `.xmp` sidecar files; preserve all unrelated XMP data, including camera/exposure metadata and manual tags outside a non-empty generated root. An empty root preserves all existing tags; tags inside a non-empty root follow its selected policy below.
 - Update **digiKam tag representation(s) only by default**. Writing other metadata representations (e.g., Lightroom, Microsoft, other keyword variants) must be independently optional through configuration.
-- Generated tags belong beneath a configurable hierarchical root, **`ai` by default**, not digiKam's special `auto` branch. digiKam's automatic-tagging replacement behavior can remove tags beneath `auto`.
-- Supported tag update policies: `add`, `overwrite`, `new`, `disabled`. Built-in default: **`add`**.
+- Generated tags normally belong beneath a configurable hierarchical root, **`ai` when the root setting is omitted**, not digiKam's special `auto` branch. digiKam's automatic-tagging replacement behavior can remove tags beneath `auto`. An explicitly configured empty string (`""`) adds no root prefix; it is distinct from an omitted setting. The root is a tag hierarchy, not an XML namespace.
+- Supported tag update policies for a non-empty root: `add`, `overwrite`, `new`, `disabled`. Built-in default: **`add`**.
   - `add`: merge generated tags within the configured root without duplicates.
   - `overwrite`: replace only tags belonging to the configured root; do not remove unrelated tags.
   - `new`: populate generated tags only if the configured root currently has no tags on the image.
   - `disabled`: do not modify those tags.
+- With an explicitly empty root, `disabled` leaves tags unchanged; `add`, `overwrite`, and `new` each behave as `add` without duplicates and must never delete any existing XMP tags. With a non-empty root, the configured policy governs tags within that root, including manually assigned tags there; tags outside it remain protected.
 - Other XMP tag/keyword representations are **disabled by default** and must offer configurable update behavior; their exact mappings are design work.
 - Optional XMP title and description population must each have **independent** configuration. The built-in default for each is `new` (populate only if absent/empty); each also supports `overwrite` and `disabled`.
 - Determine which JSON fields map to hierarchical tags, title, and description during design. Not every JSON field must become an XMP tag.
-- XMP tags remain editable through digiKam. Integration validation must verify generated tags are displayed and editable in digiKam, and manual tags remain intact.
+- XMP tags remain editable through digiKam. Integration validation must verify generated tags are displayed and editable in digiKam, and manual tags outside a non-empty root (or all existing tags for an empty root) remain intact.
 - Synchronizing historical removals from regenerated JSON into XMP is **not automatically required**. `overwrite` deliberately replaces only the configured generated-tag root; do not attempt automatic general-purpose tag reconciliation in the initial implementation.
 
 ## Search

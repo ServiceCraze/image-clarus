@@ -1,6 +1,6 @@
 # HLD - Image Clarus
 
-**Status:** Slice 1 design baseline; Slice 1 implementation and closeout are complete. Later-slice capabilities remain outside the completed slice.
+**Status:** Slice 1 implementation and closeout are complete. Slice 2 requirements are accepted; detailed design, implementation, and the readiness gate remain pending.
 
 **Date:** 2026-11-14
 
@@ -108,7 +108,7 @@ flowchart LR
   META --> SEARCH
 ```
 
-The XMP stage may also read existing XMP content for merging. Search can run at any time after relevant sidecars exist.
+The XMP stage may also read existing XMP content for merging. For Slice 2, JSON generation performs semantic inference, ranking and category placement; XMP consumes persisted JSON and deterministically applies configured publication policies without calling a model. JSON category paths do not include the XMP ownership root; the XMP stage applies a non-empty root or no prefix for an explicitly empty root. Search can run at any time after relevant sidecars exist.
 
 ### 3.2 Orchestration and stage autonomy
 
@@ -170,7 +170,7 @@ The built-in description prompt at `prompts/image-description.txt` is **exactly*
 
 > Fully describe and explain everything about this image.
 
-Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema must cover useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Exact field names, schema, prompt wording, and provenance fields are not asserted in this HLD; the Slice 1 implementation plan must resolve them during its Phase A planning/readiness work before JSON implementation begins (see §10.3).
+Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema covers useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Slice 1's exact initial schema, prompt and provenance contract are recorded in its A3 completion record (§10.3). The accepted Slice 2 requirements add distinct title, concise caption and ranked category recommendations without replacing the existing descriptive information; their exact payload shape, schema evolution and compatibility are Slice 2 design work, not frozen here.
 
 ## 5. CLI and operational architecture
 
@@ -214,7 +214,7 @@ ACDSee and MediaPro representations were also present in the inspected file. The
 
 ### 6.3 Tag hierarchy ownership and policies
 
-The generated tag subtree has a **configurable top-level hierarchy root**, default **`ai`**. This is a digiKam tag hierarchy, **not a new XML namespace**. Do not default to `auto`: digiKam's Auto Tag replacement behavior can remove tags under that branch.
+The generated tag subtree has a **configurable top-level hierarchy root**, default **`ai`** when omitted. An explicitly configured empty string (`""`) adds no root prefix; it must not be confused with an omitted setting. This is a digiKam tag hierarchy, **not a new XML namespace**. Do not default to `auto`: digiKam's Auto Tag replacement behavior can remove tags under that branch. The table applies to non-empty roots.
 
 | Tag policy | Meaning | Default |
 | --- | --- | --- |
@@ -223,7 +223,7 @@ The generated tag subtree has a **configurable top-level hierarchy root**, defau
 | `new` | Add tags only if the generated root has no existing tags for this image | No |
 | `disabled` | Do not change generated-root tags | No |
 
-**Non-negotiable ownership invariant:** a generated-tag policy must never intentionally add, delete, or modify tags outside the configured root, including when writing XMP fields shared with unrelated tags. Preserve manual tags, arbitrary camera/exposure metadata, and unrelated XMP namespaces. If the selected XMP backend cannot preserve the invariant for an observed representation, treat that as a mapping/validation issue rather than replacing the entire tag set.
+**Empty-root exception, Product Owner decision:** With an explicitly empty root, `disabled` makes no tag changes; `add`, `overwrite`, and `new` each behave as `add`, without duplicates or deletion of any existing tags. For a non-empty root, the selected policy governs assignments inside that root, including manual assignments there, and must never add, delete, or modify tags outside it. Preserve unrelated flat keyword values, camera/exposure metadata, and XML namespaces. If the selected XMP backend cannot preserve these invariants for an observed representation, treat that as a mapping/validation issue rather than replacing the entire tag set.
 
 ### 6.4 Title and description policies
 
@@ -233,11 +233,11 @@ Title and description are independent XMP fields, each supporting `new`, `overwr
 - `overwrite` replaces the current field value.
 - `disabled` leaves the field unchanged.
 
-The default may be revisited based on usability testing in digiKam. The specific structured-JSON-to-title/description/tag mapping is deferred until the structured schema is evaluated; not every JSON field must be exported.
+The specific structured-JSON-to-title/description/tag mapping is deferred until the structured schema is evaluated; not every JSON field must be exported. Under the accepted Slice 2 requirements, absent or supported empty optional source values leave the corresponding destination unchanged, even under `overwrite`. An optional config-supplied caption author has separate `new`, `overwrite`, and `disabled` policies; absent configuration leaves author metadata unchanged. Exact mappings and localized-value handling remain design and interoperability work.
 
 ### 6.5 Validation and public fixtures
 
-Confirm that generated hierarchical tags appear in digiKam, remain editable, and do not change manual tags. Confirm title/description behavior through actual digiKam display and editing. Compare before/after XMP to detect unintended changes to unrelated fields.
+Confirm that generated hierarchical tags appear in digiKam and remain editable. Verify manual tags outside a non-empty generated root remain intact, and all existing tags remain intact during empty-root updates. Confirm title/description behavior through actual digiKam display and editing. Compare before/after XMP to detect unintended changes to unrelated fields.
 
 Before committing any sample XMP or photographic fixture to the **public repository**, remove or anonymize GPS/location coordinates, camera and lens make/model, serial numbers, owner/device identifiers, and other private metadata. Non-private example tags such as `garden/container` may remain. This fixture sanitization is a repository-publishing rule; **normal user XMP processing must preserve** existing unrelated metadata, not scrub it.
 
@@ -275,7 +275,7 @@ Build independently usable, numbered slices. Each slice has its own implementati
 | Slice | Architectural capability | Boundary |
 | --- | --- | --- |
 | **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
-| Later | XMP integration | ExifTool backend, digiKam mappings, tag hierarchy/policies, title/description, sanitized fixtures |
+| **Slice 2 (requirements accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author, sanitized fixtures; design and implementation pending |
 | Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |
@@ -305,7 +305,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - One YAML `config.yaml`, prompts/schemas external and separately overridable; configuration precedence CLI > selected YAML > defaults; global then selected-stage validation.
 - Named provider and model configuration, with model selection per model-driven stage; initial OpenAI-compatible Chat Completions transport; configurable generic-to-native reasoning mapping.
 - Shared format-independent artifact service, `.bak` recovery defaults, disposable stale temp files, no file locking, accepted last-write-wins behavior.
-- digiKam-only tag writes for this release; generated hierarchy root `ai` by default, never `auto`; `add` default tag policy; no tag modifications outside the root.
+- digiKam-only tag writes for the initial XMP release; omitted root defaults to `ai`, never `auto`; `add` is the default tag policy. Non-empty-root policies affect only that root; an explicitly empty root forces `add` for enabled policies and never deletes existing tags.
 - Title and description independently default to `new`, with `overwrite` and `disabled` alternatives.
 - ExifTool only for initial XMP backend; independent search without model calls or database.
 - **Slice 1 contains both description and structured JSON generation for one image.**
@@ -332,5 +332,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 ### 10.5 Requirements reconciliation
 
 The Product Owner has superseded the earlier B2 HTTP destination restriction: the shared HTTP/HTTPS policy above and the REQ govern; the B2 record preserves the earlier decision as history. Implementation and verification of this change must be established by separate evidence.
+
+The Product Owner explicitly decided the empty-root policy in Slice 2: omission selects `ai`; an explicit empty string makes enabled tag policies additive and non-destructive. The parent REQ and §6.3 now reflect that decision. The Product Owner accepted the Slice 2 REQ on 2026-11-17; XMP mappings, schema details and implementation are not established by that acceptance.
 
 The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; application releases use SemVer with Slice 1 starting at `0.1.0`; the CLI exposes `--version`; the JSON schema version is independent; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17
 
-**Status:** Proposed Slice 2 functional requirements for Product Owner review; not yet an accepted implementation contract
+**Status:** Accepted by the Product Owner on 2026-11-17. Detailed design, implementation, and verification remain pending.
 
 **Project:** `image-clarus`
 
@@ -74,7 +74,7 @@ Slice 2 remains useful through a **single-image CLI invocation**, whether runnin
 
 - The original image bytes must never change.
 - Description, structured JSON, and XMP outputs must retain the established adjacent sidecar naming conventions.
-- An XMP edit must preserve information outside fields explicitly authorized for update, including unrelated XML namespaces, manual tags, camera/exposure data, and vendor-specific metadata.
+- An XMP edit must preserve information outside fields explicitly authorized for update, including unrelated XML namespaces, manual tags outside a non-empty generated root (or all existing tags for an empty root), camera/exposure data, and vendor-specific metadata. Assignments within a non-empty root follow S2-12.
 
 ## 5. Structured JSON output requirements
 
@@ -244,10 +244,10 @@ These questions are **not new functional scope**. They must be resolved explicit
 6. ExifTool/backend validation, field-specific merge behavior, restoration, and result semantics within established artifact-service constraints.
 7. digiKam sidecar import/refresh behavior and selection of publishable synthetic/sanitized test fixtures.
 
-These decisions should respect the current HLD's default `ai` ownership root, the explicit empty-root exception above, independent stage contracts, optional XMP-only ExifTool dependency, and existing safe-write mechanisms. Reconcile the empty-root exception into the canonical HLD before implementation. Do not silently revise Slice 1 decisions or narrow requirements for future consumers.
+These decisions should respect the canonical HLD's default `ai` ownership root and explicit empty-root exception, independent stage contracts, optional XMP-only ExifTool dependency, and existing safe-write mechanisms. Do not silently revise Slice 1 decisions or narrow requirements for future consumers.
 
 ## 10. Completion boundary
 
 Slice 2 is complete only when the **single-image JSON enhancement and XMP/digiKam integration** satisfy the functional requirements and the recorded acceptance evidence above. Passing JSON generation alone does not complete Slice 2; completing XMP without validated preservation and digiKam interoperability does not complete it either.
 
-The next artifact after Product Owner review is the Slice 2 implementation plan, with any enduring architectural updates reconciled to the canonical HLD first. This document does not authorize implementation, repository mutation, or publication of unsanitized discovery materials.
+The [Slice 2 implementation plan](IMPL-PLAN-slice-2.md) governs the remaining design and readiness gate, with enduring architectural updates reconciled to the canonical HLD. Acceptance of this REQ does not by itself authorize Phase B implementation or publication of unsanitized discovery materials.
