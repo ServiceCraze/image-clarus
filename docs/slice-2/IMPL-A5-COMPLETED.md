@@ -2,6 +2,8 @@
 
 **Status:** Phase A readiness complete. The orchestrator may assign Phase B implementation; no Phase B or C step was started by A5. The accepted requirements and current design are the execution baseline, not a claim that Slice 2 functionality is already implemented or has passed acceptance.
 
+**Subsequent progress:** B1 configuration and selected-stage preflight are complete; see [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md). B2–B6 and Phase C remain pending.
+
 **Scope deviations:** None. The Product Owner's process clarification treats assigned requirements as ready and approved; no new manual design-approval or GUI prerequisite is introduced. Genuine scope and requirement conflicts remain escalation conditions.
 
 ## Files created, updated, and removed

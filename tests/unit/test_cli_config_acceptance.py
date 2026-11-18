@@ -155,7 +155,6 @@ def test_typed_values_mapping_and_equals_reach_provider(cli):
     [
         "stages.desc.regenerate='true'",  # string, not boolean
         "providers.p.timeout_seconds=true",  # boolean, not number
-        "stages.json.validation_retries='2'",  # string, not integer
         "stages.desc.model=[m]",
         "stages.desc.regenerate={value: true}",
         "models.m.reasoning_effort_mapping=[parameter, values]",
@@ -176,6 +175,14 @@ def test_invalid_overrides_are_sanitized_and_do_not_run(cli, assignment):
     assert_rejected(result, requests)
     assert not Path(str(image) + ".desc.txt").exists()
     assert not (image.parent / SECRET).exists()
+
+
+def test_unselected_json_value_does_not_block_desc_cli(cli):
+    run, image, config, _, _, _, requests = cli
+    result = run("--config", config, "--set", "stages.json.validation_retries='2'")
+    assert result.returncode == 0, result.stderr
+    assert Path(str(image) + ".desc.txt").exists()
+    assert len(requests) == 1
 
 
 def test_discovery_user_precedes_system_without_merge(cli):

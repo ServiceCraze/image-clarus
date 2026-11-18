@@ -1,8 +1,8 @@
 # Slice 2 Implementation Plan
 
-> **For implementers and reviewers:** Phase A readiness is complete; Phase B is ready for orchestration but has not started. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
+> **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) complete; Phase B is ready and Phases B/C have not started. No Slice 2 implementation or digiKam interoperability verification is claimed.
+**Status:** In progress — Phase A (A1–A5) and B1 configuration are complete; B2–B6 and Phase C remain pending. XMP stage implementation and digiKam interoperability are not claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -97,7 +97,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ### Phase B — Implementation
 
-- [ ] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
+- [x] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
 - [ ] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [ ] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
@@ -259,11 +259,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Configuration extension and tests; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md).
 
+**B1 result:** Configuration resolution and isolated selected-XMP ExifTool preflight are implemented and tested; JSON generation, XMP policy execution and CLI stage integration remain B2–B5. The completion record distinguishes observed RED/GREEN from supplemental cases and records the full regression result.
+
 **Acceptance:**
-- [ ] Configuration precedence and omitted/explicit-empty root values and policy settings pass resolution/validation examples.
-- [ ] `desc`/`json` do not depend on XMP-specific preflight or ExifTool; isolated XMP preflight does not require model/provider selection.
-- [ ] Optional author and policy settings resolve without inventing destructive overrides; B4/B5 verify actual XMP behavior.
-- [ ] Observed RED/GREEN, regression and completion record evidence are linked.
+- [x] Configuration precedence and omitted/explicit-empty root values and policy settings pass resolution/validation examples.
+- [x] `desc`/`json` do not depend on XMP-specific preflight or ExifTool; isolated XMP preflight does not require model/provider selection.
+- [x] Optional author and policy settings resolve without inventing destructive overrides; B4/B5 verify actual XMP behavior.
+- [x] Observed RED/GREEN, regression and completion record evidence are linked.
 
 ### Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 
@@ -569,7 +571,7 @@ The Phase A design decisions are complete. These contracts do not change locked 
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** Phase B implementation and Phase C verification remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** B2–B6 implementation and Phase C verification remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 

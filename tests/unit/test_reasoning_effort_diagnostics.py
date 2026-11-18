@@ -24,7 +24,8 @@ def test_boolean_reasoning_effort_suggests_quoted_off(tmp_path, configuration, f
     path = tmp_path / "config.yaml"
     path.write_text(configuration)
     with pytest.raises(ConfigurationError) as exc:
-        resolve_config(config_file=path)
+        stage = field.split(".")[1] if field.startswith("stages.") else None
+        resolve_config(config_file=path, stages=(stage,) if stage else ())
     message = str(exc.value)
     assert field in message
     assert "boolean" in message.lower()

@@ -63,7 +63,10 @@ def test_safe_diagnostics_for_file_errors(tmp_path, text, field, reason, fix):
     path = tmp_path / "private_path_sentinel"
     path.write_text(text)
     with pytest.raises(ConfigurationError) as exc:
-        resolve_config(config_file=path)
+        resolve_config(
+            config_file=path,
+            stages=("desc",) if field.startswith("stages.desc.") else (),
+        )
     message = str(exc.value).lower()
     assert field.lower() in message
     assert reason in message

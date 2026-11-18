@@ -244,12 +244,16 @@ def test_invalid_global_schema_is_rejected(tmp_path):
         "pipeline: []",
         "pipeline:\n  unknown: x",
         "logging:\n  level: TRACE",
-        "stages:\n  desc:\n    regenerate: 3",
         "providers:\n  bad.alias: {}",
     ):
         path.write_text(text)
         with pytest.raises(ConfigurationError):
             resolve_config(config_file=path)
+
+    path.write_text("stages:\n  desc:\n    regenerate: 3")
+    assert resolve_config(config_file=path)["stages"]["desc"]["regenerate"] == 3
+    with pytest.raises(ConfigurationError, match="stages.desc.regenerate"):
+        resolve_config(config_file=path, stages=("desc",))
 
 
 def test_selected_stage_isolation_and_authentication(tmp_path, monkeypatch):

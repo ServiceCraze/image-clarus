@@ -4,7 +4,11 @@ import json
 import math
 import os
 import re
+import selectors
+import shutil
+import subprocess
 import sys
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -97,6 +101,19 @@ DEFAULTS = {
             "reasoning_effort": None,
             "regenerate": False,
             "validation_retries": 0,
+            "preferred_categories": [],
+        },
+        "xmp": {
+            "tag_root": "ai",
+            "tag_limit": 10,
+            "tag_policy": "add",
+            "title_policy": "new",
+            "caption_policy": "new",
+            "caption_author": None,
+            "caption_author_policy": "new",
+            "custom_title_property": None,
+            "custom_caption_property": None,
+            "custom_tags_property": None,
         },
     },
     "pipeline": {
@@ -129,6 +146,35 @@ def _valid_utf8_text(value):
     except UnicodeEncodeError:
         return False
     return True
+
+
+def _valid_tag_segment(value):
+    return (
+        _valid_utf8_text(value)
+        and bool(value)
+        and value == value.strip()
+        and not any(c in "/|" or ord(c) < 32 or 127 <= ord(c) <= 159 for c in value)
+    )
+
+
+def _validate_xmp_value(key, value):
+    if key == "tag_root":
+        valid = value == "" or _valid_tag_segment(value)
+    elif key == "tag_limit":
+        valid = type(value) is int and value >= 0
+    elif key.endswith("_policy"):
+        allowed = {"new", "overwrite", "disabled"}
+        if key == "tag_policy":
+            allowed.add("add")
+        valid = isinstance(value, str) and value in allowed
+    elif key == "caption_author":
+        valid = value is None or _valid_utf8_text(value)
+    else:
+        valid = value is None or (_valid_utf8_text(value) and bool(value))
+    if not valid:
+        raise ConfigurationError(
+            f"stages.xmp.{key}: invalid value; set a supported value"
+        )
 
 
 def _valid_header_credential(value):
@@ -190,6 +236,8 @@ def _override_path(parts):
             allowed = {"parameter", "values"}
         elif part == "values":
             allowed = EFFORTS - {"default"}
+        elif part == "off" and len(safe) > 1 and safe[-2] == "values":
+            allowed = {"omit"}
         else:
             allowed = {}
     return ".".join(safe)
@@ -301,7 +349,7 @@ def _validate_keys(data):
             _mapping(values, DEFAULTS[section], section)
 
 
-def _validate_shape(data):
+def _validate_shape(data, stages):
     _mapping(data, DEFAULTS)
     for group, fields in (("providers", PROVIDER_FIELDS), ("models", MODEL_FIELDS)):
         entries = data.get(group, {})
@@ -371,8 +419,23 @@ def _validate_shape(data):
     stage_data = data.get("stages", {})
     _mapping(stage_data, DEFAULTS["stages"], "stages")
     for stage, values in stage_data.items():
+        if stage not in stages:
+            continue
         _mapping(values, DEFAULTS["stages"][stage], f"stages.{stage}")
         for key, value in values.items():
+            if stage == "xmp":
+                _validate_xmp_value(key, value)
+                continue
+            if key == "preferred_categories":
+                if (
+                    not isinstance(value, list)
+                    or not all(_valid_tag_segment(item) for item in value)
+                    or len(value) != len(set(value))
+                ):
+                    raise ConfigurationError(
+                        "stages.json.preferred_categories: invalid categories; set a list of unique valid tag segments"
+                    )
+                continue
             if key == "regenerate":
                 if type(value) is not bool:
                     raise ConfigurationError(
@@ -592,10 +655,60 @@ def _check_schema(path):
         raise ConfigurationError("Invalid selected schema") from None
 
 
+_EXIFTOOL_TIMEOUT_SECONDS = 30
+
+
+def _probe_exiftool(executable):
+    """Check a bounded version response without exposing process output."""
+    args = [executable, "-config", "", "-ver"]
+    deadline = time.monotonic() + _EXIFTOOL_TIMEOUT_SECONDS
+    with subprocess.Popen(
+        args,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    ) as process:
+        try:
+            assert process.stdout is not None
+            output = bytearray()
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not selector.select(remaining):
+                        raise subprocess.TimeoutExpired(args, _EXIFTOOL_TIMEOUT_SECONDS)
+                    chunk = os.read(process.stdout.fileno(), 129 - len(output))
+                    if not chunk:
+                        break
+                    output.extend(chunk)
+                    if len(output) > 128:
+                        raise OSError
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or process.wait(timeout=remaining):
+                raise OSError
+            if not re.fullmatch(rb"[0-9]+\.[0-9]+(?:_[0-9]+)?\s*", output):
+                raise OSError
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+
 def _selected(config, stage):
     if stage not in config["stages"]:
         _fail()
     settings = config["stages"][stage]
+    if stage == "xmp":
+        executable = shutil.which("exiftool")
+        try:
+            if not executable:
+                raise OSError
+            _probe_exiftool(executable)
+        except (OSError, subprocess.TimeoutExpired):
+            raise ConfigurationError(
+                "stages.xmp: ExifTool unavailable or unusable; install a working exiftool on PATH"
+            ) from None
+        return
     alias = settings["model"]
     if not isinstance(alias, str) or alias not in config["models"]:
         raise ConfigurationError(
@@ -798,6 +911,10 @@ def resolve_config(
             raise ConfigurationError(
                 f"Invalid override: {safe_path}: invalid syntax or forbidden credential; correct the override"
             )
+        if len(safe_path.split(".")) < len(parts):
+            raise ConfigurationError(
+                f"Invalid override: {safe_path}: unknown key; remove the unknown key"
+            )
         # Build an isolated overlay, then validate it against the same schema.
         overlay = {}
         node = overlay
@@ -857,6 +974,8 @@ def resolve_config(
                 ) from None
     if regenerate:
         for stage in stages:
+            if stage == "xmp":
+                continue
             if not isinstance(config["stages"], dict):
                 config["stages"] = deepcopy(DEFAULTS["stages"])
             if stage not in config["stages"]:
@@ -869,7 +988,7 @@ def resolve_config(
             config["pipeline"] = deepcopy(DEFAULTS["pipeline"])
         config["pipeline"]["missing_prerequisite"] = missing_prerequisite
     try:
-        _validate_shape(config)
+        _validate_shape(config, stages)
     except ConfigurationError as error:
         raise _with_relevant_overrides(error, override_paths) from None
     for section, field, valid in (
@@ -889,7 +1008,12 @@ def resolve_config(
         try:
             _selected(config, stage)
         except ConfigurationError as error:
-            selected_model = config["stages"].get(stage, {}).get("model")
+            selected_settings = config["stages"].get(stage, {})
+            selected_model = (
+                selected_settings.get("model")
+                if isinstance(selected_settings, dict)
+                else None
+            )
             selected_provider = config["models"].get(selected_model, {}).get("provider")
             relevant_paths = [
                 safe
