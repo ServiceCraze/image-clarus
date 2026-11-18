@@ -134,7 +134,7 @@ def test_version_uses_installed_metadata():
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.1.30\n",
+        "image-clarus 0.1.32\n",
         "",
     )
 

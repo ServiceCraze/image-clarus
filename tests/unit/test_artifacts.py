@@ -70,6 +70,16 @@ def test_invalid_destination_remains_authoritative(tmp_path):
     assert backup.read_bytes() == b"valid:backup"
 
 
+def test_valid_destination_remains_authoritative_over_valid_backup(tmp_path):
+    dest = tmp_path / "x.desc.txt"
+    backup = tmp_path / "x.desc.txt.bak"
+    dest.write_bytes(b"valid:current")
+    backup.write_bytes(b"valid:older")
+    assert ArtifactService("retain").recover(dest, valid)
+    assert dest.read_bytes() == b"valid:current"
+    assert backup.read_bytes() == b"valid:older"
+
+
 @pytest.mark.parametrize(
     "point",
     [

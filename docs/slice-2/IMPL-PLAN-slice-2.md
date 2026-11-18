@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1 are complete; C2–C5 remain open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
+**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C2 are complete; C3–C5 remain open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -107,7 +107,7 @@ These paths were inspected as existing in the repository at planning time. They 
 ### Phase C — Verification and closeout
 
 - [x] Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
-- [ ] Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
+- [x] Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
 - [ ] Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
 - [ ] Step C4 — Run Linux package, compatibility, and quality gates [TEST]
 - [ ] Step C5 — Reconcile Slice 2 evidence and close acceptance [DOCS/TEST]
@@ -385,7 +385,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Phase C — Verification and closeout
 
-**Entry:** B1–B6 delivered with completion evidence. C1 is complete; C2–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
+**Entry:** B1–B6 delivered with completion evidence. C1–C2 are complete; C3–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
 
 ### Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 
@@ -425,12 +425,14 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Preservation diff/test matrix, failure/recovery evidence and [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md).
 
+**C2 result:** Synthetic real-ExifTool checks verified nonempty/empty-root preservation, shared and localized fields, configured policies and backup recovery. Deterministic fault tests exercised the shared artifact transaction. Two separately invoked OS processes overlapped at publication; either complete result was accepted, with lock-free lost-update risk retained. No digiKam interoperability is claimed.
+
 **Acceptance:**
-- [ ] Tag preservation invariant passes for nonempty and empty roots, including ambiguous shared fields.
-- [ ] Existing unrelated XMP metadata and language alternatives are preserved to the frozen A3 contract; all configured field policies pass.
-- [ ] Invalid/failing writes do not report success and retain recoverable artifacts, with existing filesystem mode limitations respected.
-- [ ] Separate OS processes overlap XMP read–merge–write; resulting artifacts are complete and valid, with no deterministic winner asserted and lost-update risk documented.
-- [ ] Actual tested environments and lock-free limitations are documented; record and plan checkoffs align.
+- [x] Tag preservation invariant passes for nonempty and empty roots, including ambiguous shared fields.
+- [x] Existing unrelated XMP metadata and language alternatives are preserved to the frozen A3 contract; all configured field policies pass.
+- [x] Invalid/failing writes do not report success and retain recoverable artifacts, with existing filesystem mode limitations respected.
+- [x] Separate OS processes overlap XMP read–merge–write; resulting artifacts are complete and valid, with no deterministic winner asserted and lost-update risk documented.
+- [x] Actual tested environments and lock-free limitations are documented; record and plan checkoffs align.
 
 ### Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
 
@@ -499,7 +501,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Parent requirements-to-slice allocation
 
-This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; Slice 2 work and checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
+This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C2 evidence is recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
 
 | Parent REQ area | Slice 1 baseline | Slice 2 allocation | Later candidates and goals | Prerequisites and verification |
 | --- | --- | --- | --- | --- |
@@ -581,7 +583,7 @@ The Phase A design decisions are complete and Phase B implementation is complete
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** C2–C5 remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** C3–C5 remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 
