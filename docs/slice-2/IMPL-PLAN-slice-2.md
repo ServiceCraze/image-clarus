@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** This plan is in progress, not permission to start Phase B implementation. The Product Owner accepted the Slice 2 REQ; the Phase A contract/readiness gate must also be accepted before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — A1 complete and Slice 2 REQ accepted; A2–A5 and Phases B/C are pending. The plan's remaining design/readiness decisions are not yet approved; no Slice 2 implementation or interoperability verification is claimed.
+**Status:** In progress — A1 and A2 design work complete and Slice 2 REQ accepted; A3–A5 and Phases B/C are pending. A2 design review and the readiness gate remain separate; no Slice 2 implementation or interoperability verification is claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -90,7 +90,7 @@ These paths were inspected as existing in the repository at planning time. They 
 ### Phase A — Discovery and contract freeze
 
 - [x] Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
-- [ ] Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
+- [x] Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
 - [ ] Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
 - [ ] Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
 - [ ] Step A5 — Pass the Phase A readiness gate [DESIGN]
@@ -135,7 +135,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Reconciled `docs/REQ-image-clarus.md` and `docs/HLD-image-clarus.md` reflecting the approved exception; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
 
-**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2–A5 and the Phase A readiness gate remain pending.
+**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2 is complete as design work; A3–A5 and the Phase A readiness gate remain pending.
 
 **Acceptance:**
 - [x] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
@@ -157,14 +157,16 @@ These paths were inspected as existing in the repository at planning time. They 
 5. Preserve structural-only create-if-missing skip, explicit whole-artifact JSON regeneration, strict validation, custom-schema replacement, model/prompt provenance and safe writing. Define how a consumer recognizes available fields without treating every older payload as invalid.
 6. Produce small **fictitious/sanitized** description-to-expected-metadata examples spanning distinct images, optional/empty values, multiple categories and ranking. Specify a human review rubric for supported factual content, useful title/caption, retrieval-oriented ranking and non-forced categorization; separate model-quality judgments from schema validity.
 
-**Outputs:** JSON contract and version decision, prompt requirements, ranked-path/top-N examples, future schema-evolution process and human-review rubric in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md); plan updated with accepted schema and resource contracts.
+**Outputs:** JSON contract and version decision, prompt requirements, ranked-path/top-N examples, future schema-evolution process and human-review rubric in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md); plan updated with frozen schema and resource contracts, pending Product Owner review.
+
+**A2 frozen design:** Built-in metadata schema `urn:image-clarus:metadata-schema:2.0.0` adds required `title`, `caption`, and ranked `tag_candidates` path arrays while retaining the six existing fields and envelope format 1. Each distinct path counts once toward configurable top-N (default 10); unsupported fields are empty/no-op. Preferred categories default to an empty list and, when non-empty, are a separate provider request data part, not part of the prompt/description hashes. Recognize explicit built-in 1.0.0/2.0.0 readers; custom payload publication uses an explicit mapping, with exact config and result details assigned to A4. Existing create-only skip and full regeneration remain unchanged. The linked record freezes the complete schema, exact prompt bytes, compatibility and examples; this is design completion, not Product Owner approval or implemented behavior. A3 must verify path representability.
 
 **Acceptance:**
-- [ ] Every new payload field and category/ranking rule is testable with concrete sanitized examples, with unchanged existing metadata meanings and no XMP root in JSON.
-- [ ] SemVer choice, schema ID, envelope compatibility, historical/custom payload reader policy and explicit regeneration behavior are stated without introducing automatic migration.
-- [ ] Top-N limit and multi-hierarchy counting have deterministic definitions, including invalid/duplicate entries and absent/empty fields.
-- [ ] A small human-review rubric and illustrative evaluation set exist; no real-model execution or observed quality result is claimed.
-- [ ] A2 completion record, decisions/evidence and plan checkoffs are synchronized.
+- [x] Every new payload field and category/ranking rule is testable with concrete sanitized examples, with unchanged existing metadata meanings and no XMP root in JSON.
+- [x] SemVer choice, schema ID, envelope compatibility, historical/custom payload reader policy and explicit regeneration behavior are stated without introducing automatic migration.
+- [x] Top-N limit and multi-hierarchy counting have deterministic definitions, including invalid/duplicate entries and absent/empty fields.
+- [x] A small human-review rubric and illustrative evaluation set exist; no real-model execution or observed quality result is claimed.
+- [x] A2 completion record, decisions/evidence and plan checkoffs are synchronized.
 
 ### Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
 
@@ -550,9 +552,7 @@ These are **not** permission to revisit locked product requirements. Each is a g
 | Unresolved contract | Owner | Must be fixed before |
 | --- | --- | --- |
 | Further durable design reconciliation, if identified in A2–A4; A1's parent REQ/HLD reconciliation and REQ acceptance are complete | A2–A4; Product Owner for decisions where required | A5 readiness gate |
-| New JSON field/item shape, optional/empty semantics, ranking, category guidance, path normalization, evidence-quality rubric | A2 | B2, B4; A5 readiness gate |
-| Top-N default and count for multiple paths; invalid/duplicate handling | A2, A4 | B1, B4; A5 readiness gate |
-| Built-in schema SemVer and evolution/reader compatibility for old/custom JSON | A2, A4 | B2, B4; A5 readiness gate |
+| A2-frozen JSON, ranking, category, top-N and schema design: Product Owner review; A4 final config and result details | A2; A4; Product Owner review | B1/B2/B4; A5 readiness gate |
 | Minimum ExifTool/digiKam writable field mapping, localization, hierarchy leaf assignment and flat-field preservation | A3 | B3–B4; A5 readiness gate |
 | XMP backend subprocess and artifact validation; fixture/GUI refresh process | A3 | B3, C3; A5 readiness gate for field mapping |
 | Exact XMP/config keys, source-availability semantics, policy/no-op outcome, CLI and stage result/exit behavior | A4 | B1, B4–B5; A5 readiness gate |
@@ -563,7 +563,7 @@ These are **not** permission to revisit locked product requirements. Each is a g
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 gates:** A2–A5 contract decisions and the Phase A readiness gate remain pending; do not describe these normal pending design steps as test failures. Any newly discovered contradiction or unavailable required mapping evidence must be recorded and escalated before Phase B.
+**Open Slice 2 gates:** A2 design review, A3–A5 contract decisions and the Phase A readiness gate remain pending; do not describe these normal pending design steps as test failures. Any newly discovered contradiction or unavailable required mapping evidence must be recorded and escalated before Phase B.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 
