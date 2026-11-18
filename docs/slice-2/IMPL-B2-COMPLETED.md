@@ -1,8 +1,8 @@
-# Step B2 — Extend structured JSON generation and packaged resources (EVIDENCE GAP)
+# Step B2 — Extend structured JSON generation and packaged resources (COMPLETED)
 
-**Status:** Reopened for an evidence gap. The review correction passes regression tests, but original per-test RED evidence is unverified. B2 implements the enhanced built-in JSON schema (2.0.0), updated prompt, category guidance as a third user message part, and historical schema packaging. XMP backend, deterministic selection, CLI integration, and documentation remain B3–B6.
+**Status:** Complete. The Product Owner accepted the documented original per-test RED evidence gap. The review correction passes regression tests. B2 implements the enhanced built-in JSON schema (2.0.0), updated prompt, category guidance as a third user message part, and historical schema packaging. XMP backend, deterministic selection, CLI integration, and documentation remain B3–B6.
 
-**Evidence deviation:** Original individual RED results were not established; no process exception has been accepted. Initial B2 version was `0.1.21`; the review correction is `0.1.22`.
+**Accepted evidence gap:** Original individual RED results were not established. The Product Owner explicitly accepted this documented gap. Initial B2 version was `0.1.21`; the review correction was `0.1.22`; this closeout is `0.1.23`.
 
 ## Files created, updated, and removed
 
@@ -44,4 +44,4 @@ The original implementation held the mutable configuration list rather than a sn
 - [x] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
 - [x] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
 - [x] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
-- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
+- [x] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
