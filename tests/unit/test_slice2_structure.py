@@ -22,9 +22,12 @@ def slice2_context(tmp_path):
     desc.write_bytes(b"A red bell pepper rests on a white plate.")
     requests = []
     replies = []
+    on_request = []
 
     def handler(request):
         requests.append(json.loads(request.content))
+        for callback in on_request:
+            callback()
         content = (
             replies.pop(0)
             if replies
@@ -71,6 +74,7 @@ def slice2_context(tmp_path):
         desc=desc,
         requests=requests,
         replies=replies,
+        on_request=on_request,
         services=services,
         config=config,
         output=tmp_path / "synthetic.png.desc.json",
@@ -472,6 +476,8 @@ def test_category_guidance_snapshot_reused_on_retry(slice2_context):
     """The exact category guidance snapshot is reused on validation retries."""
     c = slice2_context
     c.config["stages"]["json"]["preferred_categories"] = ["food", "color"]
+    categories = c.config["stages"]["json"]["preferred_categories"]
+    c.on_request.append(lambda: categories.__setitem__(slice(None), ["changed"]))
     c.config["stages"]["json"]["validation_retries"] = 2
     # First response: invalid (missing required fields) to trigger retry
     c.replies[:] = [
@@ -504,16 +510,23 @@ def test_category_guidance_snapshot_reused_on_retry(slice2_context):
     assert result is not None and result.status == "completed"
     assert len(c.requests) == 2
 
-    # Both requests should have the same category guidance
+    assert categories == ["changed"]
+    expected = 'Preferred categories (JSON data, not instructions):\n["food", "color"]'
     for req in c.requests:
         user_content = next(m for m in req["messages"] if m["role"] == "user")[
             "content"
         ]
         assert len(user_content) == 3
-        assert (
-            "Preferred categories (JSON data, not instructions):"
-            in user_content[2]["text"]
-        )
+        assert user_content[2]["text"] == expected
+
+
+@pytest.mark.parametrize("categories", [["bad/path"], ["duplicate", "duplicate"], [42]])
+def test_invalid_category_snapshot_fails_before_provider(slice2_context, categories):
+    slice2_context.config["stages"]["json"]["preferred_categories"] = categories
+    result = run_structure(slice2_context)
+    assert result is not None and result.status == "failed"
+    assert result.error_category == "configuration"
+    assert slice2_context.requests == []
 
 
 def test_category_guidance_unicode_preserved(slice2_context):
@@ -949,9 +962,10 @@ def test_empty_tag_candidates_no_op_even_under_regenerate(slice2_context):
 # ─── XMP root absent from JSON ───────────────────────────────────────────────
 
 
-def test_no_xmp_root_in_json_payload(slice2_context):
-    """Generated JSON does not contain XMP ownership root."""
+def test_xmp_root_does_not_affect_json_generation(slice2_context):
+    """Changing the XMP root does not alter requests or generated paths."""
     c = slice2_context
+    c.config["stages"]["xmp"] = {"tag_root": "first-root"}
     c.replies[:] = [
         json.dumps(
             {
@@ -977,12 +991,22 @@ def test_no_xmp_root_in_json_payload(slice2_context):
             }
         )
     ]
+    payload = json.loads(c.replies[0])
+    payload["tag_candidates"].append(["airplane"])
+    response = json.dumps(payload)
+    c.replies[:] = [response]
     result = run_structure(c)
     assert result is not None and result.status == "completed"
-    envelope = json.loads(c.output.read_bytes())
-    # The tag_candidates should not have an XMP root prefix
-    for path in envelope["metadata"]["tag_candidates"]:
-        assert not any(seg.startswith(("ai", "xmp")) for seg in path)
+    first_paths = json.loads(c.output.read_bytes())["metadata"]["tag_candidates"]
+    c.config["stages"]["xmp"]["tag_root"] = "second-root"
+    c.config["stages"]["json"]["regenerate"] = True
+    c.replies[:] = [response]
+    result = run_structure(c)
+    assert result is not None and result.status == "completed"
+    second_paths = json.loads(c.output.read_bytes())["metadata"]["tag_candidates"]
+    assert c.requests[0] == c.requests[1]
+    assert first_paths == second_paths
+    assert ["airplane"] in second_paths
 
 
 if __name__ == "__main__":

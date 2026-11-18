@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) and B1 configuration are complete; B2–B6 and Phase C remain pending. XMP stage implementation and digiKam interoperability are not claimed.
+**Status:** In progress — Phase A (A1–A5) and B1 configuration are complete. B2's review correction passes regression tests, but its original per-test RED evidence remains unverified; B2–B6 and Phase C remain open. XMP stage implementation and digiKam interoperability are not claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -98,7 +98,7 @@ These paths were inspected as existing in the repository at planning time. They 
 ### Phase B — Implementation
 
 - [x] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
-- [x] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
+- [ ] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
 - [ ] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
@@ -286,7 +286,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
 - [x] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
 - [x] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
-- [x] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
+- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
 
 ### Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 

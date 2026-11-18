@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 
 from image_clarus import resources, schema_worker
 from image_clarus.artifacts import ArtifactError
-from image_clarus.config import ConfigurationError, _strict_json
+from image_clarus.config import ConfigurationError, _strict_json, _valid_tag_segment
 from image_clarus.providers.openai_compatible import ProviderError
 from image_clarus.results import StageResult
 
@@ -315,6 +315,11 @@ def run_structure(image_path, config, services):
         return StageResult("json", "failed", error_category="configuration")
     preferred_categories = settings.get("preferred_categories", [])
     if not isinstance(preferred_categories, list):
+        return StageResult("json", "failed", error_category="configuration")
+    preferred_categories = preferred_categories.copy()
+    if not all(_valid_tag_segment(item) for item in preferred_categories) or len(
+        preferred_categories
+    ) != len(set(preferred_categories)):
         return StageResult("json", "failed", error_category="configuration")
     history = []
     metadata = None

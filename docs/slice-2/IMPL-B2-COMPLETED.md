@@ -1,8 +1,8 @@
-# Step B2 — Extend structured JSON generation and packaged resources (COMPLETED)
+# Step B2 — Extend structured JSON generation and packaged resources (EVIDENCE GAP)
 
-**Status:** Complete. B2 implements the enhanced built-in JSON schema (2.0.0), updated prompt, category guidance as a third user message part, and historical schema packaging. XMP backend, deterministic selection, CLI integration, and documentation remain B3–B6.
+**Status:** Reopened for an evidence gap. The review correction passes regression tests, but original per-test RED evidence is unverified. B2 implements the enhanced built-in JSON schema (2.0.0), updated prompt, category guidance as a third user message part, and historical schema packaging. XMP backend, deterministic selection, CLI integration, and documentation remain B3–B6.
 
-**Scope deviations:** None. The application's patch version is `0.1.21`.
+**Evidence deviation:** Original individual RED results were not established; no process exception has been accepted. Initial B2 version was `0.1.21`; the review correction is `0.1.22`.
 
 ## Files created, updated, and removed
 
@@ -21,37 +21,15 @@
 
 ## Test-first evidence
 
-All commands below use `uv run --locked --extra dev --python 3.13 pytest -q` followed by the named selector in `tests/unit/test_slice2_structure.py`:
+The earlier record claimed an individual RED and GREEN for each original test. That table was not supported by recorded individual test runs and is withdrawn; the original per-test RED evidence is unverified. The reported initial full-suite GREEN below is separate evidence and does not establish test-first history.
 
-| Behavior | Observed RED | Observed GREEN |
-| --- | --- | --- |
-| `::test_builtin_schema_v1_resource_exists` | 1 failed | 1 passed |
-| `::test_builtin_schema_v1_installed_wheel_matches_source` | 1 failed | 1 passed |
-| `::test_canonical_schema_is_2_0_0` | 1 failed | 1 passed |
-| `::test_canonical_prompt_is_a2_version` | 1 failed | 1 passed |
-| `::test_new_builtin_payload_requires_title_caption_tag_candidates` | 1 failed | 1 passed |
-| `::test_new_fields_accept_empty_values` | 1 failed | 1 passed |
-| `::test_tag_candidate_segment_validation` | 1 failed | 1 passed |
-| `::test_tag_candidate_duplicate_paths_rejected` | 1 failed | 1 passed |
-| `::test_category_guidance_added_as_third_user_part` | 1 failed | 1 passed |
-| `::test_category_guidance_omitted_when_empty` | 1 failed | 1 passed |
-| `::test_category_guidance_absent_when_key_missing` | 1 failed | 1 passed |
-| `::test_category_guidance_snapshot_reused_on_retry` | 1 failed | 1 passed |
-| `::test_category_guidance_unicode_preserved` | 1 failed | 1 passed |
-| `::test_existing_v1_json_skipped_without_model_call` | 1 failed | 1 passed |
-| `::test_invalid_v1_envelope_fails_without_regenerate` | 1 failed | 1 passed |
-| `::test_invalid_v1_envelope_regenerates_with_regenerate_true` | 1 failed | 1 passed |
-| `::test_explicit_regenerate_replaces_complete_artifact` | 1 failed | 1 passed |
-| `::test_custom_schema_omits_builtin_publication_fields` | 1 failed | 1 passed |
-| `::test_prompt_fingerprint_is_effective_prompt_bytes` | 1 failed | 1 passed |
-| `::test_description_fingerprint_is_exact_snapshot` | 1 failed | 1 passed |
-| `::test_schema_fingerprint_for_builtin_is_version` | 1 failed | 1 passed |
-| `::test_strict_parsing_rejects_duplicate_keys` | 1 failed | 1 passed |
-| `::test_strict_parsing_rejects_non_finite_numbers` | 1 failed | 1 passed |
-| `::test_strict_parsing_rejects_unpaired_surrogates` | 1 failed | 1 passed |
-| `::test_tag_candidate_validation_fails_on_malformed_paths` | 1 failed | 1 passed |
-| `::test_empty_tag_candidates_no_op_even_under_regenerate` | 1 failed | 1 passed |
-| `::test_no_xmp_root_in_json_payload` | 1 failed | 1 passed |
+For the review correction, `uv run --locked --extra dev --python 3.13 pytest -q tests/unit/test_slice2_structure.py::test_category_guidance_snapshot_reused_on_retry` failed before the fix because the second request contained the mutated configuration, then passed after copying and validating the snapshot. The root-independence comparison and invalid-category cases are supplemental GREEN coverage, not claimed as historical RED tests.
+
+## Review correction
+
+The original implementation held the mutable configuration list rather than a snapshot, contrary to the statement above. Version `0.1.22` copies and validates the list once before requests and reuses the independent snapshot. The retry test mutates the original list after the first request and checks the exact guidance in both requests. The root-independence test compares requests and generated paths under two configured roots, including a legitimate `airplane` tag.
+
+- Python 3.13 full suite: **609 passed**; `uv lock --locked`, Ruff check and format check passed for the correction.
 
 ## Verification
 
@@ -66,4 +44,4 @@ All commands below use `uv run --locked --extra dev --python 3.13 pytest -q` fol
 - [x] New built-in outputs validate and contain the approved publication-oriented metadata while existing descriptive fields and provenance remain intact.
 - [x] Model inference/category guidance is independent of the XMP root and custom schema/prompt replacement still works.
 - [x] Existing JSON skip, explicit replacement, strict validation, schema identity and safe publication behavior pass.
-- [x] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
+- [ ] Observed RED/GREEN and relevant regression evidence, changed-file inventory and completion record are linked.
