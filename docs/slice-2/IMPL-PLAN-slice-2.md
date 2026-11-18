@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** This plan is in progress, not permission to start Phase B implementation. The Product Owner accepted the Slice 2 REQ; the Phase A contract/readiness gate must also be accepted before Phase B. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — A1 and A2 design work complete and Slice 2 REQ accepted; A3 design is in progress; A4–A5 and Phases B/C are pending. A2 design review and the readiness gate remain separate; no Slice 2 implementation or digiKam interoperability verification is claimed.
+**Status:** In progress — A1–A3 design work complete and Slice 2 REQ accepted; A4–A5 and Phases B/C are pending. No Slice 2 implementation or digiKam interoperability verification is claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -71,7 +71,7 @@ These paths were inspected as existing in the repository at planning time. They 
 | Existing automated tests | `tests/unit/`, `tests/integration/` | Extend relevant suites; add focused XMP tests where appropriate |
 | Existing Slice 1 evidence | `docs/slice-1/IMPL-A3-COMPLETED.md`, `IMPL-A5-COMPLETED.md`, `IMPL-B5-COMPLETED.md`, `IMPL-B7-COMPLETED.md`, `IMPL-C2-COMPLETED.md`, `IMPL-C4-COMPLETED.md`, `IMPL-C5-COMPLETED.md`, `IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md` | Inherit limits and implementation contracts, not historical test results |
 
-**Proposed additions, not existing files at inspection:** An XMP stage under `src/image_clarus/stages/` and an ExifTool-backed XMP adapter under an appropriate package module; focused tests and sanitized fixtures under `tests/`. Phase A must select exact module paths and backend API before Phase B. Do not add a framework or separate service merely for extensibility.
+**A3-selected additions, not existing files at inspection:** `src/image_clarus/stages/xmp.py` and `src/image_clarus/xmp_backend.py`; focused tests and sanitized fixtures under `tests/`. The A3 record defines the backend interface. Do not add a framework or separate service merely for extensibility.
 
 ## Implementer and reviewer protocol
 
@@ -91,7 +91,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 - [x] Step A1 — Reconcile Slice 2 requirements and the existing HLD [DESIGN]
 - [x] Step A2 — Freeze enhanced JSON, ranking, and schema evolution contracts [DESIGN]
-- [ ] Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
+- [x] Step A3 — Freeze digiKam XMP field mapping and preservation contract [DESIGN]
 - [ ] Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
 - [ ] Step A5 — Pass the Phase A readiness gate [DESIGN]
 
@@ -135,7 +135,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Reconciled `docs/REQ-image-clarus.md` and `docs/HLD-image-clarus.md` reflecting the approved exception; baseline/conflict/decision evidence and [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); plan references updated to confirmed paths.
 
-**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2 is complete as design work; A3–A5 and the Phase A readiness gate remain pending.
+**A1 progress:** Reconciliation and baseline checks are recorded in the linked completion record. The Product Owner accepted the Slice 2 REQ on 2026-11-17; A1 is complete. A2 and A3 are complete as design work; A4–A5 and the Phase A readiness gate remain pending.
 
 **Acceptance:**
 - [x] Slice 2 REQ status/acceptance is explicitly recorded; no unresolved REQ contradiction is silently bypassed.
@@ -184,14 +184,14 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Exact XMP mapping and backend contract, synthetic/sanitized fixture requirements and evidence, preservation/round-trip assertions and [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md); HLD mapping clarifications where durable.
 
-**A3 progress:** The linked partial record distinguishes synthetic ExifTool and Exiv2 evidence from digiKam interoperability. DigiKam access is not an A3 prerequisite; design decisions remain to be completed. C3 retains mandatory import/edit/save verification.
+**A3 frozen design:** Use `XMP-digiKam:TagsList` for slash-separated explicitly assigned paths and `x-default` alternatives of `XMP-dc:Title`, `XMP-dc:Description` and `XMP-digiKam:CaptionsAuthorNames`; leave shared flat keywords and other observed vendor fields unchanged. `src/image_clarus/xmp_backend.py` owns ExifTool mechanics and `src/image_clarus/stages/xmp.py` owns stage/policy orchestration. The linked record defines source-image protection, preservation, validation, fixtures and failure boundaries. These are preliminary interoperability mappings tested with synthetic ExifTool, not a digiKam verification claim; C3 retains import/edit/save verification.
 
 **Acceptance:**
-- [ ] An explicit ExifTool field-read/write/validation contract and source-image protection strategy are documented, with observed and verified mappings distinguished.
-- [ ] Preliminary mappings are grounded in available evidence, specify preservation of all unrelated metadata and never rely on cross-root taxonomy comparisons; unverified digiKam behavior is assigned to C3.
-- [ ] Empty-root non-deletion and nonempty-root ownership have concrete positive/negative fixture cases, including flat-keyword ambiguity.
+- [x] An explicit ExifTool field-read/write/validation contract and source-image protection strategy are documented, with observed and verified mappings distinguished.
+- [x] Preliminary mappings are grounded in available evidence, specify preservation of all unrelated metadata and never rely on cross-root taxonomy comparisons; unverified digiKam behavior is assigned to C3.
+- [x] Empty-root non-deletion and nonempty-root ownership have concrete positive/negative fixture cases, including flat-keyword ambiguity.
 - [x] Preliminary mapping evidence and remaining interoperability uncertainty are recorded; no untested field-write assumption is promoted to fact.
-- [ ] A3 completion record and plan checkoffs are synchronized.
+- [x] A3 completion record and plan checkoffs are synchronized.
 
 ### Step A4 — Freeze configuration, update policies, compatibility, and stage outcomes [DESIGN]
 
