@@ -63,4 +63,4 @@ The following comparison was prepared when the Slice 2 REQ was proposed, against
 - [x] Current paths, executable toolchain and inherited contracts are verified; necessary changes are distinguished from deferred capabilities.
 - [x] A1 completion record lists files created, updated and removed, decisions, evidence and deviations; its link and plan checkoffs are synchronized.
 
-At A1 closeout, A2–A5 and all implementation and verification phases remained unstarted. **Subsequent progress:** A2 is complete as design work; Product Owner review of its choices and the Phase A readiness gate remain separate. A3–A5 and implementation and verification phases remain unstarted.
+At A1 closeout, A2–A5 and all implementation and verification phases remained unstarted. **Subsequent progress:** A2–A5 are complete as design/readiness work; implementation and verification phases remain unstarted. See [A5](IMPL-A5-COMPLETED.md).
