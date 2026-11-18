@@ -86,7 +86,19 @@ def setup_cli(tmp_path, port, *, injection=None, existing_description=None):
     if injection is not None:
         (tmp_path / "sitecustomize.py").write_text(injection)
         pythonpath.insert(0, str(tmp_path))
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join(pythonpath))
+    # Only the default XMP stage's preflight is expected to run here.
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    executable = tools / "exiftool"
+    executable.write_text(
+        '#!/bin/sh\nif [ "$3" = "-ver" ]; then printf "13.00\\n"; exit 0; fi\nexit 99\n'
+    )
+    executable.chmod(0o700)
+    env = dict(
+        os.environ,
+        PYTHONPATH=os.pathsep.join(pythonpath),
+        PATH=str(tools) + os.pathsep + os.environ.get("PATH", ""),
+    )
     process = subprocess.Popen(
         [
             sys.executable,
@@ -138,7 +150,7 @@ def test_signal_cancels_inflight_request_before_provider_releases(tmp_path, sign
             assert process.returncode == 128 + signum, stderr
             assert (
                 stdout
-                == "desc: skipped — reason=interrupted\njson: skipped — reason=interrupted\n"
+                == "desc: skipped — reason=interrupted\njson: skipped — reason=interrupted\nxmp: skipped — reason=interrupted\n"
             )
             assert len(requests) == 1
             assert requests[0][0] == "/v1/chat/completions"
@@ -201,7 +213,7 @@ ArtifactService._point = point
             assert process.returncode == 128 + signum, stderr
             assert (
                 stdout
-                == f"desc: completed — output={json.dumps(str(destination))}\njson: skipped — reason=interrupted\n"
+                == f"desc: completed — output={json.dumps(str(destination))}\njson: skipped — reason=interrupted\nxmp: skipped — reason=interrupted\n"
             )
             assert destination.read_bytes() == NEW_DESCRIPTION.encode()
             assert Path(str(destination) + ".bak").read_bytes() == b"old description"

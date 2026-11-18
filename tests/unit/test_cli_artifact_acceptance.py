@@ -116,12 +116,14 @@ def output(image, extension):
 
 def test_regenerate_flag_replaces_both_outputs_despite_false_layers(harness):
     run, image, requests, state = harness
-    first = run()
+    first = run("--stages", "desc,json")
     assert first.returncode == 0, first.stderr
     desc, structured = output(image, "txt"), output(image, "json")
     old_desc, old_json = desc.read_bytes(), structured.read_bytes()
     state.update(description="replacement description", caption="replacement")
     result = run(
+        "--stages",
+        "desc,json",
         "--regenerate",
         "--set",
         "stages.desc.regenerate=false",
@@ -165,7 +167,7 @@ def test_invalid_existing_output_fails_without_overwrite(
 
 def test_valid_json_is_skipped_before_missing_description_check(harness):
     run, image, requests, _ = harness
-    first = run()
+    first = run("--stages", "desc,json")
     assert first.returncode == 0, first.stderr
     desc, structured = output(image, "txt"), output(image, "json")
     original = structured.read_bytes()

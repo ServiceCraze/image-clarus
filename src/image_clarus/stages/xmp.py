@@ -1,15 +1,18 @@
-"""Deterministic XMP update planning; no publication or provider calls."""
+"""Deterministic XMP planning and recoverable sidecar publication."""
 
 import json
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
 from image_clarus import resources
+from image_clarus.artifacts import ArtifactError
 from image_clarus.config import ConfigurationError, _strict_json, _valid_tag_segment
-from image_clarus.stages.structure import _ENVELOPE, _Snapshot
+from image_clarus.results import StageResult
+from image_clarus.stages.structure import _ENVELOPE, _Snapshot, _valid_envelope
 from image_clarus.xmp_backend import FIELDS, ExifToolBackend, XmpBackendError
 
 _CUSTOM_ID = "urn:image-clarus:custom-metadata-schema"
@@ -96,8 +99,8 @@ def prepare_updates(
 ):
     """Compute updates from persisted bytes, without invoking a model or writing files.
 
-    ``None`` JSON means an absent prerequisite; B5 owns filesystem discovery,
-    recovery, publication, and conversion of this plan into a stage result.
+    ``None`` JSON means an absent prerequisite. The calling stage owns file
+    discovery, recovery, publication, and conversion to a stage result.
     Settings are the already-resolved, validated XMP configuration.
     """
     root = settings["tag_root"]
@@ -168,3 +171,125 @@ def prepare_updates(
         return XmpPlan({}, effective, "failed", error_category="invalid_artifact")
     except OSError:
         return XmpPlan({}, effective, "failed", error_category="file_io")
+
+
+def _guard_aliases(paths):
+    """Reject existing hard links and resolved (including dangling) symlink aliases."""
+    resolved = [path.resolve() for path in paths]
+    if len(set(resolved)) != len(resolved):
+        raise ValueError("unsafe artifact alias")
+    identities = set()
+    for path in paths:
+        try:
+            info = path.stat()
+        except FileNotFoundError:
+            continue
+        identity = (info.st_dev, info.st_ino)
+        if identity in identities:
+            raise ValueError("unsafe artifact alias")
+        identities.add(identity)
+
+
+def _interrupted(services):
+    stop = getattr(services, "stop", None)
+    return stop is not None and stop.signum is not None
+
+
+def run_xmp(image_path, config, services):
+    """Read persisted JSON, recover XMP, plan and safely publish a sidecar."""
+    image = Path(image_path)
+    source = Path(str(image) + ".desc.json")
+    output = Path(str(image) + ".xmp")
+    paths = (
+        image,
+        source,
+        Path(str(source) + ".bak"),
+        output,
+        Path(str(output) + ".bak"),
+    )
+    backend = ExifToolBackend(output.parent)
+    policy = config["pipeline"]["missing_prerequisite"]
+    try:
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        _guard_aliases(paths)
+        exists = services.artifacts.recover(source, _valid_envelope)
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        if not exists:
+            if policy == "skip":
+                return StageResult("xmp", "skipped", reason_code="missing_prerequisite")
+            return StageResult("xmp", "failed", error_category="missing_prerequisite")
+        json_bytes = source.read_bytes()
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        _guard_aliases(paths)
+        exists = services.artifacts.recover(output, backend.validate)
+        snapshot = output.read_bytes() if exists else None
+        plan = prepare_updates(
+            json_bytes, snapshot, config["stages"]["xmp"], output.parent
+        )
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        if plan.status != "ready":
+            return StageResult(
+                "xmp",
+                plan.status,
+                output_path=output
+                if plan.reason_code == "no_change" and exists
+                else None,
+                reason_code=plan.reason_code,
+                error_category=plan.error_category,
+                message=(
+                    "Invalid or incompatible JSON or XMP artifact"
+                    if plan.error_category == "invalid_artifact"
+                    else "XMP artifact read failed"
+                    if plan.error_category == "file_io"
+                    else "Effective tag policy: " + plan.effective_tag_policy
+                ),
+            )
+        candidate = backend.transform(snapshot, plan.updates)
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        _guard_aliases(paths)
+        services.artifacts.write(output, candidate, backend.validate)
+        return StageResult(
+            "xmp",
+            "completed",
+            output_path=output,
+            message="Effective tag policy: " + plan.effective_tag_policy,
+        )
+    except ArtifactError as error:
+        if error.category == "interrupted" or _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        return StageResult(
+            "xmp",
+            "failed",
+            error_category=error.category,
+            message="XMP artifact operation failed",
+        )
+    except XmpBackendError as error:
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        category = (
+            "file_io"
+            if str(error) in {"ExifTool timeout", "XMP working file failure"}
+            else "invalid_artifact"
+        )
+        return StageResult(
+            "xmp",
+            "failed",
+            error_category=category,
+            message="ExifTool timeout"
+            if str(error) == "ExifTool timeout"
+            else "XMP transformation failed",
+        )
+    except (OSError, ValueError, RuntimeError):
+        if _interrupted(services):
+            return StageResult("xmp", "skipped", reason_code="interrupted")
+        return StageResult(
+            "xmp",
+            "failed",
+            error_category="file_io",
+            message="XMP artifact path or file operation failed",
+        )

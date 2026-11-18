@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -223,11 +224,19 @@ def check_request(request, description, model="text-model"):
 
 @pytest.mark.parametrize("selection", [None, "desc,json"])
 def test_combined_and_default_persisted_handoff(rig, selection):
+    if selection is None and shutil.which("exiftool") is None:
+        pytest.skip("default XMP stage needs ExifTool")
     args = [] if selection is None else ["--stages", selection]
     stdout = rig.finish(rig.start(rig.config("both"), *args))
+    xmp = Path(str(rig.image) + ".xmp")
     assert (
         stdout
         == f"desc: completed — output={json.dumps(str(rig.desc))}\njson: completed — output={json.dumps(str(rig.structured))}\n"
+        + (
+            f"xmp: completed — output={json.dumps(str(xmp))}\n"
+            if selection is None
+            else ""
+        )
     )
     assert [x[0] for x in rig.requests] == ["desc", "json"]
     assert rig.requests[0][1]["model"] == "vision-model"
@@ -238,7 +247,12 @@ def test_combined_and_default_persisted_handoff(rig, selection):
     assert rig.desc.read_bytes() == V2.encode()
     check_request(rig.requests[1], rig.desc.read_bytes().decode())
     check_envelope(rig, V2)
-    assert_files(rig, rig.desc.name, rig.structured.name)
+    assert_files(
+        rig,
+        rig.desc.name,
+        rig.structured.name,
+        *([xmp.name] if selection is None else []),
+    )
 
 
 def test_desc_only(rig):
@@ -271,16 +285,16 @@ def test_json_only_missing_description(rig):
 
 def test_skip_and_explicit_regeneration(rig):
     cfg = rig.config("regenerate")
-    rig.finish(rig.start(cfg))
+    rig.finish(rig.start(cfg, "--stages", "desc,json"))
     old_desc, old_json = rig.desc.read_bytes(), rig.structured.read_bytes()
     assert (
-        rig.finish(rig.start(cfg))
+        rig.finish(rig.start(cfg, "--stages", "desc,json"))
         == "desc: skipped — reason=output_exists\njson: skipped — reason=output_exists\n"
     )
     assert len(rig.requests) == 2
     assert (rig.desc.read_bytes(), rig.structured.read_bytes()) == (old_desc, old_json)
     rig.desc.write_bytes(V1.encode())
-    stdout = rig.finish(rig.start(cfg, "--regenerate"))
+    stdout = rig.finish(rig.start(cfg, "--stages", "desc,json", "--regenerate"))
     assert (
         stdout
         == f"desc: completed — output={json.dumps(str(rig.desc))}\njson: completed — output={json.dumps(str(rig.structured))}\n"

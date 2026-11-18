@@ -62,13 +62,16 @@ def _main(state):
     process = subparsers.add_parser(
         "process",
         help="Process one image",
-        description="Outputs are create-only by default; search is a help-only stub.",
+        description="Description and JSON outputs are create-only by default; XMP uses configured policies; search is a help-only stub.",
         allow_abbrev=False,
     )
     process.add_argument("IMAGE")
     process.add_argument("--config", metavar="FILE", action=OnceAction)
     process.add_argument(
-        "--stages", metavar="STAGES", action=OnceAction, help="Default: desc,json"
+        "--stages",
+        metavar="STAGES",
+        action=OnceAction,
+        help="Default: desc,json,xmp; explicit subsets do not add prerequisites",
     )
     process.add_argument("--set", metavar="PATH=VALUE", action="append")
     for option in ("--desc-prompt", "--json-prompt", "--json-schema"):
@@ -108,11 +111,10 @@ def _main(state):
         from image_clarus.stages.description import run_description
         from image_clarus.stages.structure import run_structure
 
-        selected = tuple(
-            item.strip()
-            for item in (args.stages if args.stages is not None else "desc,json").split(
-                ","
-            )
+        selected = (
+            tuple(item.strip() for item in args.stages.split(","))
+            if args.stages is not None
+            else STAGE_REGISTRY
         )
         if (
             not selected
@@ -218,15 +220,22 @@ def _main(state):
         services = SimpleNamespace(
             artifacts=InterruptibleArtifacts(config["pipeline"]["backup_retention"]),
             provider_factory=InterruptibleProvider,
+            stop=stop,
         )
+        stage_functions = {
+            "desc": stage_wrapper("desc", run_description),
+            "json": stage_wrapper("json", run_structure),
+        }
+        if "xmp" in selected:
+            from image_clarus.stages.xmp import run_xmp
+
+            stage_functions["xmp"] = stage_wrapper("xmp", run_xmp)
+
         result = run_pipeline(
             image,
             config,
             services,
-            {
-                "desc": stage_wrapper("desc", run_description),
-                "json": stage_wrapper("json", run_structure),
-            },
+            stage_functions,
             selected=selected,
             stop=stop,
         )

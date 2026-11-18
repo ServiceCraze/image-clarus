@@ -108,7 +108,7 @@ def test_process_help_describes_frozen_options():
         "--json-schema",
         "--regenerate",
         "--missing-prerequisite",
-        "desc,json",
+        "desc,json,xmp",
         "fail",
         "create-only",
         "search",
@@ -134,7 +134,7 @@ def test_version_uses_installed_metadata():
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.1.26\n",
+        "image-clarus 0.1.27\n",
         "",
     )
 
@@ -241,7 +241,14 @@ def test_combined_execution_persists_and_rereads_description(tmp_path):
             f"providers:\n  local:\n    base_url: http://127.0.0.1:{server.server_port}/v1\nmodels:\n  m:\n    provider: local\n    model_id: synthetic\nstages:\n  desc:\n    model: m\n  json:\n    model: m\n"
         )
         result = run_cli(
-            "process", str(image), "--config", str(config), "--json-schema", str(schema)
+            "process",
+            str(image),
+            "--config",
+            str(config),
+            "--json-schema",
+            str(schema),
+            "--stages",
+            "desc,json",
         )
         assert result.returncode == 0, result.stderr
         assert (
@@ -354,6 +361,64 @@ def test_regenerate_overrides_create_only(tmp_path):
 
 
 import pytest
+
+
+@pytest.mark.parametrize(
+    "selection,expected",
+    [
+        (None, ("desc", "json", "xmp")),
+        ("xmp", ("xmp",)),
+        ("xmp,json", ("json", "xmp")),
+        ("xmp,desc", ("desc", "xmp")),
+        ("xmp,json,desc", ("desc", "json", "xmp")),
+        ("desc,json", ("desc", "json")),
+        ("desc", ("desc",)),
+        ("json", ("json",)),
+    ],
+)
+def test_cli_selects_only_requested_stages_and_preflights_them(
+    tmp_path, monkeypatch, capsys, selection, expected
+):
+    from image_clarus import cli, config
+    from image_clarus.results import StageResult
+    from image_clarus.stages import description, structure, xmp
+
+    image = tmp_path / "image.png"
+    image.write_bytes(b"synthetic")
+    calls = []
+    preflight = []
+
+    def resolve(**kwargs):
+        preflight.append(kwargs["stages"])
+        return {
+            "logging": {"level": "WARNING"},
+            "pipeline": {"backup_retention": "remove"},
+        }
+
+    def fake(name):
+        def run(image, config, services):
+            calls.append(name)
+            return StageResult(name, "skipped", reason_code="no_change")
+
+        return run
+
+    monkeypatch.setattr(config, "resolve_config", resolve)
+    monkeypatch.setattr(description, "run_description", fake("desc"))
+    monkeypatch.setattr(structure, "run_structure", fake("json"))
+    monkeypatch.setattr(xmp, "run_xmp", fake("xmp"), raising=False)
+    args = ["image-clarus", "process", str(image)]
+    if selection is not None:
+        args += ["--stages", selection]
+    monkeypatch.setattr(sys, "argv", args)
+
+    assert cli.main() == 0
+    assert preflight == [expected]
+    assert calls == list(expected)
+    output = capsys.readouterr()
+    assert output.out == "".join(
+        f"{stage}: skipped — reason=no_change\n" for stage in expected
+    )
+    assert output.err == ""
 
 
 @pytest.mark.parametrize(
@@ -546,7 +611,7 @@ def test_authentication_preflight_exits_one_without_summary(tmp_path):
     assert "Traceback" not in result.stderr
 
 
-@pytest.mark.parametrize("selection", ["", "desc,", "xmp", "DESC"])
+@pytest.mark.parametrize("selection", ["", "desc,", "unknown", "DESC"])
 def test_invalid_stage_lists_are_rejected(tmp_path, selection):
     image = tmp_path / "image.png"
     image.write_bytes(b"synthetic")
@@ -556,14 +621,76 @@ def test_invalid_stage_lists_are_rejected(tmp_path, selection):
     assert "stage" in result.stderr.lower()
 
 
+def test_exiftool_preflight_is_required_only_for_selected_xmp(tmp_path, monkeypatch):
+    image = tmp_path / "image.png"
+    image.write_bytes(b"synthetic")
+    Path(str(image) + ".desc.txt").write_text("existing")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        "providers:\n  local:\n    base_url: http://127.0.0.1:1234/v1\n"
+        "models:\n  m:\n    provider: local\n    model_id: synthetic\n"
+        "stages:\n  desc:\n    model: m\n"
+    )
+    monkeypatch.setenv("PATH", str(tmp_path))
+    desc = run_cli("process", str(image), "--config", str(config), "--stages", "desc")
+    assert (desc.returncode, desc.stdout, desc.stderr) == (
+        0,
+        "desc: skipped — reason=output_exists\n",
+        "",
+    )
+    selected = run_cli(
+        "process", str(image), "--config", str(config), "--stages", "xmp"
+    )
+    assert selected.returncode == 2
+    assert selected.stdout == ""
+    assert "ExifTool" in selected.stderr
+    assert "Traceback" not in selected.stderr
+
+
+@pytest.mark.parametrize(
+    "policy,code,line",
+    [
+        ("fail", 1, "xmp: failed — category=missing_prerequisite; message=\n"),
+        ("skip", 0, "xmp: skipped — reason=missing_prerequisite\n"),
+    ],
+)
+def test_xmp_only_missing_json_uses_policy_without_model_or_auto_expansion(
+    tmp_path, monkeypatch, policy, code, line
+):
+    image = tmp_path / "image.png"
+    image.write_bytes(b"synthetic")
+    config = tmp_path / "config.yaml"
+    config.write_text("{}\n")
+    executable = tmp_path / "exiftool"
+    executable.write_text("#!/bin/sh\nprintf '12.34\\n'\n")
+    executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    result = run_cli(
+        "process",
+        str(image),
+        "--config",
+        str(config),
+        "--stages",
+        "xmp",
+        "--missing-prerequisite",
+        policy,
+        "--regenerate",
+    )
+    assert (result.returncode, result.stdout, result.stderr) == (code, line, "")
+    assert image.read_bytes() == b"synthetic"
+    assert not Path(str(image) + ".desc.txt").exists()
+    assert not Path(str(image) + ".desc.json").exists()
+    assert not Path(str(image) + ".xmp").exists()
+
+
 @pytest.mark.parametrize("signum", [2, 15])
-@pytest.mark.parametrize("stage", ["desc", "json"])
+@pytest.mark.parametrize("stage", ["desc", "json", "xmp"])
 def test_interrupted_stage_failure_is_reported_as_skipped(
     tmp_path, monkeypatch, capsys, signum, stage
 ):
     from image_clarus import cli
     from image_clarus.results import StageResult
-    from image_clarus.stages import description, structure
+    from image_clarus.stages import description, structure, xmp
 
     image = tmp_path / "image.png"
     image.write_bytes(b"synthetic")
@@ -571,19 +698,25 @@ def test_interrupted_stage_failure_is_reported_as_skipped(
     config.write_text(
         "providers:\n  local:\n    base_url: http://127.0.0.1:1234/v1\n"
         "models:\n  m:\n    provider: local\n    model_id: synthetic\n"
-        f"stages:\n  {stage}:\n    model: m\n"
+        + (f"stages:\n  {stage}:\n    model: m\n" if stage != "xmp" else "")
     )
+    if stage == "xmp":
+        executable = tmp_path / "exiftool"
+        executable.write_text("#!/bin/sh\nprintf '12.34\\n'\n")
+        executable.chmod(0o755)
+        monkeypatch.setenv("PATH", str(tmp_path))
 
-    def interrupted_stage(*args):
+    def interrupted_stage(image_path, settings, services):
         os.kill(os.getpid(), signum)
+        assert services.stop.signum == signum
         return StageResult(stage, "failed", error_category="file_io")
 
-    module, name = (
-        (description, "run_description")
-        if stage == "desc"
-        else (structure, "run_structure")
-    )
-    monkeypatch.setattr(module, name, interrupted_stage)
+    module, name = {
+        "desc": (description, "run_description"),
+        "json": (structure, "run_structure"),
+        "xmp": (xmp, "run_xmp"),
+    }[stage]
+    monkeypatch.setattr(module, name, interrupted_stage, raising=False)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -684,6 +817,8 @@ def test_signal_interrupts_stalled_provider_without_publication(tmp_path, signum
             str(image),
             "--config",
             str(config),
+            "--stages",
+            "desc,json",
         ],
         env=env,
         stdout=subprocess.PIPE,

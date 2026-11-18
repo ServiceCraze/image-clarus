@@ -340,6 +340,8 @@ def test_failure_policy_controls_later_stage(harness, tmp_path, policy, expected
         "--regenerate",
         "--json-schema",
         schema,
+        "--stages",
+        "desc,json",
         "--set",
         "pipeline.on_stage_failure=" + policy,
     )

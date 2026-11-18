@@ -31,8 +31,8 @@ def test_default_registry_runs_fakes_in_order_with_same_dependencies():
     result = run_pipeline(
         image, config, services, {name: stage(name) for name in STAGE_REGISTRY}
     )
-    assert STAGE_REGISTRY == ("desc", "json")
-    assert [item[0] for item in seen] == ["desc", "json"]
+    assert STAGE_REGISTRY == ("desc", "json", "xmp")
+    assert [item[0] for item in seen] == ["desc", "json", "xmp"]
     assert all(
         item[1] is image and item[2] is config and item[3] is services for item in seen
     )
@@ -95,7 +95,12 @@ def test_signal_during_stage_preserves_completed_result_and_skips_later(
         return StageResult("json", "completed")
 
     result = run_pipeline(
-        Path("image"), {}, stop, {"desc": desc, "json": json}, stop=stop
+        Path("image"),
+        {},
+        stop,
+        {"desc": desc, "json": json},
+        selected=("desc", "json"),
+        stop=stop,
     )
     assert calls == ["desc"]
     assert result.stages[0].status == "completed"
@@ -116,7 +121,12 @@ def test_signal_takes_precedence_over_failure_and_interrupts_unstarted_stage():
         pytest.fail("stage must not start after signal")
 
     result = run_pipeline(
-        Path("image"), {}, None, {"desc": desc, "json": json}, stop=stop
+        Path("image"),
+        {},
+        None,
+        {"desc": desc, "json": json},
+        selected=("desc", "json"),
+        stop=stop,
     )
     assert result.exit_code == 143
     assert result.stages[1].reason_code == "interrupted"
@@ -135,7 +145,7 @@ def test_explicit_selection_follows_registry_not_request_order():
     assert [stage.stage for stage in result.stages] == ["desc", "json"]
 
 
-@pytest.mark.parametrize("selected", [(), ("json", "json"), ("xmp",), ("",)])
+@pytest.mark.parametrize("selected", [(), ("json", "json"), ("unknown",), ("",)])
 def test_invalid_selection_is_rejected_before_execution(selected):
     from image_clarus.pipeline import run_pipeline
 
@@ -161,7 +171,7 @@ def test_missing_stage_implementation_is_detected_before_any_stage_runs():
     "policy,expected_calls,expected_status",
     [
         ("stop", ["desc"], "skipped"),
-        ("continue", ["desc", "json"], "completed"),
+        ("continue", ["desc", "json", "xmp"], "completed"),
     ],
 )
 def test_failure_policy_and_exit_aggregation(policy, expected_calls, expected_status):
@@ -179,14 +189,54 @@ def test_failure_policy_and_exit_aggregation(policy, expected_calls, expected_st
         calls.append("json")
         return StageResult("json", "completed")
 
+    def xmp(image, config, services):
+        calls.append("xmp")
+        return StageResult("xmp", "completed")
+
     result = run_pipeline(
         Path("image"),
         {"pipeline": {"on_stage_failure": policy}},
         None,
-        {"desc": desc, "json": json},
+        {"desc": desc, "json": json, "xmp": xmp},
     )
     assert calls == expected_calls
     assert result.stages[1].status == expected_status
+    assert result.stages[2].status == expected_status
     if policy == "stop":
         assert result.stages[1].reason_code == "stage_not_run_after_failure"
+        assert result.stages[2].reason_code == "stage_not_run_after_failure"
     assert result.exit_code == 1
+
+
+@pytest.mark.parametrize(
+    "selected,expected",
+    [
+        (("xmp",), ["xmp"]),
+        (("json", "xmp"), ["json", "xmp"]),
+        (("xmp", "desc"), ["desc", "xmp"]),
+        (("xmp", "json", "desc"), ["desc", "json", "xmp"]),
+    ],
+)
+def test_explicit_subsets_execute_in_registry_order_without_expansion(
+    selected, expected
+):
+    from image_clarus.pipeline import run_pipeline
+
+    calls = []
+
+    def stage(name):
+        def run(image, config, services):
+            calls.append(name)
+            return StageResult(name, "completed")
+
+        return run
+
+    result = run_pipeline(
+        Path("image"),
+        {},
+        None,
+        {name: stage(name) for name in selected},
+        selected=selected,
+    )
+    assert calls == expected
+    assert [item.stage for item in result.stages] == expected

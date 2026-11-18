@@ -2,6 +2,8 @@
 
 **Status:** Complete for the deterministic policy-planning boundary. B5 stage/CLI integration and C3 actual digiKam interoperability remain open.
 
+**Subsequent progress:** B5 stage/CLI integration has been implemented but B5 remains open on an unexplained interruption-test timeout observed once; see [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md). Actual digiKam interoperability remains C3.
+
 ## Changes
 
 - Created `src/image_clarus/stages/xmp.py` and `tests/unit/test_xmp_stage.py`. The planner takes a persisted JSON byte snapshot, XMP snapshot and resolved settings; it returns exact backend updates and the effective tag policy, or a sanitized missing/invalid/no-change result. It does not invoke a model, generate JSON, write files or publish a sidecar.

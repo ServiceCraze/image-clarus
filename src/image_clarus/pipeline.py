@@ -1,7 +1,6 @@
 """Fixed stage ordering and single-image coordination.
 
-Stage implementations are supplied by the caller; the registry does not imply
-that the later-slice implementations already exist.
+Stage implementations are supplied by the caller.
 """
 
 from collections.abc import Callable, Mapping
@@ -10,7 +9,7 @@ from typing import Any
 
 from image_clarus.results import PipelineResult, StageResult
 
-STAGE_REGISTRY = ("desc", "json")
+STAGE_REGISTRY = ("desc", "json", "xmp")
 Stage = Callable[[Path, Mapping[str, Any], Any], StageResult]
 
 
