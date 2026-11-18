@@ -2,6 +2,8 @@
 
 **Status:** Complete. The Product Owner accepted the documented original per-test RED evidence gap. The review correction passes regression tests. B2 implements the enhanced built-in JSON schema (2.0.0), updated prompt, category guidance as a third user message part, and historical schema packaging. XMP backend, deterministic selection, CLI integration, and documentation remain B3–B6.
 
+**Subsequent progress:** B3's standalone XMP backend is complete; see [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md). Selection, stage integration and documentation remain B4–B6.
+
 **Accepted evidence gap:** Original individual RED results were not established. The Product Owner explicitly accepted this documented gap. Initial B2 version was `0.1.21`; the review correction was `0.1.22`; this closeout is `0.1.23`.
 
 ## Files created, updated, and removed

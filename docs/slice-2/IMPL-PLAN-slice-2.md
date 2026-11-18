@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phase A readiness is complete and Phase B is in progress. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5), B1 and B2 are complete. The Product Owner accepted B2's documented historical RED-evidence gap; B3–B6 and Phase C remain open. XMP stage implementation and digiKam interoperability are not claimed.
+**Status:** In progress — Phase A (A1–A5) and B1–B3 are complete. The Product Owner accepted B2's documented historical RED-evidence gap; B4–B6 and Phase C remain open. XMP stage integration and digiKam interoperability are not claimed.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -99,7 +99,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 - [x] Step B1 — Extend configuration and selected-stage validation [CODE/TEST]
 - [x] Step B2 — Extend structured JSON generation and packaged resources [CODE/TEST]
-- [ ] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
+- [x] Step B3 — Implement the ExifTool XMP backend and mapping [CODE/TEST]
 - [ ] Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 - [ ] Step B5 — Integrate the XMP stage, registry, and single-image CLI [CODE/TEST]
 - [ ] Step B6 — Document Slice 2 configuration, behavior, and compatibility [DOCS/TEST]
@@ -303,11 +303,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Approved XMP backend module(s), sanitized fixtures and tests; [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md).
 
+**B3 result:** The standalone backend and mapping passed synthetic ExifTool and hermetic tests. Unsupported RDF structures fail closed; sidecar recovery, source/destination alias guards and publication belong to stage integration. Actual digiKam interoperability remains in C3.
+
 **Acceptance:**
-- [ ] Backend operates on XMP sidecars and never writes image bytes; actual read/write targets match the preliminary A3 mapping. Actual digiKam interoperability remains a separate C3 obligation.
-- [ ] Subprocess failures, tool absence, malformed XMP and unexpected field mutation fail with actionable, nonsecret outcomes.
-- [ ] Required real-ExifTool mapping checks and hermetic backend tests have recorded results; unmet required mapping remains unchecked.
-- [ ] Observed RED/GREEN, changed-file inventory and completion record are linked.
+- [x] Backend operates on XMP sidecars and never writes image bytes; actual read/write targets match the preliminary A3 mapping. Actual digiKam interoperability remains a separate C3 obligation.
+- [x] Subprocess failures, tool absence, malformed XMP and unexpected field mutation fail with actionable, nonsecret outcomes.
+- [x] Required real-ExifTool mapping checks and hermetic backend tests have recorded results; unmet required mapping remains unchecked.
+- [x] Observed RED/GREEN, changed-file inventory and completion record are linked.
 
 ### Step B4 — Implement deterministic XMP selection and field policies [CODE/TEST]
 
