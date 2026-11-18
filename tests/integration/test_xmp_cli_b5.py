@@ -391,7 +391,9 @@ def test_invalid_json_fails_not_skips(rig):
     assert_source(rig)
 
 
-@pytest.mark.parametrize("selection", [None, "xmp,json,desc", "xmp,json", "xmp,desc"])
+@pytest.mark.parametrize(
+    "selection", [None, "desc,json,xmp", "xmp,json,desc", "xmp,json", "xmp,desc"]
+)
 def test_composed_stages_run_in_registry_order(rig, real_exiftool, selection):
     if selection == "xmp,json":
         rig.desc.write_text(DESCRIPTION)

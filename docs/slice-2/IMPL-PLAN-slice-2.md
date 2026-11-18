@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5) and Phase B (B1–B6) are complete; Phase C remains open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
+**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1 are complete; C2–C5 remain open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; B5's one historical signal-test timeout and unknown cause remain documented.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -106,7 +106,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ### Phase C — Verification and closeout
 
-- [ ] Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
+- [x] Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 - [ ] Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
 - [ ] Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
 - [ ] Step C4 — Run Linux package, compatibility, and quality gates [TEST]
@@ -385,7 +385,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Phase C — Verification and closeout
 
-**Entry:** B1–B6 delivered with reviewed completion evidence. Planned tests below have **not** been run by this plan. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
+**Entry:** B1–B6 delivered with completion evidence. C1 is complete; C2–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
 
 ### Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 
@@ -402,11 +402,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** CLI/stage integration matrix, test results and [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md).
 
+**C1 result:** Synthetic black-box CLI tests verified selected-stage handoffs, historical/custom compatibility and real-ExifTool publication; the record distinguishes a deliberately instrumented composed-stage disk handoff from independent CLI execution. Actual digiKam interoperability remains C3.
+
 **Acceptance:**
-- [ ] All selected-stage and default single-image flows follow persisted-file contracts and expected results.
-- [ ] Historical/custom JSON, missing artifact and optional-source versus invalid-input cases are distinguished correctly.
-- [ ] Published XMP field values, source-image integrity and policy/rank behavior match the design.
-- [ ] Executed test logs and completion record substantiate the verified cases.
+- [x] All selected-stage and default single-image flows follow persisted-file contracts and expected results.
+- [x] Historical/custom JSON, missing artifact and optional-source versus invalid-input cases are distinguished correctly.
+- [x] Published XMP field values, source-image integrity and policy/rank behavior match the design.
+- [x] Executed test logs and completion record substantiate the verified cases.
 
 ### Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
 
@@ -579,7 +581,7 @@ The Phase A design decisions are complete and Phase B implementation is complete
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** Phase C verification remains pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** C2–C5 remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 

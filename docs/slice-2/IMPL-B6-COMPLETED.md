@@ -2,6 +2,8 @@
 
 **Status:** Complete. Phase B implementation is complete; Phase C verification, including actual digiKam interoperability and metadata-quality review in C3, has not been started by B6.
 
+**Subsequent progress:** C1 synthetic CLI/persisted-handoff verification is complete; see [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md). C2–C5, including actual digiKam interoperability in C3, remain open.
+
 **Scope deviations:** None.
 
 ## Files created, updated, and removed
