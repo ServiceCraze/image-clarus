@@ -125,6 +125,29 @@ def _parse(data):
     return properties
 
 
+class _RecoveryTreeBuilder(ET.TreeBuilder):
+    def doctype(self, name, pubid, system):
+        raise XmpBackendError("malformed XMP")
+
+
+def _validate_structure(data):
+    """Validate the XMP container without interpreting foreign RDF properties."""
+    if not isinstance(data, bytes):
+        raise XmpBackendError("malformed XMP")
+    try:
+        root = ET.fromstring(data, parser=ET.XMLParser(target=_RecoveryTreeBuilder()))
+    except (ET.ParseError, ValueError):
+        raise XmpBackendError("malformed XMP") from None
+    if root.tag == R + "RDF":
+        return
+    if (
+        root.tag == "{adobe:ns:meta/}xmpmeta"
+        and sum(child.tag == R + "RDF" for child in root) == 1
+    ):
+        return
+    raise XmpBackendError("malformed XMP")
+
+
 def _typed(props):
     result = {}
     for key, (name, _) in FIELDS.items():
@@ -156,7 +179,7 @@ class ExifToolBackend:
         return {"properties": props, **_typed(props)}
 
     def validate(self, candidate):
-        self.read(candidate)
+        _validate_structure(candidate)
         return True
 
     def _run(self, args):

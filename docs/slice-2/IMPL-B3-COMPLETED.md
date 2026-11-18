@@ -13,6 +13,14 @@
 
 ## Evidence
 
+### Recovery-validator review correction (`0.1.25`)
+
+The original validator incorrectly used the transformation parser for recovery, rejecting valid XMP with foreign RDF structures the transformer cannot safely interpret. Recovery validation now checks a well-formed XML XMP/RDF container independently of transformation support, without interpreting foreign properties; DTD declarations are rejected. It does not perform full RDF semantic validation. `read()` and `transform()` retain fail-closed preservation checks.
+
+The new recovery test failed before the correction with `unsupported XMP structure`, then passed: it restores an actual backup containing a nested foreign RDF property byte-for-byte using `ArtifactService.recover`, while read and transform still reject that structure. A malformed backup is retained and not published. A UTF-16 container is accepted and an encoded DTD is rejected. These are synthetic unit scenarios.
+
+Verification after correction: **17 focused tests passed**, including the real ExifTool synthetic mapping test; **626 full-suite tests passed** on Python 3.13 with ExifTool on PATH. `uv lock --locked`, Ruff check and format across source and tests passed, and the CLI reported `0.1.25`. Earlier `0.1.24` evidence below is historical.
+
 - `PATH=<synthetic-test-exiftool-directory>:$PATH uv run --locked --extra dev --python 3.13 pytest -q tests/unit/test_xmp_backend.py`: **14 passed**, including the real ExifTool 13.64 synthetic round trip. An independent ExifTool read confirmed the four mapped values and French alternatives; the test also checks unchanged flat keywords, Lightroom hierarchy, the original sidecar snapshot and separate synthetic image bytes. This is not digiKam interoperability evidence.
 - The remaining focused cases exercise missing tool, nonzero exit, bounded actual subprocess timeout and output, sanitized errors, private temporary files, invalid arguments, malformed and unsupported structures, malformed tool output, foreign mutation and removal of a French language alternative. A valid XMP packet was published through the existing `ArtifactService` with the backend validator.
 - The backend-absent initial run failed during collection, which demonstrates missing implementation, not individual behavior RED. A real-tool test exposed incorrect list replacement before correction. The artifact-validator compatibility test failed with `invalid_artifact` before the validator fix and passed afterward; the description-attribute test failed as unsupported before the parser fix and passed afterward. Other cases are supplemental passing scenario coverage; no unobserved per-test RED is asserted.

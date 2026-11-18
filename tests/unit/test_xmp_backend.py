@@ -51,10 +51,6 @@ def test_malformed_and_unsupported_are_rejected(tmp_path):
     for data in (
         b"<broken",
         b'<!DOCTYPE x [<!ENTITY a "b">]><x/>',
-        EMPTY.replace(
-            b'<rdf:Description rdf:about=""/>',
-            b'<rdf:Description rdf:about="urn:other"/>',
-        ),
     ):
         with pytest.raises(XmpBackendError):
             backend.validate(data)
@@ -114,6 +110,44 @@ def test_unsafe_rdf_structures_are_rejected(tmp_path):
     packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail>Keep</f:detail></f:node></rdf:Description></rdf:RDF>"""
     with pytest.raises(XmpBackendError, match="unsupported"):
         backend.transform(packet, {"title": "New"})
+
+
+def test_recovery_accepts_valid_untransformable_xmp(tmp_path):
+    from image_clarus.artifacts import ArtifactService
+
+    backend = ExifToolBackend(tmp_path)
+    packet = b"""<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:f="urn:fiction"><rdf:Description rdf:about=""><f:node rdf:parseType="Resource"><f:detail>Keep</f:detail></f:node></rdf:Description></rdf:RDF>"""
+    target = tmp_path / "example.xmp"
+    backup = tmp_path / "example.xmp.bak"
+    backup.write_bytes(packet)
+    assert backend.validate(packet) is True
+    with pytest.raises(XmpBackendError, match="unsupported"):
+        backend.read(packet)
+    with pytest.raises(XmpBackendError, match="unsupported"):
+        backend.transform(packet, {"title": "New"})
+    assert ArtifactService("retain").recover(target, backend.validate) is True
+    assert target.read_bytes() == backup.read_bytes() == packet
+
+
+def test_recovery_rejects_malformed_backup_without_overwrite(tmp_path):
+    from image_clarus.artifacts import ArtifactError, ArtifactService
+
+    target = tmp_path / "example.xmp"
+    backup = tmp_path / "example.xmp.bak"
+    backup.write_bytes(b"<broken")
+    with pytest.raises(ArtifactError, match="invalid_artifact"):
+        ArtifactService().recover(target, ExifToolBackend(tmp_path).validate)
+    assert not target.exists()
+    assert backup.read_bytes() == b"<broken"
+
+
+def test_recovery_validation_accepts_utf16_and_rejects_encoded_doctype(tmp_path):
+    backend = ExifToolBackend(tmp_path)
+    packet = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description/></rdf:RDF>'
+    assert backend.validate(packet.encode("utf-16")) is True
+    hostile = '<!DOCTYPE rdf:RDF [<!ENTITY e "bad">]>' + packet
+    with pytest.raises(XmpBackendError):
+        backend.validate(hostile.encode("utf-16"))
 
 
 def test_foreign_mutation_is_rejected(tmp_path):
