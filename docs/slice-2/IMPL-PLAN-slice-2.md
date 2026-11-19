@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C2 are complete; C3–C5 remain open. The Product Owner accepted B2's documented historical RED-evidence gap. Actual digiKam interoperability is not claimed; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
+**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C2 are complete; C3 is partial and C4–C5 remain open. The Product Owner reports real digiKam import/edit and a successful XMP retest after correction; the exact reread procedure and refresh following a separate hierarchical leaf edit remain unverified. A separate independent-prompt-configurability concern remains open. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -385,7 +385,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Phase C — Verification and closeout
 
-**Entry:** B1–B6 delivered with completion evidence. C1–C2 are complete; C3–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
+**Entry:** B1–B6 delivered with completion evidence. C1–C2 are complete; C3 has partial manual evidence, and C3–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
 
 ### Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 
@@ -451,11 +451,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Sanitized operator findings, digiKam UI/round-trip procedure, metadata-quality rubric results and [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md).
 
+**C3 partial result:** The Product Owner reports digiKam import, edits, ancestor filtering, optional author and a successful retest after correction of a structured-XMP defect. The exact reread steps and a refresh/reload after the separate saved hierarchical leaf edit have not been established. The linked record distinguishes manual reports from automated regression, records quality limitations, and preserves the separate prompt-configurability concern.
+
 **Acceptance:**
 - [ ] A real digiKam read/edit/refresh path is observed and recorded; a generated tag is edited and saved, its XMP is read back and refreshed, and hierarchy, title, caption, optional author and preservation meet S2-18.
-- [ ] Human-reviewed metadata examples and outcomes are recorded with limitations; no unsupported claims pass as evidence.
-- [ ] External provider/data/cost permission is documented if used; manual evidence is not represented as automated testing.
-- [ ] Blockers remain unchecked rather than silently converted to success; completion record links to evidence.
+- [x] Human-reviewed metadata examples and outcomes are recorded with limitations; no unsupported claims pass as evidence.
+- [x] External provider/data/cost permission is documented if used; manual evidence is not represented as automated testing.
+- [x] Blockers remain unchecked rather than silently converted to success; completion record links to evidence.
 
 ### Step C4 — Run Linux package, compatibility, and quality gates [TEST]
 
@@ -501,7 +503,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Parent requirements-to-slice allocation
 
-This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C2 evidence is recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
+This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C2 evidence and partial C3 evidence are recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
 
 | Parent REQ area | Slice 1 baseline | Slice 2 allocation | Later candidates and goals | Prerequisites and verification |
 | --- | --- | --- | --- | --- |
@@ -583,7 +585,7 @@ The Phase A design decisions are complete and Phase B implementation is complete
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** C3–C5 remain pending. Actual digiKam import/edit and the minimum interoperable mapping remain C3 obligations; do not portray preliminary ExifTool tests as proving them. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** C3–C5 remain pending. C3 has Product Owner-reported digiKam evidence and a corrected structured-XMP incompatibility; the exact metadata-reread procedure and refreshed state following the separate hierarchical leaf edit remain unverified. ExifTool tests alone do not prove digiKam behavior. The Product Owner also identifies a separate independent-prompt-configurability concern: JSON user-message instruction framing remains hardcoded despite system-prompt replacement. This is not resolved by C3 testing and remains open for Slice 2 reconciliation; no correction is authorized by this documentation update. The reported samples do not establish all S2-18 representative evidence-boundary and category-guidance outcomes. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 
