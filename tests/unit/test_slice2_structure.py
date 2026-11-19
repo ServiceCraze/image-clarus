@@ -181,17 +181,9 @@ def test_canonical_schema_is_2_0_0():
     assert "tag_candidates" in schema["required"]
 
 
-def test_canonical_prompt_is_a2_version():
-    """The canonical prompt resource matches the A2 frozen text and hash."""
-    data = resources.structure_prompt().read_bytes()
-    assert (
-        data
-        == b"Extract structured photo metadata from the persisted description.\n\nUse only facts explicitly stated or directly supported by the description. Do not invent identities, locations, dates, events, intent, or visual details. Broader concepts are allowed only when semantically justified. Return a short meaningful title and a concise caption of the main subject and supported context. Recommend tags a person would search for, ordered from most to least useful, avoiding redundant near-synonyms. Use meaningful category paths when supported; a tag may be uncategorized or occur in multiple relevant categories. Do not invent a category merely to fill a hierarchy. Preferred categories, when supplied separately, are optional guidance, not evidence or a closed taxonomy. Do not include an XMP ownership root in tag paths. Do not force a fixed number of recommendations.\n\nFollow the selected JSON Schema, including its allowed empty values when information is unsupported. Return exactly one JSON object. Do not include schema-version or provenance fields, Markdown fences, comments, or surrounding prose. If validation feedback is supplied, use it to correct the output while following the same evidence limits.\n"
-    )
-    assert (
-        hashlib.sha256(data).hexdigest()
-        == "282bf0bd58c65aff44979f90d4e98f53bdf718a8ecc85c06e262c88d17f8beff"
-    )
+def test_canonical_prompt_is_valid_utf8_text():
+    """The built-in prompt is usable without freezing its wording."""
+    assert resources.structure_prompt().read_bytes().decode("utf-8").strip()
 
 
 # ─── New schema field validation tests ───────────────────────────────────────
@@ -753,9 +745,13 @@ def test_custom_schema_omits_builtin_publication_fields(slice2_context, tmp_path
 # ─── Provenance and fingerprint tests ────────────────────────────────────────
 
 
-def test_prompt_fingerprint_is_effective_prompt_bytes(slice2_context):
+def test_prompt_fingerprint_is_effective_prompt_bytes(slice2_context, tmp_path):
     """prompt_sha256 is the hash of the exact prompt-file bytes sent."""
     c = slice2_context
+    prompt_bytes = "Fictional prompt: café\r\nKeep exact whitespace.\n".encode()
+    prompt = tmp_path / "fictional-prompt.txt"
+    prompt.write_bytes(prompt_bytes)
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.replies[:] = [
         json.dumps(
             {
@@ -781,8 +777,9 @@ def test_prompt_fingerprint_is_effective_prompt_bytes(slice2_context):
     envelope = json.loads(c.output.read_bytes())
     assert (
         envelope["provenance"]["prompt_sha256"]
-        == hashlib.sha256(resources.structure_prompt().read_bytes()).hexdigest()
+        == hashlib.sha256(prompt_bytes).hexdigest()
     )
+    assert c.requests[0]["messages"][0]["content"].encode("utf-8") == prompt_bytes
 
 
 def test_description_fingerprint_is_exact_snapshot(slice2_context):

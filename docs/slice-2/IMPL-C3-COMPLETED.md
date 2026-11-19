@@ -2,6 +2,8 @@
 
 **Status: Complete and accepted by the Product Owner.** The Product Owner confirmed the digiKam **Reread Metadata** action and the subsequent screenshot showing the hierarchical leaf remains unassigned while other generated tags remain intact. Earlier ExifTool output confirms preservation of the manual top-level `food` tag. C3 is closed; Slice 2 remains open.
 
+**Subsequent progress:** C4 is complete; see [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md). C5 remains open.
+
 **Evidence provenance:** The Product Owner selected and processed the real photographs, performed the interactive digiKam checks, and authorized the associated model invocations and costs. Another assistant reviewed command output and screenshots during that session. The observations below are reported in the Product Owner's handoff; this documentation review did not independently perform those manual tests, inspect the original screenshots, or invoke a provider. Real photos and original sidecars are not included here.
 
 **Environment:** Fedora Linux 44; digiKam **9.1.0**; Image Clarus **0.2.1**; ExifTool (manual-test version not supplied). Description generation used a locally run small vision model; JSON generation used an operator-selected external service with reasoning disabled. The Product Owner chose the endpoint, inputs, transfer and expenditure. Private host, provider, model and photo identifiers are intentionally omitted.
@@ -36,7 +38,7 @@ The Product Owner prioritizes useful search coverage and recall for human-assist
 
 ## Automated regression and limitations
 
-The structured-XMP correction was separately exercised through synthetic unit and CLI tests using local ExifTool; the previously observed focused run returned **59 passed**, with Ruff, formatting and locked-dependency checks passing. Those checks are not digiKam GUI evidence. A prior Python 3.13 full-suite run returned 862 passed before a subsequent prompt-resource change; a later Python 3.12 full-suite run returned **859 passed, 3 failed** on frozen prompt text/hash expectations. This documentation task did not rerun or resolve those tests; current quality gates belong to C4.
+The structured-XMP correction was separately exercised through synthetic unit and CLI tests using local ExifTool; the previously observed focused run returned **59 passed**, with Ruff, formatting and locked-dependency checks passing. Those checks are not digiKam GUI evidence. A prior Python 3.13 full-suite run returned 862 passed before a subsequent prompt-resource change; a later Python 3.12 full-suite run returned **859 passed, 3 failed** on frozen prompt text/hash expectations. At C3 closeout these quality gates remained for C4; see subsequent progress above.
 
 The operator observed some external-filesystem permission-preservation warnings even though the affected operations completed. Treat these as observed filesystem-capability limitations, not proof of failure or universal permission behavior. The reported external JSON-generation cost was approximately $0.000221 per image, excluding local inference and other costs; it is an observation for that configuration, not a general price guarantee.
 
@@ -49,4 +51,4 @@ The operator observed some external-filesystem permission-preservation warnings 
 - [x] External provider/data/cost permission is documented if used; manual evidence is not represented as automated testing.
 - [x] Blockers remain unchecked rather than silently converted to success; completion record links to evidence.
 
-**Outstanding outside C3:** The broader representative quality/evidence-boundary and independent-prompt requirements concerns remain open for Slice 2 acceptance; C4 and C5 have not been closed by this record.
+**Outstanding outside C3:** The broader representative quality/evidence-boundary and independent-prompt requirements concerns remain open for Slice 2 acceptance; C5 remains open.

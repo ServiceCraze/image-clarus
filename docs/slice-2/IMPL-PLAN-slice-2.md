@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C3 are complete; C4–C5 remain open. The Product Owner accepted C3 after confirming digiKam's Reread Metadata action and the subsequent hierarchical-tag screenshot. A separate independent-prompt-configurability concern remains open. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
+**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C4 are complete; C5 remains open. The Product Owner retained the current lowercase prompt guidance and directed that prompt wording changes not break tests; the contract and tests were reconciled and both C4 interpreter suites passed. The Product Owner accepted C3 after confirming digiKam's Reread Metadata action and the subsequent hierarchical-tag screenshot. A separate independent-prompt-configurability concern remains open. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -109,7 +109,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 - [x] Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
 - [x] Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
-- [ ] Step C4 — Run Linux package, compatibility, and quality gates [TEST]
+- [x] Step C4 — Run Linux package, compatibility, and quality gates [TEST]
 - [ ] Step C5 — Reconcile Slice 2 evidence and close acceptance [DOCS/TEST]
 
 ---
@@ -385,7 +385,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Phase C — Verification and closeout
 
-**Entry:** B1–B6 delivered with completion evidence. C1–C3 are complete; C4–C5 remain open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
+**Entry:** B1–B6 delivered with completion evidence. C1–C4 are complete; C5 remains open. Running their existing tests as regressions does not itself close their separate acceptance steps. A failing gate requires a bounded in-scope correction with genuine test evidence or a Product Owner decision; do not silently waive criteria.
 
 ### Step C1 — Verify the single-image persisted JSON-to-XMP pipeline [TEST]
 
@@ -474,11 +474,13 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Linux test/quality/build/installed-CLI transcript, compatibility and reachability audit, [IMPL-C4-COMPLETED.md](IMPL-C4-COMPLETED.md).
 
+**C4 result:** After Product Owner direction, the prompt contract and wording-independent tests were reconciled. Python 3.12 and 3.13 each passed 864 tests; lock, Ruff, build and isolated installed-wheel checks passed. The linked record retains the earlier failures and documents the bounded reachability audit, including observed deferred import cycles.
+
 **Acceptance:**
-- [ ] Full tests, Ruff, locked dependency check and build pass on Python 3.13 Linux, with actual commands/outcomes recorded.
-- [ ] Python 3.12 compatibility is executed and passes or remains explicitly blocked/unchecked.
-- [ ] Built/installed package exposes required commands and resources; ExifTool is optional outside XMP, version/lock are coherent.
-- [ ] Production reachability, unused artifacts and no-unapproved-dependency expansion are reviewed; record and checkoffs agree.
+- [x] Full tests, Ruff, locked dependency check and build pass on Python 3.13 Linux, with actual commands/outcomes recorded.
+- [x] Python 3.12 compatibility is executed and passes or remains explicitly blocked/unchecked.
+- [x] Built/installed package exposes required commands and resources; ExifTool is optional outside XMP, version/lock are coherent.
+- [x] Production reachability, unused artifacts and no-unapproved-dependency expansion are reviewed; record and checkoffs agree.
 
 ### Step C5 — Reconcile Slice 2 evidence and close acceptance [DOCS/TEST]
 
@@ -503,7 +505,7 @@ These paths were inspected as existing in the repository at planning time. They 
 
 ## Parent requirements-to-slice allocation
 
-This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C3 evidence is recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
+This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C4 evidence is recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
 
 | Parent REQ area | Slice 1 baseline | Slice 2 allocation | Later candidates and goals | Prerequisites and verification |
 | --- | --- | --- | --- | --- |
@@ -585,7 +587,7 @@ The Phase A design decisions are complete and Phase B implementation is complete
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** C4–C5 remain pending. C3 is complete with Product Owner-reported digiKam evidence and a corrected structured-XMP incompatibility; ExifTool tests alone do not prove digiKam behavior. The Product Owner also identifies a separate independent-prompt-configurability concern: JSON user-message instruction framing remains hardcoded despite system-prompt replacement. This is not resolved by C3 testing and remains open for Slice 2 reconciliation; no correction is authorized by this documentation update. The reported samples do not establish all S2-18 representative evidence-boundary and category-guidance outcomes. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Open Slice 2 work:** C5 remains pending. C3 is complete with Product Owner-reported digiKam evidence and a corrected structured-XMP incompatibility; ExifTool tests alone do not prove digiKam behavior. C4's bounded static audit records deferred import cycles rather than claiming an acyclic graph. The Product Owner also identifies a separate independent-prompt-configurability concern: JSON user-message instruction framing remains hardcoded despite system-prompt replacement. This remains open for Slice 2 reconciliation. The reported samples do not establish all S2-18 representative evidence-boundary and category-guidance outcomes. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
 
 **Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
 

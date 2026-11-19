@@ -13,7 +13,7 @@ ASSETS = (
     (
         "structure_prompt",
         "prompts/image-structure.txt",
-        "282bf0bd58c65aff44979f90d4e98f53bdf718a8ecc85c06e262c88d17f8beff",
+        None,
     ),
     (
         "structure_schema",
@@ -24,14 +24,17 @@ ASSETS = (
 
 
 @pytest.mark.parametrize("name,path,digest", ASSETS)
-def test_source_resource_has_exact_a3_bytes(name, path, digest):
+def test_source_resource_matches_source_and_schema_contract(name, path, digest):
     lookup = getattr(resources, name, None)
     assert callable(lookup), f"{name} resource lookup is missing"
     data = lookup().read_bytes()
     assert data == (ROOT / path).read_bytes()
-    assert hashlib.sha256(data).hexdigest() == digest
-    assert data.endswith(b"\n") and not data.endswith(b"\n\n")
-    assert not data.startswith(b"\xef\xbb\xbf")
+    if digest is not None:
+        assert hashlib.sha256(data).hexdigest() == digest
+        assert data.endswith(b"\n") and not data.endswith(b"\n\n")
+        assert not data.startswith(b"\xef\xbb\xbf")
+    else:
+        assert data.decode("utf-8").strip()
 
 
 @pytest.mark.parametrize("name,path,digest", ASSETS)
@@ -76,4 +79,5 @@ def test_installed_wheel_resource_matches_source(name, path, digest, tmp_path):
         check=True,
     )
     assert result.stdout == (ROOT / path).read_bytes()
-    assert hashlib.sha256(result.stdout).hexdigest() == digest
+    if digest is not None:
+        assert hashlib.sha256(result.stdout).hexdigest() == digest

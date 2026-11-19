@@ -90,6 +90,8 @@ Follow the selected JSON Schema, including its allowed empty values when informa
 
 The exact text above plus its one final LF is 1,207 UTF-8 bytes and has SHA-256 `282bf0bd58c65aff44979f90d4e98f53bdf718a8ecc85c06e262c88d17f8beff`. B2 must read and fingerprint the same byte snapshot it sends as the effective prompt.
 
+**Subsequent Product Owner decision:** Retain the current built-in prompt's additional instruction, “Use lowercase for tags unless it is the proper name of people or places.” The current prompt is 1,280 UTF-8 bytes with SHA-256 `d640f20db83ffb1260cfb6e720b91675b20ced0a2fa11c89629e882f563ca36c`. The original text and hash above remain historical A2/B2 evidence. This is model guidance, not application-enforced case normalization; custom prompts remain replaceable and generated tag spelling remains unchanged by the application. Provenance continues to fingerprint the exact effective prompt bytes.
+
 For built-in schema 2.0.0, `""`, `""`, `[]` represent unsupported title, caption, recommendations. A custom schema is authoritative for its payload and may omit these fields; the built-in prompt's general request never overrides the selected custom schema. A custom prompt remains a full replacement and may choose how it uses the separate guidance. No generated author belongs in this payload contract.
 
 ## Guidance framing, provenance and retry
