@@ -2,7 +2,7 @@
 
 > **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
 
-**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C4 are complete; C5 remains open. The Product Owner retained the current lowercase prompt guidance and directed that prompt wording changes not break tests; the contract and tests were reconciled and both C4 interpreter suites passed. The Product Owner accepted C3 after confirming digiKam's Reread Metadata action and the subsequent hierarchical-tag screenshot. A separate independent-prompt-configurability concern remains open. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
+**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C4 are complete; C5 is partial/blocked. Its evidence crosswalk records an unresolved independent-prompt-configurability concern and gaps in representative S2-18 quality evidence; no waiver or Slice 2 closure decision is inferred. The Product Owner retained the current lowercase prompt guidance and directed that prompt wording changes not break tests; the contract and tests were reconciled and both C4 interpreter suites passed. The Product Owner accepted C3 after confirming digiKam's Reread Metadata action and the subsequent hierarchical-tag screenshot. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -497,6 +497,8 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Final crosswalk, closeout disposition and [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md); synced plan and README status after acceptance.
 
+**C5 partial result:** The linked record crosswalks S2-01–S2-18 and the acceptance outcomes, preserving the Product Owner's C3 acceptance and historical C4 results. The independent-prompt-configurability concern and representative-quality evidence remain open without an approved disposition; C5 and Slice 2 remain open.
+
 **Acceptance:**
 - [ ] All S2 requirements and acceptance outcomes map to executed, reviewable evidence or explicitly remain open with an authorized disposition.
 - [ ] All required tests, digiKam and quality/manual gates are actually satisfied before marking complete.
@@ -550,24 +552,24 @@ The matrix covers each numbered Slice 2 requirement. Phase A owns contract decis
 
 ## S2-18 acceptance-outcome crosswalk
 
-Each row is an **unverified obligation** until cited completion records demonstrate execution and results.
+The following status distinguishes supported exercised outcomes from remaining gaps. See the [C5 partial record](IMPL-C5-COMPLETED.md) for evidence, boundaries and unresolved dispositions; supported rows do not by themselves close Slice 2.
 
 | Outcome | Required evidence owner | Status |
 | --- | --- | --- |
-| JSON output extension, old descriptive fields and provenance | B2, C1, C5 | Pending |
-| Evidence-bound title/caption/tag claims | A2 rubric, C3, C5 | Pending |
-| Ranking, preferred/multiple/uncategorized paths, top-N | A2, B4, C1/C3, C5 | Pending |
-| Human-reviewed metadata quality | A2, C3, C5 | Pending |
-| Standalone stages and persisted handoffs | B5, C1, C5 | Pending |
-| digiKam hierarchy recognition, generated-tag edit/readback and ancestor filtering | A3, C3, C5 | Pending |
-| Nonempty/empty root policy and idempotence | B4, C1–C2, C5 | Pending |
-| Editable title/caption, independent policies | B3–B4, C3, C5 | Pending |
-| Optional author, no-author preservation, all policies | B1, B3–B4, C2–C3, C5 | Pending |
-| Existing XMP preservation including flat keywords | A3, C2–C3, C5 | Pending |
-| Safe writes, failures, ExifTool optionality, no image edits | B3–B5, C1–C2/C4, C5 | Pending |
-| Historical/custom JSON handling, schema/version evolution | A2/A4, B2/B4/B6, C1, C5 | Pending |
-| CLI-over-YAML precedence, selected-stage isolation | A4, B1, C1/C4, C5 | Pending |
-| Public synthetic/sanitized fixtures | A3, B3, B6, C2–C5 | Pending |
+| JSON output extension, old descriptive fields and provenance | B2, C1, C5 | Supported |
+| Evidence-bound title/caption/tag claims | A2 rubric, C3, C5 | Open: representative output evidence not established |
+| Ranking, preferred/multiple/uncategorized paths, top-N | A2, B4, C1/C3, C5 | Partial: deterministic top-N supported; representative quality coverage incomplete |
+| Human-reviewed metadata quality | A2, C3, C5 | Supported qualitative review, with recorded limitations |
+| Standalone stages and persisted handoffs | B5, C1, C5 | Supported |
+| digiKam hierarchy recognition, generated-tag edit/readback and ancestor filtering | A3, C3, C5 | Supported by Product Owner-reported evidence |
+| Nonempty/empty root policy and idempotence | B4, C1–C2, C5 | Supported for exercised combinations |
+| Editable title/caption, independent policies | B3–B4, C3, C5 | Supported for tested cases |
+| Optional author, no-author preservation, all policies | B1, B3–B4, C2–C3, C5 | Supported for tested cases |
+| Existing XMP preservation including flat keywords | A3, C2–C3, C5 | Supported for tested structures |
+| Safe writes, failures, ExifTool optionality, no image edits | B3–B5, C1–C2/C4, C5 | Supported for exercised paths; limitations recorded |
+| Historical/custom JSON handling, schema/version evolution | A2/A4, B2/B4/B6, C1, C5 | Supported; separate prompt-configurability concern open |
+| CLI-over-YAML precedence, selected-stage isolation | A4, B1, C1/C4, C5 | Supported |
+| Public synthetic/sanitized fixtures | A3, B3, B6, C2–C5 | Targeted scan passed; not exhaustive proof |
 
 ## Consolidated Phase A decisions and gates
 

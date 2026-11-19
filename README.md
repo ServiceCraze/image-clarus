@@ -1,6 +1,6 @@
 # image-clarus
 
-Image Clarus is an open-source CLI for describing one image, generating structured metadata and publishing selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible models; XMP publication consumes persisted JSON without a model. Search and batch processing are not implemented. Actual digiKam interoperability remains to be verified manually.
+Image Clarus is an open-source CLI for describing one image, generating structured metadata and publishing selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible models; XMP publication consumes persisted JSON without a model. Search and batch processing are not implemented. The Product Owner has reported successful manual digiKam interoperability checks, subject to the documented limits below.
 
 ## Install
 
@@ -115,7 +115,7 @@ Schema evolution is independent: incompatible required-field or meaning changes 
 | Explicit `""` | `add`, `new`, `overwrite` | Effective `add`: union without duplicates; **never delete existing tags**. |
 | Explicit `""` | `disabled` | Leave tags unchanged. |
 
-Ownership is case-sensitive by complete root segment: `ai` is not `aisle`. There is no cross-root taxonomy reconciliation or synchronization. Flat keywords and Lightroom hierarchy are not write targets. XMP writes only `XMP-digiKam:TagsList`, `XMP-dc:Title-x-default`, `XMP-dc:Description-x-default`, and, when configured, `XMP-digiKam:CaptionsAuthorNames-x-default`. This is a preliminary mapping, not proof of digiKam compatibility or of the minimum field set.
+Ownership is case-sensitive by complete root segment: `ai` is not `aisle`. There is no cross-root taxonomy reconciliation or synchronization. Flat keywords and Lightroom hierarchy are not write targets. XMP writes only `XMP-digiKam:TagsList`, `XMP-dc:Title-x-default`, `XMP-dc:Description-x-default`, and, when configured, `XMP-digiKam:CaptionsAuthorNames-x-default`. The Product Owner's manual digiKam checks exercised these mappings; they do not establish compatibility with every digiKam version or XMP structure.
 
 Title, caption and caption author have independent `new`, `overwrite` and `disabled` policies, each defaulting to `new`. For a nonempty available source:
 
@@ -137,7 +137,7 @@ Writes use the shared artifact service's staged validation, backup and recovery 
 
 Only one image path is accepted; directories, globs, traversal and batches are not implemented. `search --help` works, but `search` reports not implemented and exits `3`. There is no internal scheduler; external schedulers may invoke the CLI. Linux is the required test platform; other operating systems are not claimed as fully tested.
 
-ExifTool synthetic round trips are not digiKam interoperability tests. Actual digiKam import, metadata reread/refresh, hierarchy/filtering, title/caption/author display and edit/save behavior remain **unverified** and are assigned to manual C3 verification. External sidecar changes may require a metadata reread or database refresh; the exact procedure and result must be established there, not assumed.
+ExifTool synthetic round trips are not digiKam interoperability tests. In manual digiKam 9.1.0 testing, the Product Owner reported successful import, hierarchy filtering, title/caption and author display, and tag edit/readback; **Reread Metadata** was used to refresh the edited sidecar. See the [C3 evidence](docs/slice-2/IMPL-C3-COMPLETED.md) for the observed XMP incompatibility, correction, retest and limitations. External sidecar changes may require a metadata reread or database refresh; do not assume an automatic refresh.
 
 ## Project documents
 
