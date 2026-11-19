@@ -20,7 +20,7 @@ This design establishes component boundaries, configuration semantics, artifact 
 
 - Independently executable, file-in/file-out processing stages. Independence does not imply a separate OS process per stage.
 - Persisted sidecars are authoritative interstage handoffs, including when stages run sequentially in one CLI process.
-- One configurable CLI, with minimal orchestration and no internal scheduler, persistent job queue, or image database.
+- One configurable CLI, with minimal orchestration and no internal scheduler, mandatory persistent job queue, or mandatory centralized image database. Optional embedded application state is distinct from an image database or job queue.
 - Reuse cross-cutting services without encoding stage-specific behavior in the coordinator.
 - Source-image integrity, preservation of unrelated metadata, and recoverable sidecar writes.
 - Linux is required; other OS support is desirable without a mandatory cross-platform CI matrix.
@@ -32,8 +32,12 @@ This design establishes component boundaries, configuration semantics, artifact 
 
 ```mermaid
 flowchart TB
-  CLI["CLI - process and search"] --> CFG["Configuration loader"]
+  CLI["CLI - init, process and search"] --> CFG["Configuration loader"]
   CLI --> COORD["Process coordinator"]
+  CLI --> RESOLVE["State resolution and initialization"]
+  RESOLVE --> STORE["Embedded state storage"]
+  STORE --> SQLITE["SQLite or in-memory backend"]
+  DOMAINS["State domains - categories and future domains"] --> STORE
   CLI --> SEARCH["Search service"]
   COORD --> DISC["Image discovery"]
   COORD --> REG["Ordered stage registry"]
@@ -42,6 +46,10 @@ flowchart TB
   REG --> XMP["XMP stage"]
   DESC --> MODELS["Model interface and providers"]
   JSON --> MODELS
+  DESC --> PROMPT["Prompt interpolation"]
+  JSON --> PROMPT
+  CFG -.-> PROMPT
+  PROMPT -.-> DOMAINS
   DESC --> ART["Shared artifact service"]
   JSON --> ART
   XMP --> ART
@@ -54,9 +62,11 @@ flowchart TB
   CFG -.-> MODELS
 ```
 
-**CLI and command routing.** Parse `process` or `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`.
+**CLI and command routing.** Route `init`, `process` and `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`. `init` and the state capabilities below are architectural direction, not claims of existing implementation.
 
 **Configuration loader.** Discover, parse, merge defaults and CLI overrides, and validate general configuration; provide an immutable resolved configuration to consumers. The coordinator passes the entire resolved configuration to each stage without extracting stage-specific subsets.
+
+**Application state and prompt interpolation.** Independent state resolution, storage, and domain operations expose reusable state across stages and invocation mechanisms. A separate interpolation facility supplies author-selected non-sensitive configuration and state values to replaceable prompts; it does not require a category-specific injection. Their contracts are described in §§4.4–4.5.
 
 **Image discovery.** Stream eligible source image paths from files, directories, and patterns. It does not decide stage eligibility or processing success.
 
@@ -138,7 +148,7 @@ Configuration resolution is an independent component:
 4. Validate global structure and override paths, then supply the resolved configuration to consumers.
 5. Validate selected stage requirements only when that stage is selected, so an unused missing provider or stage-specific credential does not block an unrelated operation.
 
-No implicit merge between user and system files. An explicit config file disables discovery. Optional prompt and schema overrides have their own independent paths and fallbacks. The final YAML key schema, generic override value parsing, and exact argument grammar, placement, repeatability, and conflict rules remain implementation-plan details; the accepted CLI conventions are listed in §5.
+No implicit merge between user and system files. An explicit config file disables configuration-file discovery. Optional prompt and schema overrides have their own independent paths and fallbacks. State-directory selection is a separate resolution process (§4.5), with CLI and YAML choices ahead of directory discovery; it does not change configuration-file precedence. The final YAML key schema, generic override value parsing, and exact argument grammar, placement, repeatability, and conflict rules remain implementation-plan details; the accepted CLI conventions are listed in §5.
 
 | OS | User configuration directory | System configuration directory |
 | --- | --- | --- |
@@ -170,22 +180,43 @@ The built-in description prompt at `prompts/image-description.txt` is **exactly*
 
 > Fully describe and explain everything about this image.
 
-Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema covers useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Slice 1's exact initial schema, prompt and provenance contract are recorded in its A3 completion record (§10.3). The accepted Slice 2 requirements add distinct title, concise caption and ranked category recommendations without replacing the existing descriptive information; their exact payload shape, schema evolution and compatibility are Slice 2 design work, not frozen here.
+Do not add text to that built-in prompt. Both description and JSON-generation prompts can be independently overridden with external files/CLI configuration. All model-facing prompt instructions, including contextual framing, must be user-editable; built-in prompts may use macros but remain fully replaceable. No hardcoded category-guidance injection or other mandatory contextual wording is required. A reusable interpolation facility exposes `config` (non-sensitive resolved configuration) and `state` (application state), including illustrative `{{config.stages.json.preferred_categories}}` and `{{state.categories.known}}`. The author chooses whether and where macros appear and the surrounding instructions; the facility must accommodate future values rather than only these examples. Credentials and other secret-bearing values must not be interpolatable, directly or through containing configuration objects, including credentials resolved from environment variables. Macro grammar, expansion and serialization belong to subsequent design.
+
+`preferred_categories` supports complete hierarchical paths and existing single-segment values. Preferred and accumulated known category paths are advisory, not a closed taxonomy; users decide whether accumulated state influences generation. No separate model call or automatic taxonomy reconciliation is required. Prompt wording is configurable data: unit tests requiring fixed text use independent fixtures so production prompt wording changes do not break previously passing tests.
+
+The JSON stage consumes the persisted description and produces schema-validated structured metadata. Its built-in schema covers useful subjects/objects, actions, setting/context, visual features, search terms/tags, and model/prompt provenance. It must be fully replaceable by a user-provided schema, with configurable validation retry using error feedback. Slice 1's initial schema, prompt and provenance contract are recorded in its A3 completion record (§10.3). Slice 2 added distinct title, concise caption and ranked category recommendations; its design and implementation records preserve the historical contract and compatibility evidence.
+
+### 4.5 Application state and resolution
+
+The planned application-state facility is independent of processing stages and invocation mechanisms: single-image CLI, separately launched processes, digiKam scripting and eventual native batching use the same state and interpolation capabilities. It is not a mandatory image database, centralized server or persistent job queue. Separate responsibilities for state resolution, storage and domain operations allow independently evolving domains. Known hierarchical category paths are the first consumer; native batch execution history is a possible future consumer, not an implementation commitment.
+
+Use embedded SQLite through Python's built-in `sqlite3` as the initial persistent backend, with storage internal to the application-owned `.image-clarus/` directory. Provide an in-memory backend when no state directory is explicitly selected and discovery finds no initialized repository. Persistent state survives separate invocations and supports independent processes accessing shared state safely, including schema versioning and migrations. Keep transactions short and never hold one during model inference. SQLite state concurrency is separate from the lock-free sidecar-write contract in §7.
+
+`image-clarus init` explicitly initializes persistent state in `.image-clarus/` under the current working directory. Normal processing never initializes a persistent repository automatically. Resolve state in this order:
+
+1. Explicit CLI state-directory parameter.
+2. YAML-configured state directory.
+3. Search the current working directory and its ancestors for `.image-clarus/`.
+4. If none is found there, search the image directory and its ancestors.
+5. If none is found, use in-memory state.
+
+Current-working-directory discovery wins over image-directory discovery even when an image belongs to another initialized collection; nested initialized directories must be supported. Explicit selection allows one repository to be shared across unrelated collections. If a CLI- or YAML-selected directory is missing, invalid, corrupted or inaccessible, report an error rather than falling back to another repository or memory. Keep discovery locations and ordering separable from persistence so a future release can make them configurable without redesigning storage; configurable precedence is not introduced here. Nested selection details, discovered-repository failure handling, SQLite schema, migration SQL, macro grammar and implementation algorithms belong to subsequent design.
 
 ## 5. CLI and operational architecture
 
-The CLI has two primary subcommands:
+The end-state CLI has these subcommands:
 
 - `image-clarus process` — process selected image files using selected stages.
 - `image-clarus search` — search previously generated sidecars without model calls.
+- `image-clarus init` — explicitly initialize persistent application state in the current working directory.
 
-**Accepted CLI conventions:** The executable is `image-clarus`, with `process` and `search` subcommands and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
+**Accepted CLI conventions:** The executable is `image-clarus`, with `process` and `search` subcommands, planned `init`, and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
 
 **Illustrative syntax:** Examples such as `--stages=desc,json` and `--set path=value` show intended option/value shapes, not a frozen argument grammar. The implementation plan for the relevant slice will settle exact argument placement (`=` versus a separate value), repeatability, positional arguments, `--set` value parsing, option conflicts, and output/result schemas.
 
 **Discovery.** Accept file paths, directories, and glob patterns/filters. Stream one eligible image at a time, with recursive traversal enabled by default. Process eligible files within a directory before descending depth-first. A configurable extension allowlist initially considers `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff`. Model decoding failures are distinct from extension selection. Exclusion filters may be added later.
 
-**Execution and resumption.** A single process may run all selected stages sequentially, or external tools may invoke stages independently, including concurrently. Existing valid output sidecars provide natural resume/skip signals; no stored job queue is needed. systemd, cron, and other external schedulers own timing and scheduling. The CLI may later expose configurable run bounds for externally orchestrated jobs.
+**Execution and resumption.** A single process may run all selected stages sequentially, or external tools may invoke stages independently, including concurrently. Existing valid output sidecars provide natural resume/skip signals; no stored job queue is needed. systemd, cron, and other external schedulers own timing and scheduling, using Image Clarus execution controls. digiKam scripting can offer interactive selection and invocation, without making digiKam a core dependency or replacing native unattended batching. Native search remains independent. The CLI may later expose configurable run bounds for externally orchestrated jobs.
 
 **Failures and reporting.** Model/provider, timeout, authentication, invalid configuration, schema validation, corrupt/unsupported image, missing prerequisite, and filesystem errors have distinguishable categories. Built-in retry count is **zero**; opt-in retry/backoff and category-specific actions are configurable. Report stage results and a completed/skipped/failed batch summary. Support configurable console/file logging, levels, and nonzero exit statuses for failures.
 
@@ -212,7 +243,7 @@ Earlier inspection of a digiKam sidecar recorded these representations of one hi
 
 ACDSee and MediaPro representations were also present in the inspected file. The sample had no populated `dc:title` or `dc:description`. These are **observations**, not proof that every listed field must be modified for digiKam interoperability. In particular, avoid assuming `lr:hierarchicalSubject` is writable merely because it is present. Exact write targets, hierarchy conversion, and handling of shared flat keyword lists require fixture-based verification, without restarting the completed high-level discovery.
 
-Slice 2 A3 selects a preliminary mapping: `digiKam:TagsList` for slash-separated assignments and the `x-default` alternatives of `dc:title`, `dc:description`, and `digiKam:CaptionsAuthorNames`; preserve shared flat keywords and other observed vendor representations. Synthetic ExifTool checks support the design but do not prove digiKam interoperability. See the [A3 design record](slice-2/IMPL-A3-COMPLETED.md); actual import, edit and save are verified in C3.
+Slice 2 A3 selected a preliminary mapping: `digiKam:TagsList` for slash-separated assignments and the `x-default` alternatives of `dc:title`, `dc:description`, and `digiKam:CaptionsAuthorNames`; preserve shared flat keywords and other observed vendor representations. Synthetic ExifTool checks alone do not prove digiKam interoperability. The [C3 record](slice-2/IMPL-C3-COMPLETED.md) documents Product Owner-reported import, edit and reread, including the corrected incompatibility; see also the historical [A3 design record](slice-2/IMPL-A3-COMPLETED.md).
 
 ### 6.3 Tag hierarchy ownership and policies
 
@@ -235,9 +266,9 @@ Title and description are independent XMP fields, each supporting `new`, `overwr
 - `overwrite` replaces the current field value.
 - `disabled` leaves the field unchanged.
 
-Not every structured JSON field is exported to XMP. Under the accepted Slice 2 requirements, absent or supported empty optional source values leave the corresponding destination unchanged, even under `overwrite`. An optional config-supplied caption author has separate `new`, `overwrite`, and `disabled` policies; absent configuration leaves author metadata unchanged. A3 and A4 define the preliminary mappings and localized-value handling; actual interoperability remains C3 work.
+Not every structured JSON field is exported to XMP. Under the accepted Slice 2 requirements, absent or supported empty optional source values leave the corresponding destination unchanged, even under `overwrite`. An optional config-supplied caption author has separate `new`, `overwrite`, and `disabled` policies; absent configuration leaves author metadata unchanged. A3 and A4 define the preliminary mappings and localized-value handling; C3 records accepted, Product Owner-reported interoperability evidence.
 
-Slice 2 A4 defines `new` as writing only when all language alternatives for the field are absent or empty, and `overwrite` as updating only `x-default`; other languages remain intact. The [A4 record](slice-2/IMPL-A4-COMPLETED.md) defines exact configuration, custom-schema mappings, selected-stage validation and stage outcomes. It is a design contract, not evidence that the XMP stage is implemented.
+Slice 2 A4 defines `new` as writing only when all language alternatives for the field are absent or empty, and `overwrite` as updating only `x-default`; other languages remain intact. The [A4 record](slice-2/IMPL-A4-COMPLETED.md) defines the historical design contract; subsequent implementation and verification are recorded in the [Slice 2 plan](slice-2/IMPL-PLAN-slice-2.md).
 
 ### 6.5 Validation and public fixtures
 
@@ -266,11 +297,11 @@ The service must account for filesystems on which replacement or durability is n
 
 ### 7.2 Deliberately lock-free concurrent access
 
-**No application-level file locking in the initial architecture.** Independent processes use unique temporary files, and filesystem-supported replacement rather than directly interleaving destination writes. Where replacement is atomic, readers see complete versions; **last replacement wins** when writers race.
+**No application-level sidecar file locking in the initial architecture.** Independent processes use unique temporary files, and filesystem-supported replacement rather than directly interleaving destination writes. Where replacement is atomic, readers see complete versions; **last replacement wins** when writers race. Embedded SQLite concurrency is a separate state-storage concern, not a change to this sidecar contract.
 
 Possible rare consequence: one writer's description, JSON, or XMP merge may supersede another's result, losing concurrent edits (including edits from digiKam). The app does not promise to detect these conflicts or make concurrent XMP merges serializable. Filesystem errors are reported normally; Linux does not ordinarily refuse writes just because another process is updating the same path. Concurrent backup/cleanup races also cannot be completely eliminated without coordination; document this limitation, rather than promising stronger protection than implemented.
 
-Users who may run Image Clarus concurrently with digiKam can coordinate runs externally. There are no lock files, stale-lock recovery protocols, or lock timeouts.
+Users who may run Image Clarus concurrently with digiKam can coordinate runs externally. The sidecar service has no lock files, stale-lock recovery protocols, or lock timeouts; this does not prohibit SQLite's own concurrency mechanisms.
 
 ## 8. Implementation strategy and slice roadmap
 
@@ -279,7 +310,7 @@ Build independently usable, numbered slices. Each slice has its own implementati
 | Slice | Architectural capability | Boundary |
 | --- | --- | --- |
 | **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
-| **Slice 2 (requirements accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author, sanitized fixtures; design and implementation pending |
+| **Slice 2 (complete and accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author and sanitized fixtures; accepted prompt-control gap carried forward |
 | Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |
@@ -293,6 +324,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - **Stage independence:** Run `desc`, `json`, and their combination; verify registry order, selected-stage-only behavior, missing prerequisites, skip/new-only logic, regeneration and configurable continuation.
 - **Models:** Use distinct named models for `desc` and `json`, then a shared model; validate local/remote OpenAI-compatible transport, credentials, reasoning mapping, disabled/default reasoning, and unsupported capability errors.
 - **Structured output:** Inspect real JSON results for usefulness and schema conformance; reject malformed output and test optional validation retry. Verify provenance without committing private tokens or endpoint secrets.
+- **State and prompts:** Verify explicit initialization and resolution precedence, explicit-selection failures, in-memory fallback, shared-process concurrency and migrations, and that no transaction spans model inference. Exercise macro expansion with non-sensitive fixture values and secret exclusion, including containing objects and environment-resolved credentials; use independent prompt fixtures instead of freezing production wording.
 - **Filesystem safety:** Exercise create, replace, backup restoration, existing-original-plus-backup, interrupted writes, stale temporary cleanup, permissions, and deliberate overlapping writes. Explicitly test last-write-wins limitations rather than presenting them as conflict detection.
 - **XMP:** Use sanitized representative digiKam fixtures, ExifTool round trips, field-specific policies, shared flat-keyword preservation, and digiKam read/edit checks. No private EXIF/GPS/device data in public fixtures.
 - **Batch and search:** Test streaming traversal order, independent failure/skip counts, deterministic case-insensitive matching, selected JSON fields, and machine-readable output when those slices are implemented.
@@ -302,30 +334,33 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 ### 10.1 Decided
 
-- Single CLI `image-clarus` with `process` and `search`, including top-level and subcommand help plus `image-clarus --version`.
+- Single CLI `image-clarus` with `process`, `search` and planned explicit state `init`, including top-level and subcommand help plus `image-clarus --version`.
 - Application releases use Semantic Versioning; Slice 1 starts at `0.1.0` and stays on the `0.1.x` line. The JSON metadata schema version is independent of the application version.
 - Independent `desc`, `json`, `xmp` stages using persisted file handoffs; ordered registry; image-first execution; selectable subsets with no automatic prerequisite expansion.
 - Coordinator delegates configuration interpretation and completion policy to each stage and applies configurable continuation policy to structured results.
 - One YAML `config.yaml`, prompts/schemas external and separately overridable; configuration precedence CLI > selected YAML > defaults; global then selected-stage validation.
 - Named provider and model configuration, with model selection per model-driven stage; initial OpenAI-compatible Chat Completions transport; configurable generic-to-native reasoning mapping.
-- Shared format-independent artifact service, `.bak` recovery defaults, disposable stale temp files, no file locking, accepted last-write-wins behavior.
+- Shared format-independent artifact service, `.bak` recovery defaults, disposable stale temp files, no sidecar file locking, accepted last-write-wins behavior.
+- Embedded SQLite application state via `sqlite3`, explicit initialization and the resolution precedence in §4.5; separate resolution, persistence and domain operations, with in-memory fallback only when no explicit directory is selected and discovery finds none.
+- Extensible user-controlled prompt interpolation with non-sensitive `config` and application `state` namespaces; no secret-bearing configuration exposed and no mandatory hardcoded contextual framing.
 - digiKam-only tag writes for the initial XMP release; omitted root defaults to `ai`, never `auto`; `add` is the default tag policy. Non-empty-root policies affect only that root; an explicitly empty root forces `add` for enabled policies and never deletes existing tags.
 - Title and description independently default to `new`, with `overwrite` and `disabled` alternatives.
-- ExifTool only for initial XMP backend; independent search without model calls or database.
+- ExifTool only for initial XMP backend; independent native search without model calls or a mandatory image database.
 - **Slice 1 contains both description and structured JSON generation for one image.**
 
 ### 10.2 Observed, not yet fully mapped
 
 - Earlier digiKam XMP showed `digiKam:TagsList`, `lr:hierarchicalSubject`, and `dc:subject` alongside representations from MicrosoftPhoto, ACDSee, and MediaPro.
 - The inspected sample had no populated XMP title or description.
-- Exact writable field subsets, hierarchy/flat-keyword coherence, and ExifTool round-trip behavior still require fixture validation; observations must not be mistaken for verified write mappings.
+- These observations alone do not establish writable field subsets or interoperability; Slice 2's subsequent synthetic and Product Owner-reported evidence is recorded in C2 and C3.
 
 ### 10.3 Open for implementation planning
 
 - **Phase A design handoff (historical readiness gate):** The Slice 1 plan records A1 package/runtime/dependency/version-source choices; A2 CLI, configuration, typed `--set`, result, failure, and exit contracts; A3 JSON schema/prompt/provenance and artifact-validity rules; A4 Chat Completions request, reasoning mapping, transport, and security rules; and A5 safe-write transaction, backup-retention (`pipeline.backup_retention`), recovery, and concurrency rules. A4 limits Slice 1 generation controls to reasoning effort, deferring HLD §4.2's broader generation-parameter capability without removing that end-state requirement; its provider-path redaction preserves A2's intentional result-path reporting. See [IMPL-PLAN-slice-1.md](slice-1/IMPL-PLAN-slice-1.md) and its linked completion records. Erik accepted the A3 Product Owner review during A6; the Phase A readiness gate has passed. At that handoff Phase B/C implementation had not started; later work is recorded in the plan.
-- Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3 and exercised in Slice 1; see the [C5 evidence crosswalk](slice-1/IMPL-C5-COMPLETED.md). Later-slice behavior remains unimplemented.
+- Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3 and exercised in Slice 1; see the [C5 evidence crosswalk](slice-1/IMPL-C5-COMPLETED.md). Subsequent Slice 2 behavior is recorded in its own plan; other later-slice capabilities remain unimplemented unless separately recorded.
 - A5 freezes artifact-service transaction/state/fault semantics and the backup-retention config leaf in [IMPL-A5-COMPLETED.md](slice-1/IMPL-A5-COMPLETED.md). B5 implemented the original service; the approved mode correction has automated evidence and an operator-reported NTFS/FUSE probe. The Product Owner accepted the documented test-order evidence exception. See the [correction record](slice-1/IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md). Do not add filesystem-specific branches or claim crash-proof writes without observed evidence.
-- Slice 2 A3 records the preliminary JSON-to-XMP mapping and preservation contract; C3 verifies the actual minimum interoperable field set in digiKam.
+- Slice 2 A3 records the preliminary JSON-to-XMP mapping and preservation contract; accepted C3 records Product Owner-reported digiKam interoperability and its limits.
+- For the planned state and prompt facilities, subsequent design must settle storage schema, migrations and concurrent failure handling, nested discovery details, macro grammar/serialization and secret-safe interpolation behavior without narrowing §4.4–4.5.
 
 ### 10.4 Deferred without narrowing the end-state requirements
 
@@ -339,4 +374,6 @@ The Product Owner has superseded the earlier B2 HTTP destination restriction: th
 
 The Product Owner explicitly decided the empty-root policy in Slice 2: omission selects `ai`; an explicit empty string makes enabled tag policies additive and non-destructive. The parent REQ and §6.3 now reflect that decision. The Product Owner accepted the Slice 2 REQ on 2026-11-17; XMP mappings, schema details and implementation are not established by that acceptance.
 
-The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; application releases use SemVer with Slice 1 starting at `0.1.0`; the CLI exposes `--version`; the JSON schema version is independent; XMP title and description default to `new`; and the initial architecture is lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. Carry these decisions into Slice 1's implementation plan and into later slice plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.
+The November 2026 parent REQ refinements specify general-purpose state, explicit initialization and discovery, independent full prompt control and secret-safe macros. Sections 4.4–4.5 record the selected embedded SQLite architecture and these decisions without claiming implementation. The Slice 2 prompt-control gap was accepted at closeout and remains future work; the separate early-identification process lesson is recorded in the REQ. Slice 2 implementation and verification were subsequently completed as recorded in its plan and closeout, not merely by acceptance of its REQ.
+
+The REQ now reflects the approved decisions that Slice 1 includes single-image `desc` and `json` processing, with both stages independently invocable; application releases use SemVer with Slice 1 starting at `0.1.0`; the CLI exposes `--version`; the JSON schema version is independent; XMP title and description default to `new`; and initial sidecar writes are lock-free with last-successful-replacement-wins behavior and accepted lost-update risk. These decisions are recorded in Slice 1's implementation plan and carry into later plans where relevant. Other metadata representations remain part of the end-state requirements but are not synchronized in the initial XMP release.
