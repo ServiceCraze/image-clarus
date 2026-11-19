@@ -2,7 +2,7 @@
 
 **Status at C1 closeout:** Complete for C1's synthetic black-box CLI and persisted-artifact verification. C2–C5 remained open at that closeout; ExifTool results are not digiKam interoperability evidence.
 
-**Subsequent progress:** C2 metadata-preservation, recovery, failure-boundary and lock-free process-overlap verification is complete; see [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md). C3–C5 remain open.
+**Subsequent progress:** C2 metadata-preservation, recovery, failure-boundary and lock-free process-overlap verification and C3 Product Owner-reported digiKam verification are complete; see [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md) and [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md). C4–C5 remain open.
 
 **Scope deviations:** None. This is a TEST step: new tests exercise the already-implemented production behavior and are supplemental GREEN scenario coverage, not a claim of observed test-first RED.
 

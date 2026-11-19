@@ -1,6 +1,8 @@
 # Step C2 — Verify metadata preservation, write recovery, and failure boundaries (COMPLETED)
 
-**Status:** Complete for C2's synthetic XMP preservation, safe-write/recovery, and lock-free process-overlap acceptance. C3–C5 remain open. ExifTool evidence is not digiKam interoperability evidence.
+**Status at C2 closeout:** Complete for C2's synthetic XMP preservation, safe-write/recovery, and lock-free process-overlap acceptance. C3–C5 remained open at that time. ExifTool evidence is not digiKam interoperability evidence.
+
+**Subsequent progress:** C3 is complete based on Product Owner-reported digiKam testing; see [IMPL-C3-COMPLETED.md](IMPL-C3-COMPLETED.md). C4–C5 remain open.
 
 **Scope deviations:** None. This is a TEST step; no production source changed. New tests add supplemental GREEN acceptance coverage to the existing B3–B5 behavior. The first focused run had four failures in the newly written test helper, which incorrectly compared the intentionally changed `TagsList` as an unchanged field; that assertion was corrected and the focused rerun passed. No product RED or historical test-first result is claimed.
 
@@ -31,7 +33,7 @@ All image content and metadata values in these tests are synthetic and fictional
 - Full suite with ExifTool 13.64 on `PATH` and pytest temporary files on XFS: **853 passed** on Python **3.13.15** and **853 passed** on Python **3.12.14**. One combined invocation of integration and both interpreter suites exceeded the terminal's 420-second foreground limit before returning test output; it is not counted as a suite result. The three suites were then run separately and passed as recorded above.
 - The two-process overlap test was run ten times; each repetition passed. `uv lock --locked`, Ruff check and format check across `src/image_clarus` and `tests` passed. CLI reported `image-clarus 0.1.32`.
 - `df -T` confirmed the test temporary directory is on **XFS** and the checkout is on **virtiofs**. The C2 temporary-file scenarios ran on XFS. No separate NTFS/ACL mount was exercised; mode limitations were covered through the existing capability and fault simulations. ExifTool 13.64 was available locally; no system install was performed. Absolute environment-specific paths and private mount labels are omitted.
-- The lock-free design still permits lost updates and backup/cleanup races. This is not evidence of conflict detection, crash/power-loss durability, universal filesystem behavior, or digiKam compatibility. Real digiKam import/edit/read-back remains C3; C4/C5 remain open.
+- The lock-free design still permits lost updates and backup/cleanup races. This is not evidence of conflict detection, crash/power-loss durability, universal filesystem behavior, or digiKam compatibility. At C2 closeout, real digiKam import/edit/read-back remained C3; see subsequent progress above.
 
 ## Acceptance
 
