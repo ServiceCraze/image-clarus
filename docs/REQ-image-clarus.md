@@ -20,6 +20,7 @@ The tool will use configurable vision and language models to produce descriptive
 - The built-in behavior must remain useful for a simple interactive command. Configuration and CLI overrides support automated jobs; do not hard-code special scheduling behavior.
 - The source images remain unchanged. Generated artifacts are sidecar files in the same directory as their images.
 - Build in small, independently usable slices, starting with one operation on one image. Preserve the end-state requirements without implementing every feature in the first slice.
+- Requirements describe capabilities Image Clarus must enable in its operating environment, not necessarily functionality implemented entirely inside Python. External tools may fulfill capabilities using Image Clarus building blocks, without replacing the independent native batch and search requirements.
 
 ## Runtime and external dependencies
 
@@ -29,6 +30,7 @@ The tool will use configurable vision and language models to produce descriptive
 - Define project metadata and dependencies in `pyproject.toml`; use `uv` for dependency management, commit `uv.lock`, and use an isolated Python environment for development.
 - Description and structured JSON generation must not require external executables beyond Python.
 - ExifTool is the recommended external executable for XMP processing. If used, it must be required only when the XMP stage is selected.
+- Core functionality must not depend on digiKam or any other specific photo-management application.
 
 ## Processing stages and artifacts
 
@@ -57,6 +59,7 @@ Given `2023_04_23_15_05_42.jpg`:
 - Allow CLI overrides for configured image formats.
 - Exclusion patterns (e.g., thumbnails, backups) are desired in a later slice.
 - For a selected stage, use existing output sidecars to decide whether work is already complete. A missing prerequisite does not create a false completion marker.
+- Native multi-image batch processing must support independent, unattended collection processing. digiKam scripting may provide interactive image selection and batch invocation, but is complementary to native batching rather than a substitute.
 
 ## Stage dependencies
 
@@ -78,7 +81,9 @@ Given `2023_04_23_15_05_42.jpg`:
 - Provide built-in default prompts for description and structured generation.
 - The built-in default description prompt is `prompts/image-description.txt`, with the exact text: `Fully describe and explain everything about this image.` No additional instructions are part of this default prompt.
 - Support overriding each prompt independently through configuration, an external text file, or CLI parameters; external prompt files should be version-control friendly.
-- Support variable interpolation in user-configurable prompts using namespaces that distinguish value sources: `config` exposes configuration values and `state` exposes accumulated or discovered application state. Illustrative examples are `{{config.stages.json.preferred_categories}}` and `{{state.categories.known}}`. Users choose whether to include a macro, where it appears, and the surrounding instructions. Do not require automatic insertion of category guidance into every prompt or impose hardcoded contextual instructions that unnecessarily constrain prompt design. Final macro syntax, expansion and value serialization are design work; these examples do not claim current implementation.
+- All model-facing prompt instructions, including contextual framing, must be user-editable. Built-in prompts may use macros but must remain fully replaceable; do not require hardcoded category-guidance injection or other mandatory contextual prompt wording.
+- Support extensible namespaced macros in user-configurable prompts: `config` exposes resolved configuration and `state` exposes application state. Illustrative examples are `{{config.stages.json.preferred_categories}}` and `{{state.categories.known}}`. Users choose whether to include macros, where they appear, and their surrounding instructions. Final macro syntax, expansion and value serialization are design work; these examples do not claim current implementation.
+- Changing the text of a built-in, user-configurable prompt must not break previously passing unit tests. Tests requiring stable prompt content must use independent fixtures rather than depend on production prompt wording.
 - Support a reasoning-effort setting independently for each model-driven stage, including disabling reasoning where the provider supports it. When unspecified, preserve the provider's default behavior.
 - Provide a built-in default JSON schema, replaceable in full by a user-supplied schema file. The actual schema and structured-generation prompt wording are design deliverables, not prescriptive REQ content.
 - Validate model-produced JSON against the selected schema. When configured, a validation retry may send validation errors back to the model.
@@ -102,7 +107,22 @@ The generated metadata format must be versioned independently from the applicati
 
 - Support user-configured `preferred_categories` as complete hierarchical category paths, including single-segment values for backward compatibility. Examples include `food`, `food/desserts/cookies`, and `equipment/kitchenware`. These are guidance rather than a closed taxonomy: a model may introduce new categories when appropriate.
 - Support accumulated known category hierarchies, preserving complete paths, and make them available through the `state` prompt-macro namespace. Known categories may come from prior Image Clarus processing or existing categories discovered in image metadata or digiKam. Their availability can help models reuse established categories while allowing new ones.
-- Making known categories available through the macro is sufficient by default; users decide whether and how to use them in prompts. Do not require a separate model call, semantic retrieval system, mandatory centralized database, or automatic taxonomy reconciliation. State storage, discovery, expansion and serialization are design work.
+- Making known categories available through the macro is sufficient by default; users control taxonomy conventions and decide whether and how accumulated categories influence generation. Do not require a separate model call, semantic retrieval system, mandatory centralized database, or automatic taxonomy reconciliation. State persistence and discovery follow the application-state requirements below; storage implementation, macro expansion and serialization are design work.
+
+## Application state
+
+- Provide an extensible, general-purpose state facility supporting multiple independently evolving domains, rather than a category-specific database. Known hierarchical tag categories are the first consumer; native batch execution history is a possible future consumer.
+- Persistent state must be available across separate CLI invocations, images and directories, and support concurrent access by independent processes. Support state schema evolution and migrations.
+- Provide in-memory state when persistent state is unavailable or has not been initialized. State functionality must be independent of invocation mechanism, including single-image CLI, digiKam scripting and future native batching. Do not require a centralized server or persistent job queue.
+- Persistent state is explicitly initialized, never automatically created by normal processing. `image-clarus init` initializes `.image-clarus/` in the current working directory.
+- Resolve the state directory in this precedence order:
+  1. An explicit CLI parameter.
+  2. The state directory configured in YAML.
+  3. Discovery from the current working directory and its ancestors.
+  4. If not found there, discovery from the image's directory and its ancestors.
+  5. If not found, in-memory state.
+- Current-working-directory discovery takes precedence over image-directory discovery even if the image belongs to another initialized collection. Explicit selection must support sharing state across unrelated photo collections. Discovery must support nested initialized state directories according to this precedence.
+- Keep discovery behavior separable from persistence so its precedence can become configurable in a future release without redesigning the state facility. Detailed discovery algorithms, persistence implementation and interfaces belong to design.
 
 ## XMP metadata integration
 
@@ -129,6 +149,7 @@ The generated metadata format must be versioned independently from the applicati
 - Support human-readable file-path/results output and scripting-friendly machine-readable output such as JSON.
 - Use the same file selection and traversal mechanisms where relevant.
 - Future semantic search using embeddings is an explicit goal but **not a release-one requirement**. An external LLM runner reading the files may provide an interim natural-language search workflow without being built into this CLI.
+- Native search remains an independent requirement; external photo-management workflows do not replace it.
 
 ## Configuration and precedence
 
@@ -165,13 +186,13 @@ Configuration precedence, highest first:
 
 ## External scheduling, stop and resume
 
-- Do not implement an internal scheduler as a requirement. The CLI must be usable from systemd services/timers, cron, scripts or other external orchestrators.
+- Do not implement an internal scheduler as a requirement. External schedulers can fulfill scheduling needs using Image Clarus execution controls; the CLI must be usable from systemd services/timers, cron, scripts or other external orchestrators.
 - A scheduler may invoke only description processing, only JSON processing, only XMP processing, or combined stages.
 - Separate processes for different stages may run concurrently when externally orchestrated; internal model-aware pipeline concurrency is **not required**. Avoid introducing unnecessary shared mutable queues or mandatory databases.
 - On a graceful stop request, cancel any model request still in flight when safe; once a file-writing operation has started, allow that operation to finish safely before exit.
 - Resume by rescanning eligible files and skipping already completed output sidecars. Do not require persistent in-memory job state.
 - Support externally controlled run bounds or time-window behavior where useful for long-running batch invocation, without requiring an internal clock-based scheduler. Precise controls may be designed in the appropriate slice.
-- The initial architecture uses no application-level file locks. Safe-write and recovery guarantees apply to an individual operation; when processes concurrently update the same output, the last successful replacement wins. Lost updates, including concurrent XMP edits, and backup/cleanup races are accepted limitations; do not promise serialized updates or conflict detection.
+- The initial sidecar-write architecture uses no application-level file locks. Sidecar safe-write and recovery guarantees apply to an individual operation; when processes concurrently update the same output, the last successful replacement wins. Lost updates, including concurrent XMP edits, and backup/cleanup races are accepted limitations; do not promise serialized sidecar updates or conflict detection. This sidecar limitation does not remove the separate requirement for concurrent shared-state access.
 
 ## Safe-write requirements
 
@@ -201,6 +222,10 @@ The resulting refinements require full hierarchical preferred-category paths whi
 
 Slice 2 testing exposed a gap between independent prompt control and hardcoded user-message framing. The Product Owner accepted that gap for Slice 2 closeout; the prompt-control and macro requirements above are the remedy for future slices, without a committed slice assignment. The larger lesson is that the gap should have been identified and raised earlier during implementation. Early discovery and escalation of such gaps is a broader process issue to address outside this implementation, particularly as this was a new project; no specific process remedy is claimed here.
 
+## Requirements Evolution — November 19, 2026 Discovery
+
+Product discovery refined accumulated categories into the first consumer of a general-purpose, extensible application-state facility. Persistent state is explicitly initialized; explicit CLI and YAML selection precede current-working-directory discovery, which precedes image-directory discovery, with in-memory state when none is available. Prompt control now explicitly covers all model-facing instructions, including contextual framing, and uses extensible, user-placed macros. External tools may fulfill capabilities such as scheduling and interactive selection, while native unattended batch processing and native search remain independent requirements. These are end-state decisions, not claims of implementation or allocation to a particular delivery slice.
+
 ## Delivery approach and scope
 
 The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice. Each numbered delivery slice has its own implementation plan; `Phase A`, `Phase B`, `Phase C`, and step identifiers are scoped within that plan and are not slice names.
@@ -228,6 +253,7 @@ Design work must resolve, without silently reducing any requirements above:
 - CLI framework, detailed argument grammar, package structure, and result schemas
 - Final YAML key schema, generic override semantics, and relative-path resolution for prompt and schema files
 - Structured-generation prompt and JSON schema, including provenance representation
+- State storage, migration and concurrency behavior, nested discovery details and failure handling; macro expansion and serialization
 - XMP fields and representation-specific mappings, with tests against digiKam
 - Stage prerequisites and configurable actions on failure
 - Search matching syntax, field filters and output formats
