@@ -51,4 +51,4 @@ The operator observed some external-filesystem permission-preservation warnings 
 - [x] External provider/data/cost permission is documented if used; manual evidence is not represented as automated testing.
 - [x] Blockers remain unchecked rather than silently converted to success; completion record links to evidence.
 
-**Outstanding outside C3:** The broader representative quality/evidence-boundary and independent-prompt requirements concerns remain open for Slice 2 acceptance; C5 remains open.
+**Subsequent C5 disposition:** The Product Owner accepted the independent-prompt gap for Slice 2 closeout with a future remedy in the parent REQ, and affirmed the C3 functionality and usefulness acceptance without requiring an assessment of a particular model's accuracy. See [C5](IMPL-C5-COMPLETED.md) for the decision and evidence limits. The above observations remain the historical C3 record.

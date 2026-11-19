@@ -1,6 +1,6 @@
 # HLD - Image Clarus
 
-**Status:** Slice 1 implementation and closeout are complete. Slice 2 design, implementation, and C1–C4 verification are complete; C5 acceptance reconciliation remains open. See the [Slice 2 plan](slice-2/IMPL-PLAN-slice-2.md) for current evidence and open concerns.
+**Status:** Slice 1 and Slice 2 implementation and closeout are complete. The Product Owner accepted the Slice 2 prompt-control gap for future remedy; see the [Slice 2 plan](slice-2/IMPL-PLAN-slice-2.md) for evidence and limitations.
 
 **Date:** 2026-11-14
 

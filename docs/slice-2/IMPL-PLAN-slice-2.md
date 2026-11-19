@@ -1,8 +1,8 @@
 # Slice 2 Implementation Plan
 
-> **For implementers and reviewers:** Phases A and B are complete; Phase C remains open. Complete steps in order unless an approved plan revision changes dependencies. Every CODE/TEST step requires observed RED → GREEN → REFACTOR evidence. Create the linked `IMPL-<StepId>-COMPLETED.md` only when that step is actually executed, and synchronize its evidence and checkboxes with this plan. Review the completion record first; a record alone is not proof that acceptance passed.
+> **For implementers and reviewers:** Phases A, B and C are complete. Completion records preserve executed evidence and accepted exceptions; a record alone is not proof that every possible case was tested.
 
-**Status:** In progress — Phase A (A1–A5), Phase B (B1–B6), and C1–C4 are complete; C5 is partial/blocked. Its evidence crosswalk records an unresolved independent-prompt-configurability concern and gaps in representative S2-18 quality evidence; no waiver or Slice 2 closure decision is inferred. The Product Owner retained the current lowercase prompt guidance and directed that prompt wording changes not break tests; the contract and tests were reconciled and both C4 interpreter suites passed. The Product Owner accepted C3 after confirming digiKam's Reread Metadata action and the subsequent hierarchical-tag screenshot. The Product Owner accepted B2's documented historical RED-evidence gap; the B5 signal-test timeout and a later C2 observation of the inherited harness timeout are documented with unknown causes.
+**Status:** Complete — Phases A–C and Slice 2 closeout are complete. The Product Owner accepted the prompt-control gap for Slice 2, with future remedy in the parent REQ, and affirmed C3 functionality and usefulness without requiring model-accuracy benchmarking. Evidence limits remain in [C5](IMPL-C5-COMPLETED.md). The Product Owner retained lowercase prompt guidance and directed that prompt wording changes not break tests; both C4 interpreter suites passed. C3 was accepted after the reported digiKam Reread Metadata action and subsequent screenshot. The Product Owner accepted B2's historical RED-evidence gap; the B5 signal-test timeout and later C2 harness timeout have documented unknown causes.
 
 **Goal:** Extend the single-image `json` output with useful title, caption, and ranked hierarchical tag recommendations, then implement a deterministic `xmp` stage that publishes configured metadata to digiKam-compatible XMP sidecars while preserving source images and unrelated XMP metadata.
 
@@ -110,7 +110,7 @@ These paths were inspected as existing in the repository at planning time. They 
 - [x] Step C2 — Verify metadata preservation, write recovery, and failure boundaries [TEST]
 - [x] Step C3 — Perform digiKam interoperability and metadata-quality reviews [MANUAL/TEST]
 - [x] Step C4 — Run Linux package, compatibility, and quality gates [TEST]
-- [ ] Step C5 — Reconcile Slice 2 evidence and close acceptance [DOCS/TEST]
+- [x] Step C5 — Reconcile Slice 2 evidence and close acceptance [DOCS/TEST]
 
 ---
 
@@ -497,17 +497,17 @@ These paths were inspected as existing in the repository at planning time. They 
 
 **Outputs:** Final crosswalk, closeout disposition and [IMPL-C5-COMPLETED.md](IMPL-C5-COMPLETED.md); synced plan and README status after acceptance.
 
-**C5 partial result:** The linked record crosswalks S2-01–S2-18 and the acceptance outcomes, preserving the Product Owner's C3 acceptance and historical C4 results. The independent-prompt-configurability concern and representative-quality evidence remain open without an approved disposition; C5 and Slice 2 remain open.
+**C5 result:** The linked record crosswalks S2-01–S2-18 and acceptance outcomes. The Product Owner accepted the prompt-control gap for Slice 2 with future remedy in the parent REQ, and affirmed C3 functionality and usefulness while distinguishing model accuracy from product evaluation. Evidence limits and historical C4 results remain recorded.
 
 **Acceptance:**
-- [ ] All S2 requirements and acceptance outcomes map to executed, reviewable evidence or explicitly remain open with an authorized disposition.
-- [ ] All required tests, digiKam and quality/manual gates are actually satisfied before marking complete.
-- [ ] Plan, summary/detail checkboxes, completion records, HLD and public documentation agree.
-- [ ] Product Owner closeout decision and deviations/carry-forward are recorded; C5 record linked.
+- [x] All S2 requirements and acceptance outcomes map to executed, reviewable evidence or explicitly remain open with an authorized disposition.
+- [x] All required tests, digiKam and quality/manual gates are actually satisfied before marking complete.
+- [x] Plan, summary/detail checkboxes, completion records, HLD and public documentation agree.
+- [x] Product Owner closeout decision and deviations/carry-forward are recorded; C5 record linked.
 
 ## Parent requirements-to-slice allocation
 
-This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C4 evidence is recorded, and remaining Slice 2 checks are pending. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
+This matrix carries forward all end-state areas from the Slice 1 allocation. Slice 1 evidence remains historical; C1–C5 evidence and accepted exceptions are recorded. Later capabilities are candidates, not commitments to a numbered slice or Release 1.
 
 | Parent REQ area | Slice 1 baseline | Slice 2 allocation | Later candidates and goals | Prerequisites and verification |
 | --- | --- | --- | --- | --- |
@@ -552,13 +552,13 @@ The matrix covers each numbered Slice 2 requirement. Phase A owns contract decis
 
 ## S2-18 acceptance-outcome crosswalk
 
-The following status distinguishes supported exercised outcomes from remaining gaps. See the [C5 partial record](IMPL-C5-COMPLETED.md) for evidence, boundaries and unresolved dispositions; supported rows do not by themselves close Slice 2.
+The following status distinguishes supported exercised outcomes from evidence limitations. See the [C5 record](IMPL-C5-COMPLETED.md) for evidence, boundaries and Product Owner dispositions.
 
 | Outcome | Required evidence owner | Status |
 | --- | --- | --- |
 | JSON output extension, old descriptive fields and provenance | B2, C1, C5 | Supported |
-| Evidence-bound title/caption/tag claims | A2 rubric, C3, C5 | Open: representative output evidence not established |
-| Ranking, preferred/multiple/uncategorized paths, top-N | A2, B4, C1/C3, C5 | Partial: deterministic top-N supported; representative quality coverage incomplete |
+| Evidence-bound title/caption/tag claims | A2 rubric, C3, C5 | Accepted with evidence limits; model accuracy is distinct from product functionality |
+| Ranking, preferred/multiple/uncategorized paths, top-N | A2, B4, C1/C3, C5 | Accepted with evidence limits; deterministic top-N supported, not every semantic case reviewed |
 | Human-reviewed metadata quality | A2, C3, C5 | Supported qualitative review, with recorded limitations |
 | Standalone stages and persisted handoffs | B5, C1, C5 | Supported |
 | digiKam hierarchy recognition, generated-tag edit/readback and ancestor filtering | A3, C3, C5 | Supported by Product Owner-reported evidence |
@@ -567,13 +567,13 @@ The following status distinguishes supported exercised outcomes from remaining g
 | Optional author, no-author preservation, all policies | B1, B3–B4, C2–C3, C5 | Supported for tested cases |
 | Existing XMP preservation including flat keywords | A3, C2–C3, C5 | Supported for tested structures |
 | Safe writes, failures, ExifTool optionality, no image edits | B3–B5, C1–C2/C4, C5 | Supported for exercised paths; limitations recorded |
-| Historical/custom JSON handling, schema/version evolution | A2/A4, B2/B4/B6, C1, C5 | Supported; separate prompt-configurability concern open |
+| Historical/custom JSON handling, schema/version evolution | A2/A4, B2/B4/B6, C1, C5 | Supported; separate prompt-configurability gap accepted and carried forward |
 | CLI-over-YAML precedence, selected-stage isolation | A4, B1, C1/C4, C5 | Supported |
 | Public synthetic/sanitized fixtures | A3, B3, B6, C2–C5 | Targeted scan passed; not exhaustive proof |
 
 ## Consolidated Phase A decisions and gates
 
-The Phase A design decisions are complete and Phase B implementation is complete. These contracts do not change locked product requirements; slice-wide verification remains assigned to Phase C.
+The Phase A design decisions, Phase B implementation and Phase C verification are complete, subject to the recorded Product Owner dispositions and evidence limits.
 
 | Contract | Design disposition | Implementation / verification |
 | --- | --- | --- |
@@ -589,9 +589,9 @@ The Phase A design decisions are complete and Phase B implementation is complete
 
 **Approved Slice 2 deviations:** None recorded at planning time.
 
-**Open Slice 2 work:** C5 remains pending. C3 is complete with Product Owner-reported digiKam evidence and a corrected structured-XMP incompatibility; ExifTool tests alone do not prove digiKam behavior. C4's bounded static audit records deferred import cycles rather than claiming an acyclic graph. The Product Owner also identifies a separate independent-prompt-configurability concern: JSON user-message instruction framing remains hardcoded despite system-prompt replacement. This remains open for Slice 2 reconciliation. The reported samples do not establish all S2-18 representative evidence-boundary and category-guidance outcomes. Escalate genuine scope or requirements conflicts, not ordinary implementation decisions.
+**Closeout disposition:** C3 is complete with Product Owner-reported digiKam evidence and a corrected structured-XMP incompatibility; ExifTool tests alone do not prove digiKam behavior. C4's bounded static audit records deferred import cycles rather than claiming an acyclic graph. The Product Owner accepted the hardcoded user-message framing gap for Slice 2. The reported samples do not establish every representative semantic outcome; the Product Owner affirmed product functionality and usefulness, not a general model-accuracy claim.
 
-**Carry-forward:** Only the explicitly excluded end-state features in the scope table; no later slice number or Release 1 promise is assigned. Do not narrow current Slice 2 acceptance by marking a hard requirement as deferred without Product Owner authorization.
+**Carry-forward:** Independent prompt control and related macros, category guidance and state are specified in the parent REQ for future work, alongside previously excluded end-state features; no later slice number or Release 1 promise is assigned. Earlier identification and escalation of gaps is a broader process issue to address outside this implementation; no process fix is claimed.
 
 **Inherited historical exceptions:** Slice 1's accepted test-order and safe-write mode capability corrections remain accurately recorded in its own files. They do not waive new Slice 2 tests or create permission to skip RED evidence.
 
@@ -600,8 +600,8 @@ The Phase A design decisions are complete and Phase B implementation is complete
 **Plan validation is structural only.** Creation of this proposed plan does **not** mean code was implemented, ExifTool/digiKam ran, model quality was demonstrated, or any test passed.
 
 - [x] The accepted Slice 2 REQ and completed Phase A contracts are recorded; the orchestrator owns subsequent step assignment.
-- [ ] Actual implementation and verification results support every detailed acceptance row before it is checked.
-- [ ] Completion records and deviations remain aligned as work proceeds.
+- [x] Actual implementation and verification results, together with explicit Product Owner dispositions, support the detailed acceptance rows.
+- [x] Completion records and deviations are aligned at closeout.
 
 **Source documents and implementation baseline:**
 

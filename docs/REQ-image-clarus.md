@@ -199,6 +199,8 @@ During Product Owner hands-on use of Image Clarus 0.2.1 and digiKam 9.1.0, hiera
 
 The resulting refinements require full hierarchical preferred-category paths while retaining single-segment values; accumulated or discovered known category paths exposed as optional prompt context; and user-controlled, namespaced prompt macros. Prompt customization must encompass contextual instructions and dynamically supplied values, not just system-prompt replacement. Users choose how to incorporate the available values, without prescribing additional model calls or automatic taxonomy-selection logic. These are new or refined end-state requirements identified through Slice 2 testing, not claims that Slice 2 already implements them, and they are not assigned to a particular future slice.
 
+Slice 2 testing exposed a gap between independent prompt control and hardcoded user-message framing. The Product Owner accepted that gap for Slice 2 closeout; the prompt-control and macro requirements above are the remedy for future slices, without a committed slice assignment. The larger lesson is that the gap should have been identified and raised earlier during implementation. Early discovery and escalation of such gaps is a broader process issue to address outside this implementation, particularly as this was a new project; no specific process remedy is claimed here.
+
 ## Delivery approach and scope
 
 The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice. Each numbered delivery slice has its own implementation plan; `Phase A`, `Phase B`, `Phase C`, and step identifiers are scoped within that plan and are not slice names.
