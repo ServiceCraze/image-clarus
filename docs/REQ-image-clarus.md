@@ -78,6 +78,7 @@ Given `2023_04_23_15_05_42.jpg`:
 - Provide built-in default prompts for description and structured generation.
 - The built-in default description prompt is `prompts/image-description.txt`, with the exact text: `Fully describe and explain everything about this image.` No additional instructions are part of this default prompt.
 - Support overriding each prompt independently through configuration, an external text file, or CLI parameters; external prompt files should be version-control friendly.
+- Support variable interpolation in user-configurable prompts using namespaces that distinguish value sources: `config` exposes configuration values and `state` exposes accumulated or discovered application state. Users choose whether to include a macro, where it appears, and the surrounding instructions. Do not require automatic insertion of category guidance into every prompt or impose hardcoded contextual instructions that unnecessarily constrain prompt design. Exact macro syntax, expansion and value serialization are design work.
 - Support a reasoning-effort setting independently for each model-driven stage, including disabling reasoning where the provider supports it. When unspecified, preserve the provider's default behavior.
 - Provide a built-in default JSON schema, replaceable in full by a user-supplied schema file. The actual schema and structured-generation prompt wording are design deliverables, not prescriptive REQ content.
 - Validate model-produced JSON against the selected schema. When configured, a validation retry may send validation errors back to the model.
@@ -96,6 +97,12 @@ The default schema must support information useful for deterministic photo disco
 The exact field names, types, controlled vocabularies, schema and structured-generation prompt are design work. A replacement schema must be supported without modifying application source.
 
 The generated metadata format must be versioned independently from the application. Define its identifier/representation and evolution policy during Phase A3 of the Slice 1 plan.
+
+### Category guidance and known state
+
+- Support user-configured `preferred_categories` as complete hierarchical category paths, including single-segment values for backward compatibility. Examples include `food`, `food/desserts/cookies`, and `equipment/kitchenware`. These are guidance rather than a closed taxonomy: a model may introduce new categories when appropriate.
+- Support accumulated known category hierarchies, preserving complete paths, and make them available through the `state` prompt-macro namespace. Known categories may come from prior Image Clarus processing or existing categories discovered in image metadata or digiKam. Their availability can help models reuse established categories while allowing new ones.
+- Making known categories available through the macro is sufficient by default; users decide whether and how to use them in prompts. Do not require a separate model call, semantic retrieval system, mandatory centralized database, or automatic taxonomy reconciliation. State storage, discovery, expansion and serialization are design work.
 
 ## XMP metadata integration
 
@@ -183,6 +190,14 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 - Linux is the required test platform; a full cross-platform CI matrix is not required, though portability to other operating systems is desirable.
 - Tests should cover available development filesystems and representative compatibility cases. Testing every filesystem, driver, and operating-system combination is **not** required.
 - Never promise fully crash-proof writes on filesystems that cannot guarantee them. Recovery behavior is required.
+
+## Requirements Evolution — November 2026 Slice 2 Testing
+
+The original end-state requirements provided independently configurable prompts, structured metadata, hierarchical XMP tags, and independent image processing without requiring a centralized database. Slice 2's accepted design introduced `preferred_categories` as optional guidance using single top-level segments, supplied separately from the replaceable system prompt. These were the design and implementation choices at that time, not an implementation of the enhancements below.
+
+During Product Owner hands-on use of Image Clarus 0.2.1 and digiKam 9.1.0, hierarchical tagging proved valuable for organizing and retrieving photographs. Independently processing images also highlighted the need for more consistent categories across a collection without sacrificing useful depth or the ability to introduce new categories. The Product Owner values user control over models, prompts, categorization conventions, and inference costs.
+
+The resulting refinements require full hierarchical preferred-category paths while retaining single-segment values; accumulated or discovered known category paths exposed as optional prompt context; and user-controlled, namespaced prompt macros. Prompt customization must encompass contextual instructions and dynamically supplied values, not just system-prompt replacement. Users choose how to incorporate the available values, without prescribing additional model calls or automatic taxonomy-selection logic. These are new or refined end-state requirements identified through Slice 2 testing, not claims that Slice 2 already implements them, and they are not assigned to a particular future slice.
 
 ## Delivery approach and scope
 
