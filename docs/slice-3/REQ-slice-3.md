@@ -66,6 +66,7 @@ Native batching and search remain independent end-state requirements. External s
 ### S3-01 - Fully user-editable model instructions
 
 - All model-facing **instructions**, including contextual framing previously supplied in a hardcoded user message, must be replaceable through the existing prompt configuration mechanisms.
+- Consolidate default instructions into the existing description and JSON prompt texts; do not introduce additional prompt inputs or hide unchangeable prompt instructions in code. Users own both prompts and can remove, change or rearrange any instruction or macro.
 - Do not automatically append category advice or any other mandatory instructional language when the user has supplied a replacement prompt.
 - Preserve the exact default description prompt: `Fully describe and explain everything about this image.`
 - Required image data, persisted description text, and schema/protocol payloads may still be transmitted as stage inputs. Their presence must not be used to conceal additional mandatory instructions.
@@ -74,6 +75,7 @@ Native batching and search remain independent end-state requirements. External s
 ### S3-02 - User-controlled namespaced macros
 
 - Support optional macros in model-facing prompt text with separate `config` and `state` namespaces.
+- Apply macro substitution to both existing prompt inputs, description and JSON, whether built in or user supplied; do not require a separate prompt to use macros.
 - `config` exposes eligible non-sensitive **resolved** configuration; `state` exposes available application state.
 - Examples: `{{config.stages.json.preferred_categories}}` and `{{state.categories.known}}`.
 - A prompt author decides which macros to include, where they appear, and their surrounding instructions. No category macro is mandatory.
@@ -105,6 +107,7 @@ Native batching and search remain independent end-state requirements. External s
 - Preserve the hierarchy in the configured guidance instead of reducing it to a top-level category.
 - Category guidance is advisory and not a closed taxonomy. The model may recommend other categories when appropriate.
 - The user controls whether and how this guidance enters a prompt through S3-02. Do not reinstate hardcoded instructional framing.
+- During implementation, the built-in JSON prompt may be changed to migrate its existing guidance into the prompt text and must use the configuration macro to include preferred categories by default. Users may remove or change the macro and its surrounding text in their replacement prompt; no guidance is injected when omitted.
 
 ## 6. Application state requirements
 
@@ -142,7 +145,7 @@ Native batching and search remain independent end-state requirements. External s
 
 - Application state is an **optional enhancement**, not a prerequisite for any of the three primary stages: `desc`, `json`, or `xmp`.
 - Missing, inaccessible, invalid, corrupted, or incompatible state, including an explicitly selected state directory, must not by itself cause otherwise valid primary stage processing to fail or prevent sidecar publication.
-- Report state failures through diagnostics/output or logging, with warnings where appropriate when the primary operation succeeds. Do not silently report a failed state operation as successful.
+- Report state failures through visible error output identifying the state problem, including when the primary operation succeeds. Do not silently report a failed state operation as successful; the primary stage's ordinary completion result remains independent of the state error.
 - An invalid explicit state directory must not silently select a different persistent repository. Failure handling may use nonpersistent state for the current invocation, without altering the user's explicit persistent selection.
 - State updates and sidecar publication must remain independent: failure to save category history must not invalidate successfully generated image metadata or change the ordinary completion result of a primary stage.
 - A state-management operation such as `init` may fail when it cannot fulfill its own purpose. The nonblocking rule applies to ordinary image processing.
@@ -169,16 +172,16 @@ Native batching and search remain independent end-state requirements. External s
 
 | Area | Observable outcome |
 | --- | --- |
-| Full prompt replacement | A replacement prompt controls all model-facing instructions; application code no longer appends mandatory category guidance |
-| Namespaced macros | User-selected `config` and `state` references provide the respective values; omitting them does not force category context into prompts |
+| Full prompt replacement | The two existing prompt inputs control all model-facing instructions; application code appends no hidden mandatory instructions, and replacement prompts may remove or change guidance |
+| Namespaced macros | User-selected `config` and `state` references work in both description and JSON prompt inputs; omitting them does not force category context into prompts |
 | Secret safety | Direct and environment-resolved credentials cannot be interpolated, including by referencing a containing object |
 | Prompt edits and tests | Production prompt text can change without breaking unit tests that should use stable independent fixtures |
-| Optional prompt SHA | Default JSON omits `prompt_sha256`; explicit YAML/CLI enablement includes it using existing calculation; prior and new JSON envelopes remain valid |
+| Optional prompt SHA | Default JSON omits `prompt_sha256`; explicit YAML/CLI enablement includes it using existing calculation; the shared envelope validator accepts valid prior and new JSON, validates the hash when present, and XMP can consume both |
 | Preserved JSON fields | `prompt_id`, `description_sha256`, approved model-identification fields, and custom-schema SHA version handling continue to work |
-| Hierarchical guidance | Single and multi-segment preferred category paths work through existing configuration and optional prompt macros |
-| Known categories | Successful processing can accumulate reusable category paths; an initialized shared repository retains them for subsequent CLI invocations |
+| Hierarchical guidance | Single and multi-segment preferred category paths reach the actual built-in JSON request through its macro; a user replacement can omit or change guidance without injected category instructions |
+| Known categories | A synthetic successful JSON generation accumulates a category hierarchy, and a later independent CLI invocation using the same initialized repository can access it |
 | Initialization and resolution | `init` creates a repository in CWD; normal processing does not; CLI > YAML > CWD ancestors > image ancestors > memory works, including nested/conflicting repositories |
-| Nonblocking state failures | Primary stages still complete and publish valid sidecars when state is unavailable or fails; problems are reported without silent substitution of another persistent repository |
+| Nonblocking state failures | Primary stages still complete and publish valid sidecars when state is unavailable or fails; visible error output reports the state problem even on primary success, without silent substitution of another persistent repository |
 | State concurrency/evolution | Independent processes can safely reuse one repository; versioned state supports migrations without destructive replacement |
 | Regression | Existing stage independence, XMP policies, source-image preservation, and prior accepted compatibility behaviors remain intact |
 
