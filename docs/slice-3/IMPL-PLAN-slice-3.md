@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A in progress. A1 is complete; A2 and A3 remain open. Phases B and C have not started, and their evidence remains unrun.
+**Status:** Phase A in progress. A1 and A2 are complete; A3 remains open. Phases B and C have not started, and their evidence remains unrun.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -86,7 +86,7 @@ These are existing files and observed behavior at the stated baseline. Recheck c
 | Resources and packaging | `resources.py`, `prompts/`, `schemas/`, `pyproject.toml` | Keep the two existing prompt inputs and four packaged prompt/schema resources. SQLite uses the standard-library backend selected in the HLD. |
 | User documentation | `README.md`, `examples/config.yaml` | Document actual frozen options, precedence, defaults, error behavior, and single-image examples after implementation. |
 
-**A1-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py` and `tests/unit/test_prompt_expansion.py`, with a read-only state-view interface. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence; see [A1](IMPL-A1-COMPLETED.md). A2 selects the separate state resolution, storage, and domain paths and reconciles its service lifetime and diagnostics with A1 before A3. Proposed paths are not claims that implementation exists.
+**A1/A2-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py`, the separate `state/resolution.py`, `storage.py`, `categories.py`, `accumulation.py` modules, and focused state/prompt tests. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1. See [A1](IMPL-A1-COMPLETED.md) and [A2](IMPL-A2-COMPLETED.md); selected paths do not claim implementation exists.
 
 **Dependency direction:** CLI/orchestration supplies resolved configuration and shared services; stages use prompt expansion; prompt expansion reads a safe configuration view and state-domain values; state domains use storage; location resolution selects a backend independently. Provider adapters remain transport boundaries. JSON parsing/extraction stays in a metadata/domain component rather than the stage coordinator. Audit changed imports against the existing graph; do not turn this slice into a repository-wide rewrite of documented historical cycles.
 
@@ -97,7 +97,7 @@ All headings below exactly match their corresponding detailed step headings.
 ### Phase A Discovery and contract freeze
 
 - [x] Step A1 - Freeze configuration and prompt contracts [DESIGN]
-- [ ] Step A2 - Freeze state and accumulation contracts [DESIGN]
+- [x] Step A2 - Freeze state and accumulation contracts [DESIGN]
 - [ ] Step A3 - Verify implementation readiness [DESIGN]
 
 ### Phase B Implementation
@@ -173,13 +173,15 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Outputs:** State, discovery, schema/migration, accumulation, diagnostics, and test contracts in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md); confirmed implementation paths and dependency directions.
 
+**A2 result:** The linked design freezes resolution, SQLite/memory interfaces and migrations, diagnostics, category extraction and post-stage eligibility. It reconciles the state snapshot and service lifetime with A1. The design is not implemented; A3 remains responsible for the readiness assessment.
+
 **Acceptance**
 
-- [ ] A2 enumerates every state-precedence boundary and failure route, including explicit failures, and proves normal processing has no initialization path by design.
-- [ ] A2 specifies versioned SQLite/in-memory interfaces, non-destructive evolution, independent-process sharing, and transaction lifetimes.
-- [ ] A2 gives an extraction/eligibility table and a lifecycle sequence showing accumulation after selected stages, with both default-on and disabled behavior.
-- [ ] A2 defines observable state diagnostics that cannot change otherwise valid primary results or silently select another persistent repository.
-- [ ] A1/A2 agree on settings, safe macro values, service lifetime, and the tests required before implementation.
+- [x] A2 enumerates every state-precedence boundary and failure route, including explicit failures, and proves normal processing has no initialization path by design.
+- [x] A2 specifies versioned SQLite/in-memory interfaces, non-destructive evolution, independent-process sharing, and transaction lifetimes.
+- [x] A2 gives an extraction/eligibility table and a lifecycle sequence showing accumulation after selected stages, with both default-on and disabled behavior.
+- [x] A2 defines observable state diagnostics that cannot change otherwise valid primary results or silently select another persistent repository.
+- [x] A1/A2 agree on settings, safe macro values, service lifetime, and the tests required before implementation.
 
 **Dependencies:** Current accepted requirements; final reconciliation with A1 before A3.
 
