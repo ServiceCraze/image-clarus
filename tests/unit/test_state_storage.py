@@ -1,4 +1,5 @@
 import multiprocessing
+import signal
 import sqlite3
 import time
 from pathlib import Path
@@ -223,6 +224,61 @@ def test_stop_before_begin_and_before_commit_rolls_back(tmp_path):
         store.add_categories(paths())
     token.signum = None
     assert store.snapshot_categories() == []
+
+
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM])
+@pytest.mark.parametrize("operation", ["initialize", "migration", "write"])
+def test_stop_during_final_busy_rolls_back_before_commit(
+    tmp_path, monkeypatch, operation, signum
+):
+    directory = tmp_path / "state"
+    token = SimpleNamespace(signum=None)
+    if operation != "initialize":
+        initialize(directory)
+        SQLiteStorage(directory).add_categories(["existing"])
+    if operation == "migration":
+        monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+
+    real_busy = storage._busy
+    injected = []
+
+    def stop_during_busy(conn, deadline):
+        real_busy(conn, deadline)
+        if conn.in_transaction:
+            token.signum = signum
+            injected.append(signum)
+
+    monkeypatch.setattr(storage, "_busy", stop_during_busy)
+
+    def migrate(conn):
+        conn.execute("UPDATE domain_versions SET version=2 WHERE domain='categories'")
+        conn.execute("INSERT INTO known_categories VALUES ('migrated')")
+
+    with pytest.raises(StateStopped):
+        if operation == "initialize":
+            initialize(directory, stop=token)
+        elif operation == "migration":
+            SQLiteStorage(directory, stop=token, migrations={(1, 1): migrate})
+        else:
+            SQLiteStorage(directory, stop=token).add_categories(["new"])
+    assert injected == [signum]
+    with sqlite3.connect(directory / DATABASE_NAME) as conn:
+        if operation == "initialize":
+            assert (
+                conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+                == []
+            )
+            assert conn.execute("PRAGMA application_id").fetchone() == (0,)
+            assert conn.execute("PRAGMA user_version").fetchone() == (0,)
+        else:
+            assert conn.execute("SELECT path FROM known_categories").fetchall() == [
+                ("existing",)
+            ]
+            assert conn.execute("SELECT version FROM domain_versions").fetchone() == (
+                1,
+            )
 
 
 @pytest.mark.parametrize("fault_at", [1, 2, 3, 4, 5, 6])

@@ -18,6 +18,8 @@
 4. The stage-local expansion imports keep XMP and schema worker imports independent of macro execution. A production-source audit found no remaining callers of the removed provider category parameter or old fixed request labels; category validation remains used in configuration and as stage-boundary validation. No B6 state accumulation was added.
 5. A final audit reproduced a `StateStopped` escaping the CLI during a state macro read. The stage wrapper now maps it to an interrupted stage when the stop token is set, preserves propagation otherwise, and retains service cleanup. Four regression cases inject stop requests for both model stages and both supported signal values; these are injected boundary tests, not real OS-signal delivery at that boundary.
 
+**Subsequent B6 progress:** [B6](IMPL-B6-COMPLETED.md) implemented post-image category accumulation. The B5 evidence above remains historical; C1 verification remains open.
+
 ## Verification and limitations
 
 - Before the provider change, `uv run --no-sync pytest tests/unit/test_openai_compatible.py::test_json_parts_reasoning_and_retry_context -q` failed on the old request framing; the provider suite then passed **55 tests**. Four stage/namespace cases initially failed: two showed missing description expansion and two reached the superseded provider argument. After wiring and a correction to the test's description-newline assumption, the focused scenarios passed. The differing failure causes are not represented as four clean behavioral RED cases.

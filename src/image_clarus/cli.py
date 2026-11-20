@@ -276,6 +276,14 @@ def _main(state):
                 selected=selected,
                 stop=stop,
             )
+            from image_clarus.state.accumulation import accumulate_categories
+
+            accumulate_categories(
+                result,
+                state_service,
+                enabled=config["state"]["accumulate_categories"],
+                stop=stop,
+            )
         finally:
             state_service.close()
         for stage in result.stages:

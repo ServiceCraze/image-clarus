@@ -175,8 +175,8 @@ def _validate_or_migrate(
             if next_version == version:
                 raise StateError("invalid repository migration")
             version = next_version
-        _check_stop(stop)
         _busy(conn, deadline)
+        _check_stop(stop)
         conn.commit()
     except BaseException:
         _rollback(conn)
@@ -238,8 +238,8 @@ def initialize(directory: Path, *, stop: Any = None) -> None:
                 )
                 conn.execute(f"PRAGMA application_id = {APPLICATION_ID}")
                 conn.execute(f"PRAGMA user_version = {FORMAT_VERSION}")
-                _check_stop(stop)
                 _busy(conn, deadline)
+                _check_stop(stop)
                 conn.commit()
             except BaseException:
                 _rollback(conn)
@@ -324,8 +324,8 @@ class SQLiteStorage:
                 ]
                 if any(not isinstance(path, str) for path in result):
                     raise StateError("category read failed")
-            _check_stop(self.stop)
             _busy(conn, deadline)
+            _check_stop(self.stop)
             conn.commit()
             return result
         except StateError:
