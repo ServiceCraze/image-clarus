@@ -1,13 +1,33 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from image_clarus.pipeline import StopToken
 from image_clarus.results import PipelineResult, StageResult
+from image_clarus.stages.structure import _read_envelope
 from image_clarus.state.accumulation import accumulate_categories
 from image_clarus.state.service import StateService
 from image_clarus.state.storage import MemoryStorage
+
+
+def test_state_accumulation_import_does_not_depend_on_stages():
+    probe = """
+import builtins
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name == 'image_clarus.stages' or name.startswith('image_clarus.stages.'):
+        raise ImportError('stage imports forbidden')
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+import image_clarus.state.accumulation
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def envelope(
@@ -36,8 +56,24 @@ def invoke(tmp_path, data, stage=None, *, enabled=True, stop=None):
     Path(str(image) + ".desc.json").write_bytes(data)
     service = StateService(MemoryStorage(), stop=stop)
     result = PipelineResult(image, (stage or StageResult("json", "completed"),))
-    accumulate_categories(result, service, enabled=enabled, stop=stop)
+    accumulate_categories(
+        result, service, enabled=enabled, stop=stop, read_envelope=_read_envelope
+    )
     return service.snapshot_categories()
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b'{"format_version":1,"format_version":1}',
+        b"\xff",
+        envelope([["A"]]).replace(b'"metadata":', b'"unexpected": 1, "metadata":'),
+        envelope([["A"]]).replace(b'"A"', b'"\\ud800"'),
+        envelope([["A"]]).replace(b'"A"', b"1e9999"),
+    ],
+)
+def test_invalid_envelope_never_accumulates(tmp_path, data):
+    assert invoke(tmp_path, data) == []
 
 
 def test_valid_envelope_without_unrelated_fields_contributes_complete_paths(tmp_path):
@@ -99,6 +135,7 @@ def test_stopped_skips_optional_work(tmp_path):
         PipelineResult(image, (StageResult("json", "completed"),)),
         Never(),
         enabled=True,
+        read_envelope=_read_envelope,
         stop=stop,
     )
 
@@ -110,6 +147,7 @@ def test_missing_file_reports_sanitized_error(tmp_path, capsys):
         PipelineResult(image, (StageResult("json", "completed"),)),
         service,
         enabled=True,
+        read_envelope=_read_envelope,
     )
     assert service.snapshot_categories() == []
     error = capsys.readouterr().err
@@ -124,7 +162,7 @@ def test_disabled_does_not_read(tmp_path, monkeypatch):
     result = PipelineResult(
         tmp_path / "sample.jpg", (StageResult("json", "completed"),)
     )
-    accumulate_categories(result, object(), enabled=False)
+    accumulate_categories(result, object(), enabled=False, read_envelope=_read_envelope)
 
 
 def test_unexpected_optional_failure_is_sanitized(tmp_path, capsys):
@@ -139,5 +177,6 @@ def test_unexpected_optional_failure_is_sanitized(tmp_path, capsys):
         PipelineResult(image, (StageResult("json", "completed"),)),
         Broken(),
         enabled=True,
+        read_envelope=_read_envelope,
     )
     assert "private sentinel" not in capsys.readouterr().err

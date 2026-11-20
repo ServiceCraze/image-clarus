@@ -276,14 +276,17 @@ def _main(state):
                 selected=selected,
                 stop=stop,
             )
-            from image_clarus.state.accumulation import accumulate_categories
+            if "json" in selected and config["state"]["accumulate_categories"]:
+                from image_clarus.stages.structure import _read_envelope
+                from image_clarus.state.accumulation import accumulate_categories
 
-            accumulate_categories(
-                result,
-                state_service,
-                enabled=config["state"]["accumulate_categories"],
-                stop=stop,
-            )
+                accumulate_categories(
+                    result,
+                    state_service,
+                    enabled=True,
+                    read_envelope=_read_envelope,
+                    stop=stop,
+                )
         finally:
             state_service.close()
         for stage in result.stages:

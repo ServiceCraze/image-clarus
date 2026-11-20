@@ -4,21 +4,15 @@ import re
 import sys
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-
-from image_clarus.config import _strict_json, _valid_tag_segment
-from image_clarus.stages.structure import _ENVELOPE, _Snapshot
+from image_clarus.config import _valid_tag_segment
 from image_clarus.state.storage import StateStopped
 
 _BUILTIN = "urn:image-clarus:metadata-schema:"
 _CUSTOM = "urn:image-clarus:custom-metadata-schema"
 
 
-def _extract(data):
-    data.decode("utf-8")
-    envelope = _strict_json(_Snapshot(data))
-    if not Draft202012Validator(_ENVELOPE).is_valid(envelope):
-        raise ValueError
+def _extract(data, read_envelope):
+    envelope = read_envelope(data)
     identity = (envelope["schema_id"], envelope["schema_version"])
     if identity == (_BUILTIN + "1.0.0", "1.0.0"):
         return []
@@ -42,7 +36,7 @@ def _extract(data):
     return sorted(paths)
 
 
-def accumulate_categories(result, service, *, enabled, stop=None):
+def accumulate_categories(result, service, *, enabled, read_envelope, stop=None):
     """Perform optional work without changing the primary pipeline result."""
     if not enabled or (stop is not None and stop.signum is not None):
         return
@@ -57,7 +51,7 @@ def accumulate_categories(result, service, *, enabled, stop=None):
         return
     try:
         data = Path(str(result.image_path) + ".desc.json").read_bytes()
-        paths = _extract(data)
+        paths = _extract(data, read_envelope)
         if paths and (stop is None or stop.signum is None):
             service.add_categories(paths)
     except StateStopped:

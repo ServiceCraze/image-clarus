@@ -252,11 +252,19 @@ def _valid_description(data):
         return False
 
 
+def _read_envelope(data):
+    data.decode("utf-8")
+    value = _strict_json(_Snapshot(data))
+    if not Draft202012Validator(_ENVELOPE).is_valid(value):
+        raise ValueError
+    return value
+
+
 def _valid_envelope(data):
     try:
-        value = _strict_json(_Snapshot(data))
-        return Draft202012Validator(_ENVELOPE).is_valid(value)
-    except ConfigurationError:
+        _read_envelope(data)
+        return True
+    except (ConfigurationError, UnicodeError, ValueError):
         return False
 
 

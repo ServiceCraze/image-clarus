@@ -10,9 +10,9 @@ from jsonschema import Draft202012Validator
 
 from image_clarus import resources
 from image_clarus.artifacts import ArtifactError
-from image_clarus.config import ConfigurationError, _strict_json, _valid_tag_segment
+from image_clarus.config import ConfigurationError, _valid_tag_segment
 from image_clarus.results import StageResult
-from image_clarus.stages.structure import _ENVELOPE, _Snapshot, _valid_envelope
+from image_clarus.stages.structure import _read_envelope, _valid_envelope
 from image_clarus.xmp_backend import FIELDS, ExifToolBackend, XmpBackendError
 
 _CUSTOM_ID = "urn:image-clarus:custom-metadata-schema"
@@ -32,11 +32,7 @@ def _publication_fields(json_bytes, settings):
     """Validate the fixed envelope and derive only explicitly supported fields."""
     if not isinstance(json_bytes, bytes):
         raise TypeError
-    # Decode explicitly: json.loads(bytes) also accepts UTF-16/32, contrary to A4.
-    json_bytes.decode("utf-8")
-    envelope = _strict_json(_Snapshot(json_bytes))
-    if not Draft202012Validator(_ENVELOPE).is_valid(envelope):
-        raise ValueError
+    envelope = _read_envelope(json_bytes)
     identity = (envelope["schema_id"], envelope["schema_version"])
     metadata = envelope["metadata"]
     if identity in {(_BUILTIN_ID + "1.0.0", "1.0.0"), (_BUILTIN_ID + "2.0.0", "2.0.0")}:

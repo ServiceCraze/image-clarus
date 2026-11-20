@@ -7,8 +7,10 @@
 ## Files created, updated, removed
 
 - Created: `src/image_clarus/state/accumulation.py`, `tests/unit/test_state_accumulation.py`, `tests/unit/test_cli_state_accumulation.py`, `tests/integration/test_state_accumulation_cli.py`, `tests/integration/test_state_accumulation_timing.py`, `tests/integration/test_state_accumulation_signals.py`, and this record.
-- Updated: `src/image_clarus/cli.py`, `src/image_clarus/state/storage.py`, `tests/unit/test_state_storage.py`, `tests/unit/test_cli.py`, `tests/unit/test_resources.py`, `pyproject.toml`, `uv.lock`, the Slice 3 plan and predecessor progress notes.
+- Updated: `src/image_clarus/cli.py`, `src/image_clarus/state/storage.py`, `src/image_clarus/stages/structure.py`, `src/image_clarus/stages/xmp.py`, `tests/unit/test_state_storage.py`, `tests/unit/test_cli.py`, `tests/unit/test_resources.py`, `pyproject.toml`, `uv.lock`, the Slice 3 plan and predecessor progress notes. The review correction also added architecture coverage to `tests/unit/test_state_accumulation.py`.
 - Removed: None.
+
+**Review correction:** An independent review found that the original accumulation module imported the JSON stage, contrary to the frozen dependency direction. The CLI now injects the shared strict envelope reader; state no longer imports a stage. The CLI loads accumulation only when JSON is selected and accumulation is enabled. The existing CLI and XMP paths can still import the JSON stage independently, so this correction does not claim XMP-only execution avoids that import.
 
 ## Behavior and acceptance evidence
 
@@ -24,6 +26,7 @@
 - Initial direct-component RED was a missing-module collection failure, not behavioral evidence. Before CLI wiring, an independent skipped-JSON invocation failed behaviorally because state remained empty; the focused accumulation and state suite subsequently passed **72 tests**. The original ordering test used an injected pipeline; the later real XMP-stage barrier test provides separate stronger timing evidence.
 - The pre-commit correction produced **6 observed failures** before the fix and **6 passes** after it. Independent CLI processes also received actual SIGINT and SIGTERM at controlled pre-BEGIN, pre-COMMIT-check, and immediately-after-COMMIT checkpoints; all six cases passed, preserving signal exit and sidecar bytes. The after-COMMIT checkpoint proves a committed result at that boundary, not a signal delivered inside SQLite's commit syscall. Atomic coupling between state and sidecars is not claimed.
 - The first full suite found **8 failures** from a stage-selection test double that omitted the now-consumed resolved setting. Updating that double to match resolved configuration yielded **8 focused passes**. The final full suite, with temporary ExifTool 13.55 on `PATH`, passed **1,163 tests**, no skips. Ruff check and format check passed; **143 files** formatted. `uv lock --locked` resolved **21 packages** and the CLI reported **0.2.13**.
+- For the review correction, an isolated subprocess import test failed before the fix because importing state accumulation reached `stages.structure`; it passed afterward with stage imports blocked. Envelope parsing and validation remain shared for JSON skip, XMP and accumulation. A subsequent full suite with temporary ExifTool passed **1,169 tests**, no skips; Ruff check and formatting passed with **144 files**, `uv lock --locked` resolved **21 packages**, and the CLI reported **0.2.14**. The earlier 0.2.13 evidence remains historical.
 - Separate-process and failure-injection tests use fictional images, state and a local synthetic provider. They do not establish live-provider behavior, power-loss durability, or a deterministic winner for concurrent sidecar writers.
 
 ## B6 acceptance
