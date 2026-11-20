@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phases A and B complete. Phase C is in progress: C1 is complete; C2 is partial pending disposition of a new deferred static import cycle; C3 remains open. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phases A and B complete. Phase C is in progress: C1 and C2 are complete; C3 remains open. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -113,7 +113,7 @@ All headings below exactly match their corresponding detailed step headings.
 ### Phase C Verification and closeout
 
 - [x] Step C1 - Verify requests persistence and state failure behavior [TEST]
-- [ ] Step C2 - Run regression packaging and quality checks [TEST]
+- [x] Step C2 - Run regression packaging and quality checks [TEST]
 - [ ] Step C3 - Reconcile evidence and close Slice 3 [DOCS]
 
 ## 4. Detailed steps
@@ -462,7 +462,7 @@ All headings below exactly match their corresponding detailed step headings.
 - [x] Installed CLI/resource/state checks pass outside the checkout. A blocker is recorded and leaves the affected criterion unchecked unless an explicitly approved exception is recorded.
 - [x] Prompt wording changes do not break previously passing unit behavior that should use independent fixtures.
 - [x] Inherited stage/XMP/source/safe-write/signal behavior is protected by relevant regression evidence.
-- [ ] The bounded cleanup/import audit identifies removed or retained paths and introduces no unrecorded exception.
+- [x] The bounded cleanup/import audit identifies removed or retained paths and introduces no unrecorded exception.
 - [x] Version references, document links, step labels, scope, and privacy-scan findings are reconciled.
 
 **Dependencies:** B1–B7, C1.

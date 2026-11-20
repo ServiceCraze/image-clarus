@@ -2,7 +2,7 @@
 
 **Status:** Complete for C1 runtime evidence. C2 regression/package and C3 slice closeout remain open.
 
-**Subsequent C2 progress:** [C2](IMPL-C2-COMPLETED.md) records passing regression and package checks but remains open on the dependency-cycle audit. C3 remains open; C1 evidence is historical.
+**Subsequent C2 progress:** [C2](IMPL-C2-COMPLETED.md) completed regression and package checks and corrected the identified new dependency cycle. C3 remains open; C1 evidence is historical.
 
 **Scope deviations:** None. Fault-injection limits are stated below; no live model or new manual interoperability test was required.
 

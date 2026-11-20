@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 
-from image_clarus.config import ConfigurationError
+from image_clarus.config_errors import ConfigurationError
 from image_clarus.state.storage import StateStopped
 
 _NAME = re.compile(r"(?:config|state)(?:\.[A-Za-z_][A-Za-z0-9_-]*)+")
