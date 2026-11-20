@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Draft for Product Owner review; not accepted or authorized for implementation.
+**Status:** Accepted by the Product Owner; implementation proceeds when the relevant work is assigned by the orchestrator.
 
 **Project:** `image-clarus`
 
@@ -27,9 +27,9 @@ Requirements identified as `S3-` apply to this slice. Decisions not explicitly m
 ### 2.1 Included
 
 - Complete user control over prompts for the existing model-driven stages, including previously hardcoded instructional framing.
-- Optional, extensible `config` and `state` macros in user-configurable prompts, with secret-bearing configuration excluded.
+- Optional, extensible `config` and `state` macros in user-configurable prompts, with secret-bearing configuration excluded and generic per-macro hierarchy-expansion controls.
 - Complete hierarchical paths in `stages.json.preferred_categories`, retaining single-segment compatibility.
-- General-purpose application state using embedded SQLite when initialized and in-memory state otherwise; known category paths are its first domain.
+- General-purpose application state using embedded SQLite when initialized and in-memory state otherwise; known category paths are its first domain and, by default, accumulate after selected stages finish, including from valid existing JSON skipped by the selected JSON stage. JSON category accumulation can be disabled through configuration.
 - Explicit `image-clarus init`, state-directory selection, discovery and reuse across separate invocations.
 - Reporting state problems without making optional application state a dependency of `desc`, `json`, or `xmp` processing.
 - An opt-in setting for including `prompt_sha256` in generated JSON, **disabled by default**.
@@ -82,6 +82,29 @@ Native batching and search remain independent end-state requirements. External s
 - The mechanism must permit additional configuration keys and future state domains without hardcoding a separate prompt instruction for each one.
 - The exact grammar, value serialization, and behavior of malformed or unavailable references are design matters, subject to the stage-independence requirement in S3-09.
 
+**Generic hierarchy expansion:** Under `prompt_expansion.macros`, each macro can independently configure `delimiter` and `max_depth` for array-valued macros containing hierarchical strings. These settings follow the existing configuration precedence, including CLI overrides of YAML values. The same mechanism applies to eligible `config` and `state` macros, not only categories. It transforms prompt output only: it must not modify the prompt text, underlying configuration or application state, and must not require the state backend to use the prompt-output representation.
+
+```yaml
+prompt_expansion:
+  macros:
+    state.categories.known:
+      delimiter: "/"
+      max_depth: 2
+    config.stages.json.preferred_categories:
+      delimiter: "/"
+      max_depth: 3
+```
+
+| Setting | Default | Behavior |
+| --- | --- | --- |
+| `delimiter` | `/` | Separator between hierarchy segments |
+| `max_depth` | `null` | Unlimited depth; preserve complete paths |
+| `max_depth: 0` | — | Expand to `[]` |
+| Positive `max_depth` | — | Retain at most that many hierarchy segments |
+| Negative `max_depth` | — | Invalid configuration |
+
+When truncation makes paths identical, return unique values in the expansion. The underlying category registry retains complete information regardless of prompt-expansion depth.
+
 ### S3-03 - Protect secret configuration
 
 - API credentials and other secret-bearing configuration values must not be accessible through prompt macros, directly or by expanding containing configuration objects.
@@ -125,7 +148,9 @@ Native batching and search remain independent end-state requirements. External s
 - Make those paths available to prompts through `{{state.categories.known}}` when the prompt author explicitly references the macro.
 - Persistent state allows reuse across separate CLI invocations and different images/directories sharing a selected repository; in-memory state is limited to its process lifetime.
 - The model remains free to recommend new categories; state does not impose an authoritative or closed taxonomy.
-- Exact extraction, deduplication, and update timing rules for category paths from processing results belong to design. Do **not** introduce an unapproved distinction between category nodes and leaf tags as a product requirement.
+- JSON category accumulation is enabled by default and can be disabled through configuration. When enabled, update category state after processing the selected stages for an image has finished, using available valid structured metadata. A state-update failure must not alter core stage completion results or sidecars, consistent with S3-09.
+- When accumulation is enabled and the JSON stage is selected but skips generation because an existing valid `.desc.json` artifact is present, its category paths must contribute to state without another model invocation or regeneration of the artifact, subject to the nonblocking state-failure behavior in S3-09. When accumulation is disabled, do not add categories from JSON, whether generated or skipped.
+- Exact extraction, deduplication and storage representation for category paths remain design decisions. Do **not** introduce an unapproved distinction between category nodes and leaf tags as a product requirement.
 
 ### S3-08 - Explicit initialization and location precedence
 
@@ -174,12 +199,14 @@ Native batching and search remain independent end-state requirements. External s
 | --- | --- |
 | Full prompt replacement | The two existing prompt inputs control all model-facing instructions; application code appends no hidden mandatory instructions, and replacement prompts may remove or change guidance |
 | Namespaced macros | User-selected `config` and `state` references work in both description and JSON prompt inputs; omitting them does not force category context into prompts |
+| Hierarchy expansion | Depth 2 truncates `food/desserts/cookies` to `food/desserts` and deduplicates identical truncated paths; depth 0 expands to `[]` without modifying the source prompt, configuration or state; omitted depth preserves complete paths. The same behavior works for `config` and `state` arrays; negative depth is invalid configuration; CLI overrides take precedence over YAML settings |
 | Secret safety | Direct and environment-resolved credentials cannot be interpolated, including by referencing a containing object |
 | Prompt edits and tests | Production prompt text can change without breaking unit tests that should use stable independent fixtures |
 | Optional prompt SHA | Default JSON omits `prompt_sha256`; explicit YAML/CLI enablement includes it using existing calculation; the shared envelope validator accepts valid prior and new JSON, validates the hash when present, and XMP can consume both |
 | Preserved JSON fields | `prompt_id`, `description_sha256`, approved model-identification fields, and custom-schema SHA version handling continue to work |
 | Hierarchical guidance | Single and multi-segment preferred category paths reach the actual built-in JSON request through its macro; a user replacement can omit or change guidance without injected category instructions |
-| Known categories | A synthetic successful JSON generation accumulates a category hierarchy, and a later independent CLI invocation using the same initialized repository can access it |
+| Known categories | With default-enabled accumulation, after selected stages finish, a synthetic successful JSON generation accumulates a category hierarchy that a later independent CLI invocation using the same initialized repository can access; accumulation is not a prerequisite for stage success. Disabling accumulation through configuration prevents JSON-derived category updates |
+| Existing JSON accumulation | With default-enabled accumulation and available state, selecting JSON with an existing valid artifact that causes generation to be skipped contributes its categories to state, without a model invocation or regeneration. Disabling accumulation prevents that update |
 | Initialization and resolution | `init` creates a repository in CWD; normal processing does not; CLI > YAML > CWD ancestors > image ancestors > memory works, including nested/conflicting repositories |
 | Nonblocking state failures | Primary stages still complete and publish valid sidecars when state is unavailable or fails; visible error output reports the state problem even on primary success, without silent substitution of another persistent repository |
 | State concurrency/evolution | Independent processes can safely reuse one repository; versioned state supports migrations without destructive replacement |
@@ -189,7 +216,7 @@ Tests should rely on synthetic data and independent prompt fixtures where exact 
 
 ## 8. Design decisions requiring Product Owner review if scope changes
 
-The implementation design must settle mechanics needed to fulfill the approved behaviors, including macro parsing and value formatting, JSON envelope compatibility, category accumulation rules, SQLite schema/migrations/concurrency, initialization details, directory discovery, and nonblocking state diagnostics.
+The implementation design must settle mechanics needed to fulfill the approved behaviors, including macro parsing and value formatting with the S3-02 expansion controls, JSON envelope compatibility, category extraction and storage representation with the S3-07 update timing and skip behavior, SQLite schema/migrations/concurrency, initialization details, directory discovery, and nonblocking state diagnostics.
 
 These are **design details, not permission to add product requirements**. Any proposal to add historical taxonomy imports, automatic reconciliation, prompt tracking, sidecar/state transaction coupling, extra retries, or new functionality must be presented separately for explicit Product Owner approval before entering a requirements document or implementation prompt.
 
@@ -197,4 +224,4 @@ These are **design details, not permission to add product requirements**. Any pr
 
 Slice 3 can be accepted when the fully user-controlled prompts and macros, hierarchical preferred-category paths, general-purpose state with reusable category history and explicit initialization/discovery, nonblocking state behavior, and opt-in `prompt_sha256` meet the above outcomes.
 
-Native batching, native search, scheduling, digiKam-specific automation, and historical taxonomy import are not Slice 3 acceptance conditions. Acceptance of this document is separate from authorization to implement it.
+Native batching, native search, scheduling, digiKam-specific automation, and historical taxonomy import are not Slice 3 acceptance conditions. Requirements acceptance is an orchestration responsibility; assigning a plan step establishes its governing requirements as ready and accepted. It is not a separate implementation-plan acceptance gate.
