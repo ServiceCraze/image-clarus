@@ -10,7 +10,7 @@
 
 **Repository baseline inspected:** The current repository already contains the Python 3.12+ package, two registered stages (`desc`, `json`), a single-image `process` CLI, an OpenAI-compatible provider, configuration resolution, structured JSON generation, and a shared artifact service. At planning inspection, `pyproject.toml` reported version `0.1.10`; this is a snapshot, **not** a prescribed Slice 2 version or a claim that tests were run for this plan. The existing payload schema is `1.0.0` with envelope `format_version: 1`. Phase A must recheck paths and behavior against the then-current checkout before editing.
 
-**Planning rule:** Carry forward the project-specific checklist discipline from Slice 1—ordered phases, searchable exact-match step headings, decisions and readiness, test-first implementation, recorded evidence, and Product Owner scope control. Do not import unrelated Service Craze frontend/backend, tenant, COMMS, UI, or JavaScript gates. Do not impose a step-count target.
+**Planning rule:** Carry forward the project-specific checklist discipline from Slice 1—ordered phases, searchable exact-match step headings, decisions and readiness, test-first implementation, recorded evidence, and Product Owner scope control. Do not import unrelated frontend/backend, tenant, communications, UI, or JavaScript gates. Do not impose a step-count target.
 
 ---
 

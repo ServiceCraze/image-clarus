@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phases A and B complete. Phase C is in progress: C1 is complete; C2 and C3 remain open. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phases A and B complete. Phase C is in progress: C1 is complete; C2 is partial pending disposition of a new deferred static import cycle; C3 remains open. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -10,7 +10,7 @@
 
 **Intended repository path:** `docs/slice-3/IMPL-PLAN-slice-3.md`
 
-**Inspected baseline:** `ServiceCraze/image-clarus`, `main` at commit `357b6dcd809fc9ae0b5f8ed67679410dc39a8481`; package version `0.2.3`. Repository files were inspected for this draft. No application tests, builds, model calls, or implementation steps were executed.
+**Inspected baseline:** `image-clarus`, `main` at commit `357b6dcd809fc9ae0b5f8ed67679410dc39a8481`; package version `0.2.3`. Repository files were inspected for this draft. No application tests, builds, model calls, or implementation steps were executed.
 
 **Authority:** [Parent REQ](../REQ-image-clarus.md) → [Parent HLD](../HLD-image-clarus.md) → [Slice 3 REQ](REQ-slice-3.md) → this plan → implementation. The [Slice 2 plan](../slice-2/IMPL-PLAN-slice-2.md) and [closeout](../slice-2/IMPL-C5-COMPLETED.md) establish accepted history and evidence limits.
 
@@ -458,12 +458,12 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Required Linux Python 3.13 and 3.12 suites, lint/format, lock consistency, and build checks pass, with actual outcomes and any skips recorded. Failed or blocked required checks remain unchecked unless an explicitly approved exception is recorded.
-- [ ] Installed CLI/resource/state checks pass outside the checkout. A blocker is recorded and leaves the affected criterion unchecked unless an explicitly approved exception is recorded.
-- [ ] Prompt wording changes do not break previously passing unit behavior that should use independent fixtures.
-- [ ] Inherited stage/XMP/source/safe-write/signal behavior is protected by relevant regression evidence.
+- [x] Required Linux Python 3.13 and 3.12 suites, lint/format, lock consistency, and build checks pass, with actual outcomes and any skips recorded. Failed or blocked required checks remain unchecked unless an explicitly approved exception is recorded.
+- [x] Installed CLI/resource/state checks pass outside the checkout. A blocker is recorded and leaves the affected criterion unchecked unless an explicitly approved exception is recorded.
+- [x] Prompt wording changes do not break previously passing unit behavior that should use independent fixtures.
+- [x] Inherited stage/XMP/source/safe-write/signal behavior is protected by relevant regression evidence.
 - [ ] The bounded cleanup/import audit identifies removed or retained paths and introduces no unrecorded exception.
-- [ ] Version references, document links, step labels, scope, and privacy-scan findings are reconciled.
+- [x] Version references, document links, step labels, scope, and privacy-scan findings are reconciled.
 
 **Dependencies:** B1–B7, C1.
 
