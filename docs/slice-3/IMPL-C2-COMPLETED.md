@@ -2,7 +2,7 @@
 
 **Status:** Complete. The Product Owner authorized the targeted correction of the newly identified prompt-expansion import cycle; C3 has not started.
 
-**Scope deviations:** None. Two publishable planning documents were sanitized during the scoped privacy audit; their historical technical meaning is unchanged. This correction was delivered as version `0.2.17` rather than a bump solely for closeout.
+**Scope deviations:** None. Two publishable planning documents were sanitized during the scoped privacy audit; their historical technical meaning is unchanged. The privacy corrections were delivered in `0.2.17`, and the authorized dependency-cycle correction in `0.2.18`. The version was subsequently changed to `0.3.0` at the Product Owner's request; the verification results below retain the versions actually tested.
 
 ## Files created, updated, removed
 
