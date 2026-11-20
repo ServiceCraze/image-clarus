@@ -26,7 +26,7 @@
 6. CODE steps follow focused test → observed RED → implementation → observed GREEN → relevant regression. Record commands and the expected reason for failure. Supplemental tests against existing behavior may start GREEN; describe them honestly. If the required test-first sequence cannot be demonstrated, record the exception for orchestration disposition rather than inventing evidence.
 7. Preserve existing patterns and production consumers. For each replaced path, audit remaining callers, tests, resources, and exports. Remove confirmed orphaned production code and obsolete tests or fixtures. Retaining a confirmed orphan requires the established explicit Product Owner exception, documented purpose, and an adjacent code comment; tests or unsupported exports alone are not a retention reason.
 8. Use synthetic inputs, independent prompt fixtures, controlled local provider stubs, and fictitious credentials and infrastructure identifiers in publishable work. Record actual privacy-scan scope. No live provider call or new digiKam manual acceptance exercise is required by this plan.
-9. Apply the project's patch-version increment convention to delivered changes at the assigned delivery boundary. Synchronize the authoritative `pyproject.toml`, `uv.lock`, and relevant version assertions when applicable. Do not select a future release number or change repository files merely because this draft exists.
+9. **The delivering step owns version synchronization.** For each assigned step (A1–A3, B1–B7, C1–C3) that delivers repository changes, apply the project's patch-version increment convention at that step's delivery boundary, not later in C2 or closeout. The same delivering step updates the authoritative `pyproject.toml` version, synchronizes `uv.lock`, updates affected exact-version assertions (including `tests/unit/test_cli.py` and `tests/unit/test_resources.py` where applicable), verifies those updates, and records them in its completion record. This applies to code, test, and documentation deliveries under the project convention. Do not preselect future versions or modify repository files merely because this plan is drafted.
 10. Commits, pushes, and history changes are not acceptance gates or actions authorized by this plan.
 
 ## 1. Scope and inherited contracts
@@ -325,20 +325,20 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Add failing request tests for built-in and replacement prompts in both stages, configurable context, and replacement prompts omitting all category macros.
+1. Add failing captured-request tests for built-in and replacement prompts in both stages and replacement prompts omitting category guidance. Explicitly cover all four prompt/namespace combinations with authored fixture prompts: description/config, description/state, JSON/config, and JSON/state.
 2. Expand prompt snapshots immediately before use while preserving stage skip/preflight behavior and the original prompt bytes for explicitly enabled hashing.
-3. Consolidate existing default instructional framing into the two prompt texts as A1 specifies. Preserve the exact built-in description text. Update the built-in JSON prompt to include preferred-category guidance through its configuration macro.
+3. Consolidate existing default instructional framing into the two prompt texts as A1 specifies. Preserve the exact built-in description text. Update the built-in JSON prompt to include preferred-category guidance through its configuration macro, removing the obsolete `when supplied separately` wording from `prompts/image-structure.txt` while retaining guidance that categories are optional, advisory, and not a closed taxonomy.
 4. Remove the superseded mandatory category payload and hardcoded contextual instructions. Preserve required image/description/schema data, transport/protocol behavior, reasoning mapping, and bounded validation feedback.
-5. Verify captured requests, including a macro-bearing fixture whose source hash differs from its expanded text. Do not inject known-state context unless the authored prompt asks for it.
+5. Verify captured requests for each of the four stage/namespace combinations, including a macro-bearing fixture whose source hash differs from its expanded text. Verify built-in JSON requests at default depth, configured positive depth, and depth zero. Do not inject known-state context unless the authored prompt asks for it.
 6. Update obsolete framing/category injection assertions; retain tests for real protocol and input-data contracts. Audit affected provider arguments and helpers for genuine remaining consumers.
 
 **Outputs:** Integrated prompts, request assembly, updated built-in JSON prompt, fixture-based tests, and removal of superseded instruction paths; [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md).
 
 **Acceptance**
 
-- [ ] Actual captured requests show user-chosen macros and instructions in both stages; replacements can omit category guidance without automatic reinsertion.
-- [ ] The built-in JSON request includes complete configured preferred paths through the macro, including single-segment compatibility.
-- [ ] Product/resource inspection confirms the required description default; wording-dependent unit tests use fixtures instead of freezing production text.
+- [ ] Captured provider requests separately prove description/config, description/state, JSON/config, and JSON/state expansion through authored prompt fixtures; replacements can omit category guidance without automatic reinsertion.
+- [ ] At the default unlimited depth, the built-in JSON request includes complete configured preferred paths, including single-segment values. With a configured positive depth it uses truncated paths, and with depth zero it emits `[]`, as specified by the per-macro setting.
+- [ ] Product/resource inspection confirms the required description default, and confirms the built-in JSON prompt no longer says categories are `supplied separately` while preserving advisory, non-closed-taxonomy guidance; wording-dependent unit tests use fixtures instead of freezing production text.
 - [ ] Opt-in hash testing proves the stored hash remains the raw source-byte hash after expansion.
 - [ ] Required stage data, custom schema support, reasoning, bounded validation retries, independent stage selection, and prior sidecar behavior remain intact.
 
@@ -412,7 +412,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Capture outbound requests from real CLI subprocesses using controlled local provider stubs. Verify prompt replacement/macros, default preferred categories, secret exclusion, opt-in hash, and both-stage support.
+1. Capture outbound requests from real CLI subprocesses using controlled local provider stubs. Verify all four authored prompt/namespace combinations (description/config, description/state, JSON/config, JSON/state), replacement without category advice, secret exclusion, and opt-in hash. For the built-in JSON prompt, verify full paths at default unlimited depth and truncated/`[]` output at configured positive/zero depth.
 2. Exercise fresh JSON and selected existing-JSON skips, accumulation enabled/disabled, post-selected-stage timing, a second independent invocation, and explicit cross-collection sharing.
 3. Exercise the full discovery precedence and no-auto-creation matrix with conflicting/nested repositories and explicit selection failures.
 4. Exercise state open/read/update/migration/permission/corruption/version/contention failures with expected visible diagnostics, successful otherwise-valid primary artifacts, and no persistent substitution.
@@ -445,7 +445,7 @@ All headings below exactly match their corresponding detailed step headings.
 3. In a disposable source copy, change production prompt wording and rerun unit checks that could have depended on it. Fixture-based text/hash tests must remain valid. Keep bundled-default product checks separate from unit tests that should tolerate wording changes.
 4. Build/install the distribution in a separate environment and run outside the checkout with `PYTHONPATH` unset. Check version, top-level/process/search/init help, packaged prompt/schema resources, and synthetic processing/state usage. A source-tree import must not conceal a missing packaged resource.
 5. Audit replaced instruction/category-injection paths, obsolete assertions/fixtures, new dependency directions, and new cycles. Preserve legitimate supported consumers; do not reopen unrelated historical architecture work.
-6. Confirm delivery-boundary version increments are synchronized without inventing an additional release bump solely for closeout. Check documentation links, exact step headings, crosswalks, status markers, and requirement scope.
+6. Confirm each step that delivered repository changes performed its own delivery-boundary patch-version increment and synchronized `pyproject.toml`, `uv.lock`, and affected version assertions. C2 verifies those deliveries; it does not defer or take ownership of earlier steps' version updates or invent an additional release bump solely for closeout. Check documentation links, exact step headings, crosswalks, status markers, and requirement scope.
 7. Scan the actual new/changed publishable files and recorded evidence for known private identifiers, credentials, and local paths. Report scope and findings rather than claiming exhaustive secrecy.
 
 **Outputs:** Runtime, regression, package, dependency, cleanup, version, and privacy evidence; [IMPL-C2-COMPLETED.md](IMPL-C2-COMPLETED.md).
@@ -495,7 +495,7 @@ All headings below exactly match their corresponding detailed step headings.
 | S3-02 Namespaced macros and generic expansion | A1, A2 | B1, B4, B5 | E02–E03; configuration and request tests |
 | S3-03 Secret configuration protection | A1 | B4, B5 | E04; nested/inline/environment sentinels and diagnostics |
 | S3-04 Optional prompt SHA and fixture independence | A1 | B1, B5 | E05–E07; C2 disposable prompt-edit and package checks |
-| S3-05 Hierarchical preferred categories | A1 | B1, B5 | E08; full-path/default-request and replacement tests |
+| S3-05 Hierarchical preferred categories | A1 | B1, B5 | E08; full paths at default depth, configured truncation/zero, and replacement tests |
 | S3-06 General-purpose state | A2 | B2, B3 | Backend/domain review, E09, E11, E13 |
 | S3-07 Known category state and accumulation | A2 | B2, B6 | E09–E10; post-stage/default-on/off and second-process evidence |
 | S3-08 Explicit initialization and precedence | A1, A2 | B1, B3 | E11; all precedence boundaries and no-auto-creation tests |
@@ -511,13 +511,13 @@ The Expected evidence column specifies future proof, not completed verification.
 | ID | S3-12 area | Expected observable evidence | Evidence owner | Initial status |
 | --- | --- | --- | --- | --- |
 | E01 | Full prompt replacement | Captured built-in/replacement requests show author-controlled instructions and no hidden mandatory framing; required data remains present. | B5, C1 | Not run |
-| E02 | Namespaced macros | Both prompt inputs expand fixture-selected config/state values; omission does not inject category context. | B4, B5, C1 | Not run |
+| E02 | Namespaced macros | Captured requests separately verify description/config, description/state, JSON/config, and JSON/state with authored fixture prompts; omission does not inject category context. | B4, B5, C1 | Not run |
 | E03 | Hierarchy expansion | Both namespaces and a non-category array cover delimiter/default/null/positive/zero/negative, deduplication, per-macro CLI precedence, and unchanged sources. | B1, B4, C1 | Not run |
 | E04 | Secret safety | Inline/environment sentinels and containing-object references are absent from expanded requests and diagnostics; provider authentication still works through its normal channel. | B4, B5, C1 | Not run |
 | E05 | Prompt edits and tests | Stable text/hash cases use fixtures; a disposable production-prompt wording change leaves relevant unit checks passing. | B1, B5, C2 | Not run |
 | E06 | Optional prompt SHA | Default omission; YAML/CLI enablement; raw source-byte fixture hash despite expansion; old/new/invalid-present validator and XMP cases. | B1, B5, C1 | Not run |
 | E07 | Preserved JSON fields | Assertions for approved identifiers, raw persisted-description hash, and custom-schema hash remain valid. | B1, C1, C2 | Not run |
-| E08 | Hierarchical guidance | Actual built-in JSON request contains complete configured single/multisegment paths through its macro; replacement can change or omit them. | B1, B5, C1 | Not run |
+| E08 | Hierarchical guidance | Captured built-in JSON requests contain complete single/multisegment paths at default unlimited depth; configured positive depth truncates them and zero yields `[]`; replacements can change or omit guidance. | B1, B5, C1 | Not run |
 | E09 | Known categories | Default-on successful JSON accumulates after selected stages; a second CLI process expands persisted full paths; disabling accumulation prevents updates. | B6, C1 | Not run |
 | E10 | Existing JSON accumulation | Selected JSON with valid existing output accumulates with zero provider calls and unchanged sidecar bytes; disabled setting prevents updates. | B6, C1 | Not run |
 | E11 | Initialization and resolution | CLI tests show intentional init, no automatic repository creation, all precedence boundaries, nested/conflicting repositories, and explicit shared-state selection. | B3, C1 | Not run |
