@@ -288,3 +288,21 @@ def test_valid_unicode_full_paths_are_preserved(tmp_path, backend):
     paths = ["/根/🐈", "a|b/ c ", "a\x00b", "", "é/🖼"]
     store.add_categories(paths)
     assert store.snapshot_categories() == sorted(paths)
+
+
+@pytest.mark.parametrize("backend", ["memory", "sqlite"])
+@pytest.mark.parametrize("value", ["food/desserts/cookies", ""])
+def test_scalar_string_is_rejected_without_mutation(tmp_path, backend, value):
+    if backend == "sqlite":
+        directory = tmp_path / "state"
+        storage.initialize(directory)
+        store = storage.SQLiteStorage(directory)
+    else:
+        store = storage.MemoryStorage()
+    store.add_categories(["existing/path"])
+    with pytest.raises(storage.StateError, match="category update failed") as error:
+        store.add_categories(value)
+    assert str(error.value) == "category update failed"
+    assert store.snapshot_categories() == ["existing/path"]
+    store.add_categories(["food/desserts/cookies"])
+    assert store.snapshot_categories() == ["existing/path", "food/desserts/cookies"]

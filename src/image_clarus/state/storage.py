@@ -37,6 +37,8 @@ def _check_stop(stop: Any) -> None:
 def _category_values(paths: Iterable[str]) -> list[str]:
     """Materialize and validate the common storage domain before mutation."""
     try:
+        if isinstance(paths, str):
+            raise TypeError
         values = []
         for path in paths:
             if not isinstance(path, str):
