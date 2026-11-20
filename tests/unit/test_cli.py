@@ -134,7 +134,7 @@ def test_version_uses_installed_metadata():
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.2.9\n",
+        "image-clarus 0.2.10\n",
         "",
     )
 
@@ -393,6 +393,7 @@ def test_cli_selects_only_requested_stages_and_preflights_them(
         return {
             "logging": {"level": "WARNING"},
             "pipeline": {"backup_retention": "remove"},
+            "state": {"directory": None},
         }
 
     def fake(name):

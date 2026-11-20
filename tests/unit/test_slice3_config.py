@@ -361,3 +361,94 @@ def test_process_cli_accepts_state_flag_and_rejects_duplicate(tmp_path):
     assert result.returncode == 2
     assert "prompt_expansion.macros.<name>.max_depth" in result.stderr
     assert "state.categories.known" not in result.stderr
+
+
+@pytest.mark.parametrize("origin", ["yaml", "set", "flag"])
+def test_state_dangling_parent_does_not_select_alternate_repo(
+    tmp_path, monkeypatch, capsys, origin
+):
+    from image_clarus.state.service import StateService
+    from image_clarus.state.storage import initialize
+
+    cwd = tmp_path / "work"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    alternate = cwd / "repo"
+    initialize(alternate)
+    (cwd / "dangling").symlink_to(cwd / "missing")
+    config_file = cwd / "config.yaml"
+    config_file.write_text("state: {directory: dangling/../repo}\n")
+    args = {"config_file": config_file}
+    if origin == "set":
+        args["overrides"] = ["state.directory=dangling/../repo"]
+    elif origin == "flag":
+        args["state_dir"] = "dangling/../repo"
+    config = resolve_config(**args)
+    service = StateService.select(config["state"]["directory"], cwd, cwd / "x")
+    service.add_categories(["fictional/category"])
+    assert "state error" in capsys.readouterr().err
+    service.close()
+    check = StateService.select(alternate, cwd, cwd / "x")
+    assert check.snapshot_categories() == []
+    check.close()
+
+
+def test_state_resolution_permission_is_nonblocking(tmp_path, monkeypatch, capsys):
+    from pathlib import Path
+
+    from image_clarus.state.service import StateService
+
+    monkeypatch.chdir(tmp_path)
+    original = Path.resolve
+
+    def denied(self, *args, **kwargs):
+        if "blocked" in self.parts:
+            raise PermissionError("fictional private sentinel")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", denied)
+    config = resolve_config(discovery_paths=(), state_dir="blocked/repo")
+    service = StateService.select(
+        config["state"]["directory"], tmp_path, tmp_path / "x"
+    )
+    assert service.snapshot_categories() == []
+    err = capsys.readouterr().err
+    assert "state error" in err and "fictional private sentinel" not in err
+    service.close()
+
+
+def test_cli_dangling_parent_uses_temporary_state(tmp_path):
+    from image_clarus.state.storage import initialize
+
+    image = tmp_path / "fictional.jpg"
+    image.write_bytes(b"fictional")
+    (tmp_path / "fictional.jpg.desc.txt").write_text("fictional")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        'providers: {p: {base_url: "http://fictional.example/v1"}}\nmodels: {m: {provider: p, model_id: fictional}}\nstages: {desc: {model: m}}\n'
+    )
+    initialize(tmp_path / "repo")
+    (tmp_path / "dangling").symlink_to(tmp_path / "missing")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "image_clarus",
+            "process",
+            str(image),
+            "--config",
+            str(config),
+            "--stages",
+            "desc",
+            "--state-dir",
+            "dangling/../repo",
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "desc: skipped" in result.stdout
+    assert "state error" in result.stderr

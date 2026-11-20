@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete. Phase B is in progress: B1–B2 are complete; B3–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phase A complete. Phase B is in progress: B1–B3 are complete; B4–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -86,7 +86,7 @@ These are existing files and observed behavior at the stated baseline. Recheck c
 | Resources and packaging | `resources.py`, `prompts/`, `schemas/`, `pyproject.toml` | Keep the two existing prompt inputs and four packaged prompt/schema resources. SQLite uses the standard-library backend selected in the HLD. |
 | User documentation | `README.md`, `examples/config.yaml` | Document actual frozen options, precedence, defaults, error behavior, and single-image examples after implementation. |
 
-**A1/A2-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py`, `src/image_clarus/state/__init__.py`, `src/image_clarus/state/resolution.py`, `src/image_clarus/state/storage.py`, `src/image_clarus/state/categories.py`, `src/image_clarus/state/accumulation.py`, `tests/unit/test_prompt_expansion.py`, `tests/unit/test_state_storage.py`, `tests/unit/test_state_resolution.py`, `tests/unit/test_state_categories.py`, and `tests/integration/test_state_cli.py`. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1; A3 records the readiness clarifications. See [A1](IMPL-A1-COMPLETED.md), [A2](IMPL-A2-COMPLETED.md) and [A3](IMPL-A3-COMPLETED.md); selected paths do not claim implementation exists.
+**A1/A2-selected additions:** B2–B3 implemented the `state` package, storage, category, resolution and invocation-local service modules and their tests. `src/image_clarus/prompt_expansion.py`, `src/image_clarus/state/accumulation.py` and `tests/unit/test_prompt_expansion.py` remain planned for later steps. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1; A3 records the readiness clarifications. See [A1](IMPL-A1-COMPLETED.md), [A2](IMPL-A2-COMPLETED.md), [A3](IMPL-A3-COMPLETED.md), [B2](IMPL-B2-COMPLETED.md) and [B3](IMPL-B3-COMPLETED.md).
 
 **Dependency direction:** CLI/orchestration supplies resolved configuration and shared services; stages use prompt expansion; prompt expansion reads a safe configuration view and state-domain values; state domains use storage; location resolution selects a backend independently. Provider adapters remain transport boundaries. JSON parsing/extraction stays in a metadata/domain component rather than the stage coordinator. Audit changed imports against the existing graph; do not turn this slice into a repository-wide rewrite of documented historical cycles.
 
@@ -104,7 +104,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 - [x] Step B1 - Extend configuration and JSON hash compatibility [CODE]
 - [x] Step B2 - Implement state storage and category operations [CODE]
-- [ ] Step B3 - Implement initialization and state resolution [CODE]
+- [x] Step B3 - Implement initialization and state resolution [CODE]
 - [ ] Step B4 - Implement safe namespaced macro expansion [CODE]
 - [ ] Step B5 - Integrate fully user-owned prompts [CODE]
 - [ ] Step B6 - Integrate category accumulation after processing [CODE]
@@ -288,11 +288,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] `init` initializes in CWD, and ordinary processing in an uninitialized tree leaves no persistent repository.
-- [ ] Table-driven tests cover the entire precedence order, nearest nested matches, unrelated-collection sharing, and CWD winning over a different image repository.
-- [ ] An invalid explicit selection emits a state error and does not update another persistent repository; otherwise valid primary work retains its outcome.
-- [ ] Diagnostics remain visible under supported logging-level settings and exclude synthetic secret values.
-- [ ] Existing CLI and selected-stage behavior remain supported; `init --help` is available without an image or configured model.
+- [x] `init` initializes in CWD, and ordinary processing in an uninitialized tree leaves no persistent repository.
+- [x] Table-driven tests cover the entire precedence order, nearest nested matches, unrelated-collection sharing, and CWD winning over a different image repository.
+- [x] An invalid explicit selection emits a state error and does not update another persistent repository; otherwise valid primary work retains its outcome.
+- [x] Diagnostics remain visible under supported logging-level settings and exclude synthetic secret values.
+- [x] Existing CLI and selected-stage behavior remain supported; `init --help` is available without an image or configured model.
 
 **Dependencies:** B1, B2.
 

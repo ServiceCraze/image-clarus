@@ -87,7 +87,24 @@ def _main(state):
     subparsers.add_parser(
         "search", help="Search (not implemented in Slice 1)", allow_abbrev=False
     )
+    subparsers.add_parser(
+        "init", help="Initialize state in the current directory", allow_abbrev=False
+    )
     args = parser.parse_args()
+    if args.command == "init":
+        from pathlib import Path
+
+        from image_clarus.state.storage import StateError, StateStopped, initialize
+
+        try:
+            initialize(Path.cwd() / ".image-clarus", stop=state.stop)
+        except StateStopped:
+            return 128 + state.stop.signum
+        except StateError:
+            print("image-clarus: state error: initialization failed", file=sys.stderr)
+            return 1
+        print("image-clarus: state initialized")
+        return 0
     if args.command == "search":
         print("search is not implemented in Slice 1", file=sys.stderr)
     else:
@@ -212,6 +229,8 @@ def _main(state):
             return run
 
         from image_clarus.artifacts import ArtifactError
+        from image_clarus.state.service import StateService
+        from image_clarus.state.storage import StateStopped
 
         class InterruptibleArtifacts(ArtifactService):
             def write(self, *args, **kwargs):
@@ -219,28 +238,41 @@ def _main(state):
                     raise ArtifactError("interrupted")
                 return super().write(*args, **kwargs)
 
-        services = SimpleNamespace(
-            artifacts=InterruptibleArtifacts(config["pipeline"]["backup_retention"]),
-            provider_factory=InterruptibleProvider,
-            stop=stop,
-        )
-        stage_functions = {
-            "desc": stage_wrapper("desc", run_description),
-            "json": stage_wrapper("json", run_structure),
-        }
-        if "xmp" in selected:
-            from image_clarus.stages.xmp import run_xmp
+        try:
+            state_service = StateService.select(
+                config["state"]["directory"], Path.cwd(), image, stop=stop
+            )
+        except StateStopped:
+            return 128 + stop.signum
 
-            stage_functions["xmp"] = stage_wrapper("xmp", run_xmp)
+        try:
+            services = SimpleNamespace(
+                artifacts=InterruptibleArtifacts(
+                    config["pipeline"]["backup_retention"]
+                ),
+                provider_factory=InterruptibleProvider,
+                stop=stop,
+                state=state_service,
+            )
+            stage_functions = {
+                "desc": stage_wrapper("desc", run_description),
+                "json": stage_wrapper("json", run_structure),
+            }
+            if "xmp" in selected:
+                from image_clarus.stages.xmp import run_xmp
 
-        result = run_pipeline(
-            image,
-            config,
-            services,
-            stage_functions,
-            selected=selected,
-            stop=stop,
-        )
+                stage_functions["xmp"] = stage_wrapper("xmp", run_xmp)
+
+            result = run_pipeline(
+                image,
+                config,
+                services,
+                stage_functions,
+                selected=selected,
+                stop=stop,
+            )
+        finally:
+            state_service.close()
         for stage in result.stages:
             if stage.status == "completed":
                 import json

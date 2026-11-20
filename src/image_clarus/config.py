@@ -302,11 +302,26 @@ def _path(value, base):
         raise ConfigurationError("Invalid configuration path") from None
 
 
+def _state_path(value, base):
+    """Anchor the origin without resolving filesystem components prematurely."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        _fail()
+    path = Path(value)
+    try:
+        path = path.expanduser()
+    except (OSError, RuntimeError, ValueError):
+        # Selection will retry expansion and turn its failure into a state error.
+        return path
+    return base / path
+
+
 def _normalize_paths(data, base):
     state = data.get("state")
     if isinstance(state, dict) and "directory" in state:
         try:
-            state["directory"] = _path(state["directory"], base)
+            state["directory"] = _state_path(state["directory"], base)
         except ConfigurationError:
             pass  # A higher-priority layer may repair the value.
     for root, stage, field in PATH_FIELDS:
@@ -1081,7 +1096,7 @@ def resolve_config(
         if not isinstance(config["state"], dict):
             config["state"] = deepcopy(DEFAULTS["state"])
         try:
-            config["state"]["directory"] = _path(state_dir, Path.cwd())
+            config["state"]["directory"] = _state_path(state_dir, Path.cwd())
         except ConfigurationError:
             raise ConfigurationError(
                 "state.directory: invalid path; set a nonempty path"

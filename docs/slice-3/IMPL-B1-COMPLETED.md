@@ -18,7 +18,7 @@
 4. Existing provenance identifiers, description hash, custom-schema hash, create-only and regeneration behavior remain covered. A former description-stage assertion froze the production prompt text; it now compares the captured request with the actual resource while retaining an independent custom-prompt case. The production prompt itself was not changed.
 5. Shared crosswalk outcomes E03, E05–E08 and E14 remain open as whole outcomes because they also belong to later steps; B1 evidence does not imply those later portions ran. State availability and initialization are not implemented by accepting the setting.
 
-**Subsequent progress:** [B2](IMPL-B2-COMPLETED.md) implemented the state storage and category-domain foundation. CLI discovery and nonblocking integration remain assigned to B3; B1's recorded evidence is unchanged.
+**Subsequent progress:** [B2](IMPL-B2-COMPLETED.md) implemented the state storage and category-domain foundation, and [B3](IMPL-B3-COMPLETED.md) implemented CLI discovery and nonblocking integration. B1's recorded evidence is unchanged.
 
 ## Verification and limitations
 

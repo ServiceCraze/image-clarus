@@ -34,6 +34,8 @@ Review identified that passing a scalar string to `add_categories` incorrectly t
 
 The focused regression was observed RED (**4 failures**) before the correction and GREEN (**4 passed**) afterward, covering both backends and both string forms. With temporary ExifTool 13.55 on `PATH`, the full suite passed **986 tests** without skips. Ruff check and format passed; `uv lock --locked` resolved **21 packages**, and the CLI reported **0.2.9**. This correction updates the package metadata, lockfile and exact-version assertions; the preceding 0.2.8 evidence remains historical. B2 remains complete; B3 has not started.
 
+**Subsequent B3 progress:** [B3](IMPL-B3-COMPLETED.md) implemented initialization routing, state selection and nonblocking service integration. The statements and verification above describe the earlier B2 delivery and review correction.
+
 ## B2 acceptance
 
 - [x] Memory and SQLite implementations satisfy the A2 domain contract; a separate process reads persisted full hierarchy.
