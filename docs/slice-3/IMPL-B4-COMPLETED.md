@@ -18,6 +18,8 @@
 4. The engine reads known category paths via the existing invocation-local state service. An injected storage-read failure through the real service produces visible sanitized diagnostics and an empty known-category snapshot; later memory additions work. Intentional memory use and stop propagation are covered. This is unit-level evidence, not a captured stage request.
 5. E02–E06 and related cross-step evidence remain open until B5/C1/C2 exercise the integration and request boundaries. No claim is made that real model requests already use macros or that unavailable state was tested through a model stage.
 
+**Subsequent B5 progress:** [B5](IMPL-B5-COMPLETED.md) integrated expansion in both model stages and tested captured synthetic requests and state fallback. C1/C2 cross-step verification remains open; the B4 observations above are historical.
+
 ## Verification and limitations
 
 - The initial new-module test run failed **collection** because the macro module did not exist; it was not a behavioral RED. Initial behavior tests and broader scenarios were then developed and passed. This test-order limitation is recorded, not reconstructed as historical failures.

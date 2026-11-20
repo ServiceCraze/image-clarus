@@ -4,6 +4,7 @@ from pathlib import Path
 
 from image_clarus import resources
 from image_clarus.artifacts import ArtifactError
+from image_clarus.config import ConfigurationError
 from image_clarus.providers.openai_compatible import ProviderError
 from image_clarus.results import StageResult
 
@@ -43,6 +44,23 @@ def run_description(image_path, config, services):
             "failed",
             error_category="configuration",
             message="Unable to read description prompt",
+        )
+    try:
+        # Deferred so importing stages for other work never opens state.
+        from image_clarus.prompt_expansion import expand_prompt, safe_config_snapshot
+
+        prompt = expand_prompt(
+            prompt,
+            safe_config_snapshot(config),
+            getattr(services, "state", None),
+            config.get("prompt_expansion", {}).get("macros", {}),
+        )
+    except ConfigurationError:
+        return StageResult(
+            "desc",
+            "failed",
+            error_category="configuration",
+            message="Invalid prompt expansion",
         )
     try:
         image_bytes = image_path.read_bytes()

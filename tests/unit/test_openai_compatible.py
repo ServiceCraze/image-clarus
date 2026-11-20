@@ -127,10 +127,16 @@ def test_json_parts_reasoning_and_retry_context():
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": "Persisted description:\ndesc\n"},
                 {
                     "type": "text",
-                    "text": 'Selected JSON Schema:\n{"$id": "urn:test", "type": "object"}',
+                    "text": json.dumps(
+                        {
+                            "description": "desc\n",
+                            "schema": {"$id": "urn:test", "type": "object"},
+                        },
+                        ensure_ascii=False,
+                        allow_nan=False,
+                    ),
                 },
             ],
         },

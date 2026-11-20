@@ -66,6 +66,7 @@ def context(tmp_path):
                 "reasoning_effort": None,
                 "regenerate": False,
                 "validation_retries": 0,
+                "preferred_categories": [],
             }
         },
         "pipeline": {"missing_prerequisite": "fail"},
@@ -114,10 +115,10 @@ def test_generation_uses_exact_snapshots_and_provenance(context):
         "prompt_sha256": hashlib.sha256(c.prompt.read_bytes()).hexdigest(),
         "description_sha256": hashlib.sha256(c.desc.read_bytes()).hexdigest(),
     }
-    assert (
-        c.requests[0]["messages"][1]["content"][0]["text"]
-        == "Persisted description:\né\r\n"
-    )
+    assert json.loads(c.requests[0]["messages"][1]["content"][0]["text"]) == {
+        "description": "é\r\n",
+        "schema": json.loads(c.schema.read_bytes()),
+    }
     assert c.output.read_bytes().endswith(b"\n")
 
 
@@ -423,9 +424,10 @@ def test_builtin_resources(context):
     assert result["schema_version"] == "2.0.0"
     assert result["provenance"]["prompt_id"] == "builtin:image-structure"
     assert "prompt_sha256" not in result["provenance"]
-    assert (
-        c.requests[0]["messages"][0]["content"].encode()
-        == resources.structure_prompt().read_bytes()
+    assert c.requests[0]["messages"][0][
+        "content"
+    ] == resources.structure_prompt().read_text().replace(
+        "{{config.stages.json.preferred_categories}}", "[]"
     )
 
 
@@ -701,10 +703,10 @@ def test_hierarchical_preferred_categories_reach_provider(context):
         "food",
         "food/desserts/café",
     ]
+    context.prompt.write_text("{{config.stages.json.preferred_categories}}")
     assert run(context).status == "completed"
     assert (
-        '["food", "food/desserts/café"]'
-        in context.requests[0]["messages"][1]["content"][2]["text"]
+        context.requests[0]["messages"][0]["content"] == '["food","food/desserts/café"]'
     )
 
 
@@ -743,3 +745,117 @@ def test_present_null_prompt_hash_is_invalid(context):
     value = json.loads(context.output.read_bytes())
     value["provenance"]["prompt_sha256"] = None
     assert not _valid_envelope(json.dumps(value).encode())
+
+
+@pytest.mark.parametrize(
+    "stage,namespace",
+    [("desc", "config"), ("desc", "state"), ("json", "config"), ("json", "state")],
+)
+def test_authored_prompt_expands_in_actual_request(context, stage, namespace):
+    c = context
+    c.services.state = SimpleNamespace(snapshot_categories=lambda: ["fiction/root"])
+    c.config["stages"]["json"]["preferred_categories"] = ["fiction/config"]
+    c.config["stages"]["desc"] = {
+        "model": "text",
+        "prompt_file": c.prompt,
+        "reasoning_effort": None,
+        "regenerate": True,
+    }
+    name = (
+        "config.stages.json.preferred_categories"
+        if namespace == "config"
+        else "state.categories.known"
+    )
+    source = ("Fixture: {{" + name + "}}\n").encode()
+    c.prompt.write_bytes(source)
+    if stage == "desc":
+        from image_clarus.stages.description import run_description
+
+        result = run_description(c.image, c.config, c.services)
+    else:
+        c.config["stages"]["json"]["include_prompt_sha256"] = True
+        result = run(c)
+    assert result.status == "completed"
+    expected = "fiction/config" if namespace == "config" else "fiction/root"
+    assert c.requests[0]["messages"][0]["content"] == 'Fixture: ["' + expected + '"]\n'
+    if stage == "json":
+        assert (
+            json.loads(c.output.read_bytes())["provenance"]["prompt_sha256"]
+            == hashlib.sha256(source).hexdigest()
+        )
+        data = json.loads(c.requests[0]["messages"][1]["content"][0]["text"])
+        assert data == {
+            "description": c.desc.read_bytes().decode("utf-8"),
+            "schema": json.loads(c.schema.read_bytes()),
+        }
+
+
+@pytest.mark.parametrize("stage", ["desc", "json"])
+def test_secret_macro_fails_before_provider(context, stage, monkeypatch):
+    c = context
+    monkeypatch.setenv("FICTIONAL_KEY", "synthetic-secret-env")
+    c.config["providers"]["local"]["api_key_env"] = "FICTIONAL_KEY"
+    c.prompt.write_text("{{config.providers.local.api_key_env}}")
+    c.config["stages"]["desc"] = {
+        "model": "text",
+        "prompt_file": c.prompt,
+        "reasoning_effort": None,
+        "regenerate": True,
+    }
+    if stage == "desc":
+        from image_clarus.stages.description import run_description
+
+        result = run_description(c.image, c.config, c.services)
+    else:
+        result = run(c)
+    assert result.status == "failed" and result.error_category == "configuration"
+    assert "synthetic-secret-env" not in str(result)
+    assert c.requests == []
+
+
+def test_state_read_failure_falls_back_without_blocking_request(context, capsys):
+    from image_clarus.state.service import StateService
+    from image_clarus.state.storage import StateError
+
+    class BrokenStorage:
+        def snapshot_categories(self):
+            raise StateError("synthetic private detail")
+
+        def close(self):
+            pass
+
+    context.services.state = StateService(BrokenStorage())
+    context.prompt.write_text("Context: {{state.categories.known}}")
+    assert run(context).status == "completed"
+    assert context.requests[0]["messages"][0]["content"] == "Context: []"
+    diagnostic = capsys.readouterr().err
+    assert "state error" in diagnostic and "synthetic private detail" not in diagnostic
+
+
+@pytest.mark.parametrize("stage", ["desc", "json"])
+def test_parent_config_expansion_redacts_credentials(context, stage, monkeypatch):
+    c = context
+    monkeypatch.setenv("FICTIONAL_KEY", "synthetic-secret-env")
+    c.config["providers"]["local"].update(
+        api_key_env="FICTIONAL_KEY", alias="synthetic-secret-env"
+    )
+    c.prompt.write_text("{{config.providers}}")
+    c.config["stages"]["desc"] = {
+        "model": "text",
+        "prompt_file": c.prompt,
+        "reasoning_effort": None,
+        "regenerate": True,
+    }
+    if stage == "desc":
+        from image_clarus.stages.description import run_description
+
+        result = run_description(c.image, c.config, c.services)
+    else:
+        result = run(c)
+    assert result.status == "completed"
+    text = c.requests[0]["messages"][0]["content"]
+    assert (
+        "synthetic-secret-env" not in text
+        and "FICTIONAL_KEY" not in text
+        and "api_key_env" not in text
+    )

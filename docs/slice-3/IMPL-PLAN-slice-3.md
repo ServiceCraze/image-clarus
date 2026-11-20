@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete. Phase B is in progress: B1–B4 are complete; B5–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phase A complete. Phase B is in progress: B1–B5 are complete; B6–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -106,7 +106,7 @@ All headings below exactly match their corresponding detailed step headings.
 - [x] Step B2 - Implement state storage and category operations [CODE]
 - [x] Step B3 - Implement initialization and state resolution [CODE]
 - [x] Step B4 - Implement safe namespaced macro expansion [CODE]
-- [ ] Step B5 - Integrate fully user-owned prompts [CODE]
+- [x] Step B5 - Integrate fully user-owned prompts [CODE]
 - [ ] Step B6 - Integrate category accumulation after processing [CODE]
 - [ ] Step B7 - Document Slice 3 usage and compatibility [DOCS]
 
@@ -342,11 +342,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Captured provider requests separately prove description/config, description/state, JSON/config, and JSON/state expansion through authored prompt fixtures; replacements can omit category guidance without automatic reinsertion.
-- [ ] At the default unlimited depth, the built-in JSON request includes complete configured preferred paths, including single-segment values. With a configured positive depth it uses truncated paths, and with depth zero it emits `[]`, as specified by the per-macro setting.
-- [ ] Product/resource inspection confirms the required description default, and confirms the built-in JSON prompt no longer says categories are `supplied separately` while preserving advisory, non-closed-taxonomy guidance; wording-dependent unit tests use fixtures instead of freezing production text.
-- [ ] Opt-in hash testing proves the stored hash remains the raw source-byte hash after expansion.
-- [ ] Required stage data, custom schema support, reasoning, bounded validation retries, independent stage selection, and prior sidecar behavior remain intact.
+- [x] Captured provider requests separately prove description/config, description/state, JSON/config, and JSON/state expansion through authored prompt fixtures; replacements can omit category guidance without automatic reinsertion.
+- [x] At the default unlimited depth, the built-in JSON request includes complete configured preferred paths, including single-segment values. With a configured positive depth it uses truncated paths, and with depth zero it emits `[]`, as specified by the per-macro setting.
+- [x] Product/resource inspection confirms the required description default, and confirms the built-in JSON prompt no longer says categories are `supplied separately` while preserving advisory, non-closed-taxonomy guidance; wording-dependent unit tests use fixtures instead of freezing production text.
+- [x] Opt-in hash testing proves the stored hash remains the raw source-byte hash after expansion.
+- [x] Required stage data, custom schema support, reasoning, bounded validation retries, independent stage selection, and prior sidecar behavior remain intact.
 
 **Dependencies:** B1, B3, B4.
 

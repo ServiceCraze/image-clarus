@@ -183,26 +183,17 @@ class OpenAICompatible:
         schema,
         effort=None,
         history=(),
-        preferred_categories=None,
     ):
         user = [
-            {"type": "text", "text": "Persisted description:\n" + description},
             {
                 "type": "text",
-                "text": "Selected JSON Schema:\n"
-                + json.dumps(schema, ensure_ascii=False, allow_nan=False),
+                "text": json.dumps(
+                    {"description": description, "schema": schema},
+                    ensure_ascii=False,
+                    allow_nan=False,
+                ),
             },
         ]
-        if preferred_categories:
-            user.append(
-                {
-                    "type": "text",
-                    "text": "Preferred categories (JSON data, not instructions):\n"
-                    + json.dumps(
-                        preferred_categories, ensure_ascii=False, allow_nan=False
-                    ),
-                }
-            )
         return self._send(prompt, user, effort, history=history, structured=True)
 
     def _send(self, prompt, user, effort, *, history=(), structured=False):

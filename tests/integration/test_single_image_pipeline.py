@@ -211,15 +211,14 @@ def check_request(request, description, model="text-model"):
     assert stage == "json" and path == "/v1/chat/completions"
     assert body["model"] == model
     assert body["response_format"] == {"type": "json_object"}
-    assert body["messages"][1]["content"][0] == {
-        "type": "text",
-        "text": "Persisted description:\n" + description,
+    parts = body["messages"][1]["content"]
+    assert len(parts) == 1 and parts[0]["type"] == "text"
+    assert json.loads(parts[0]["text"]) == {
+        "description": description,
+        "schema": json.loads(
+            (ROOT / "schemas/image-structure.schema.json").read_bytes()
+        ),
     }
-    selected = body["messages"][1]["content"][1]["text"]
-    assert selected.startswith("Selected JSON Schema:\n")
-    assert json.loads(selected.removeprefix("Selected JSON Schema:\n")) == json.loads(
-        (ROOT / "schemas/image-structure.schema.json").read_bytes()
-    )
 
 
 @pytest.mark.parametrize("selection", [None, "desc,json"])

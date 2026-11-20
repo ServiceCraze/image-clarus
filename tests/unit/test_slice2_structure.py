@@ -348,9 +348,12 @@ def test_tag_candidate_duplicate_paths_rejected():
 # ─── Category guidance tests ─────────────────────────────────────────────────
 
 
-def test_category_guidance_added_as_third_user_part(slice2_context):
-    """Non-empty preferred categories are added as third user message part."""
+def test_category_guidance_expands_in_authored_prompt(slice2_context, tmp_path):
+    """Non-empty preferred categories expand in the authored prompt."""
     c = slice2_context
+    prompt = tmp_path / "category-prompt.txt"
+    prompt.write_text("{{config.stages.json.preferred_categories}}")
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.config["stages"]["json"]["preferred_categories"] = ["food", "color"]
     c.replies[:] = [
         json.dumps(
@@ -380,29 +383,22 @@ def test_category_guidance_added_as_third_user_part(slice2_context):
     result = run_structure(c)
     assert result is not None and result.status == "completed"
 
-    # Check the request had three user parts
-    user_messages = [m for m in c.requests[0]["messages"] if m["role"] == "user"]
-    assert len(user_messages) == 1
-    user_content = user_messages[0]["content"]
-    assert len(user_content) == 3
-    assert user_content[0]["type"] == "text"
-    assert user_content[0]["text"].startswith("Persisted description:")
-    assert user_content[1]["type"] == "text"
-    assert user_content[1]["text"].startswith("Selected JSON Schema:")
-    assert user_content[2]["type"] == "text"
-    assert user_content[2]["text"].startswith(
-        "Preferred categories (JSON data, not instructions):"
-    )
-    # Verify the exact JSON serialization
-    import json as json_module
-
-    expected = json_module.dumps(["food", "color"], ensure_ascii=False, allow_nan=False)
-    assert expected in user_content[2]["text"]
+    messages = c.requests[0]["messages"]
+    assert '["food","color"]' in messages[0]["content"]
+    assert len(messages[1]["content"]) == 1
+    data = json.loads(messages[1]["content"][0]["text"])
+    assert data == {
+        "description": c.desc.read_bytes().decode(),
+        "schema": json.loads(resources.structure_schema().read_bytes()),
+    }
 
 
-def test_category_guidance_omitted_when_empty(slice2_context):
-    """Empty or absent preferred categories omit the third user part."""
+def test_category_guidance_expands_empty_array(slice2_context, tmp_path):
+    """Empty preferred categories expand to an empty array."""
     c = slice2_context
+    prompt = tmp_path / "category-prompt.txt"
+    prompt.write_text("{{config.stages.json.preferred_categories}}")
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.config["stages"]["json"]["preferred_categories"] = []
     c.replies[:] = [
         json.dumps(
@@ -429,13 +425,17 @@ def test_category_guidance_omitted_when_empty(slice2_context):
 
     user_messages = [m for m in c.requests[0]["messages"] if m["role"] == "user"]
     user_content = user_messages[0]["content"]
-    assert len(user_content) == 2  # Only description and schema
+    assert len(user_content) == 1
+    assert "[]" in c.requests[0]["messages"][0]["content"]
 
 
 def test_category_guidance_absent_when_key_missing(slice2_context):
     """Missing preferred_categories key omits the third user part."""
     c = slice2_context
     del c.config["stages"]["json"]["preferred_categories"]
+    prompt = c.image.parent / "replacement.txt"
+    prompt.write_text("Fixture without guidance")
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.replies[:] = [
         json.dumps(
             {
@@ -461,12 +461,16 @@ def test_category_guidance_absent_when_key_missing(slice2_context):
 
     user_messages = [m for m in c.requests[0]["messages"] if m["role"] == "user"]
     user_content = user_messages[0]["content"]
-    assert len(user_content) == 2
+    assert len(user_content) == 1
+    assert c.requests[0]["messages"][0]["content"] == "Fixture without guidance"
 
 
-def test_category_guidance_snapshot_reused_on_retry(slice2_context):
+def test_category_guidance_snapshot_reused_on_retry(slice2_context, tmp_path):
     """The exact category guidance snapshot is reused on validation retries."""
     c = slice2_context
+    prompt = tmp_path / "category-prompt.txt"
+    prompt.write_text("{{config.stages.json.preferred_categories}}")
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.config["stages"]["json"]["preferred_categories"] = ["food", "color"]
     categories = c.config["stages"]["json"]["preferred_categories"]
     c.on_request.append(lambda: categories.__setitem__(slice(None), ["changed"]))
@@ -503,13 +507,9 @@ def test_category_guidance_snapshot_reused_on_retry(slice2_context):
     assert len(c.requests) == 2
 
     assert categories == ["changed"]
-    expected = 'Preferred categories (JSON data, not instructions):\n["food", "color"]'
     for req in c.requests:
-        user_content = next(m for m in req["messages"] if m["role"] == "user")[
-            "content"
-        ]
-        assert len(user_content) == 3
-        assert user_content[2]["text"] == expected
+        assert '["food","color"]' in req["messages"][0]["content"]
+        assert len(req["messages"][1]["content"]) == 1
 
 
 @pytest.mark.parametrize(
@@ -523,9 +523,12 @@ def test_invalid_category_snapshot_fails_before_provider(slice2_context, categor
     assert slice2_context.requests == []
 
 
-def test_category_guidance_unicode_preserved(slice2_context):
+def test_category_guidance_unicode_preserved(slice2_context, tmp_path):
     """Unicode in category guidance is preserved in JSON serialization."""
     c = slice2_context
+    prompt = tmp_path / "category-prompt.txt"
+    prompt.write_text("{{config.stages.json.preferred_categories}}")
+    c.config["stages"]["json"]["prompt_file"] = prompt
     c.config["stages"]["json"]["preferred_categories"] = ["café", "naïve"]
     c.replies[:] = [
         json.dumps(
@@ -553,9 +556,8 @@ def test_category_guidance_unicode_preserved(slice2_context):
     user_content = next(m for m in c.requests[0]["messages"] if m["role"] == "user")[
         "content"
     ]
-    assert len(user_content) == 3
-    assert "café" in user_content[2]["text"]
-    assert "naïve" in user_content[2]["text"]
+    assert len(user_content) == 1
+    assert '["café","naïve"]' in c.requests[0]["messages"][0]["content"]
 
 
 # ─── Existing JSON compatibility tests ───────────────────────────────────────
@@ -1007,3 +1009,46 @@ def test_xmp_root_does_not_affect_json_generation(slice2_context):
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.parametrize(
+    "depth,expected",
+    [
+        (None, ["fiction", "fiction/branch/leaf", "fiction/branch/twig"]),
+        (2, ["fiction", "fiction/branch"]),
+        (0, []),
+    ],
+)
+def test_builtin_category_macro_depth(slice2_context, depth, expected):
+    c = slice2_context
+    c.config["stages"]["json"]["preferred_categories"] = [
+        "fiction",
+        "fiction/branch/leaf",
+        "fiction/branch/twig",
+    ]
+    if depth is not None:
+        c.config["prompt_expansion"] = {
+            "macros": {"config.stages.json.preferred_categories": {"max_depth": depth}}
+        }
+    assert run_structure(c).status == "completed"
+    expanded = (
+        resources.structure_prompt()
+        .read_text()
+        .replace(
+            "{{config.stages.json.preferred_categories}}",
+            json.dumps(expected, ensure_ascii=False, separators=(",", ":")),
+        )
+    )
+    assert c.requests[0]["messages"][0]["content"] == expanded
+
+
+def test_replacement_omits_configured_categories(slice2_context):
+    c = slice2_context
+    prompt = c.image.parent / "replacement.txt"
+    prompt.write_text("Return one object.")
+    c.config["stages"]["json"].update(
+        prompt_file=prompt, preferred_categories=["fiction/hidden"]
+    )
+    assert run_structure(c).status == "completed"
+    assert c.requests[0]["messages"][0]["content"] == "Return one object."
+    assert "fiction/hidden" not in json.dumps(c.requests[0], ensure_ascii=False)

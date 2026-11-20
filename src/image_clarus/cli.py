@@ -186,6 +186,7 @@ def _main(state):
 
         from image_clarus.providers.openai_compatible import ProviderError
         from image_clarus.results import StageResult
+        from image_clarus.state.storage import StateStopped
 
         stop = state.stop
 
@@ -221,7 +222,12 @@ def _main(state):
 
         def stage_wrapper(name, function):
             def run(image_path, stage_config, stage_services):
-                outcome = function(image_path, stage_config, stage_services)
+                try:
+                    outcome = function(image_path, stage_config, stage_services)
+                except StateStopped:
+                    if stop.signum is None:
+                        raise
+                    return StageResult(name, "skipped", reason_code="interrupted")
                 if stop.signum is not None and outcome.status != "completed":
                     return StageResult(name, "skipped", reason_code="interrupted")
                 return outcome
@@ -230,7 +236,6 @@ def _main(state):
 
         from image_clarus.artifacts import ArtifactError
         from image_clarus.state.service import StateService
-        from image_clarus.state.storage import StateStopped
 
         class InterruptibleArtifacts(ArtifactService):
             def write(self, *args, **kwargs):

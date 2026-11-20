@@ -134,7 +134,7 @@ def test_version_uses_installed_metadata():
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.2.11\n",
+        "image-clarus 0.2.12\n",
         "",
     )
 
@@ -255,10 +255,12 @@ def test_combined_execution_persists_and_rereads_description(tmp_path):
             result.stdout
             == f"desc: completed — output={json.dumps(str(image) + '.desc.txt')}\njson: completed — output={json.dumps(str(image) + '.desc.json')}\n"
         )
-        assert (
-            requests[1]["messages"][1]["content"][0]["text"]
-            == "Persisted description:\npersisted description"
-        )
+        parts = requests[1]["messages"][1]["content"]
+        assert len(parts) == 1
+        assert json.loads(parts[0]["text"]) == {
+            "description": "persisted description",
+            "schema": json.loads(schema.read_text()),
+        }
         data = json.loads(Path(str(image) + ".desc.json").read_text())
         assert (
             data["provenance"]["description_sha256"]

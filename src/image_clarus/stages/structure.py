@@ -329,6 +329,18 @@ def run_structure(image_path, config, services):
         preferred_categories
     ) != len(set(preferred_categories)):
         return StageResult("json", "failed", error_category="configuration")
+    try:
+        # Deferred: XMP and schema-worker imports must not initialize expansion.
+        from image_clarus.prompt_expansion import expand_prompt, safe_config_snapshot
+
+        prompt = expand_prompt(
+            prompt,
+            safe_config_snapshot(config),
+            getattr(services, "state", None),
+            config.get("prompt_expansion", {}).get("macros", {}),
+        )
+    except ConfigurationError:
+        return StageResult("json", "failed", error_category="configuration")
     history = []
     metadata = None
     for attempt in range(retries + 1):
@@ -341,7 +353,6 @@ def run_structure(image_path, config, services):
                 schema=schema,
                 effort=settings["reasoning_effort"],
                 history=history,
-                preferred_categories=preferred_categories,
             )
         except ProviderError as error:
             return StageResult("json", "failed", error_category=error.category)
