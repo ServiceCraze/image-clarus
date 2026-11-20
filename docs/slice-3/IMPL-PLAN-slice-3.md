@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete. Phase B is in progress: B1 is complete; B2–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phase A complete. Phase B is in progress: B1–B2 are complete; B3–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -103,7 +103,7 @@ All headings below exactly match their corresponding detailed step headings.
 ### Phase B Implementation
 
 - [x] Step B1 - Extend configuration and JSON hash compatibility [CODE]
-- [ ] Step B2 - Implement state storage and category operations [CODE]
+- [x] Step B2 - Implement state storage and category operations [CODE]
 - [ ] Step B3 - Implement initialization and state resolution [CODE]
 - [ ] Step B4 - Implement safe namespaced macro expansion [CODE]
 - [ ] Step B5 - Integrate fully user-owned prompts [CODE]
@@ -261,11 +261,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Memory and SQLite implementations satisfy the A2 domain contract; a separate process reads persisted full hierarchy.
-- [ ] Independent concurrent processes access/update one store without corruption or loss attributable to the state transaction design in the tested scenario.
-- [ ] Migration/version tests preserve existing data; unsupported or failed operations do not destructively replace the repository.
-- [ ] Transaction lifetime and contention behavior match A2, with no model/stage dependency in storage.
-- [ ] Resolution, storage, and domain responsibilities remain separate, with no speculative state consumer.
+- [x] Memory and SQLite implementations satisfy the A2 domain contract; a separate process reads persisted full hierarchy.
+- [x] Independent concurrent processes access/update one store without corruption or loss attributable to the state transaction design in the tested scenario.
+- [x] Migration/version tests preserve existing data; unsupported or failed operations do not destructively replace the repository.
+- [x] Transaction lifetime and contention behavior match A2, with no model/stage dependency in storage.
+- [x] Resolution, storage, and domain responsibilities remain separate, with no speculative state consumer.
 
 **Dependencies:** B1; frozen A2 interfaces.
 

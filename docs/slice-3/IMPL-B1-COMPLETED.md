@@ -18,6 +18,8 @@
 4. Existing provenance identifiers, description hash, custom-schema hash, create-only and regeneration behavior remain covered. A former description-stage assertion froze the production prompt text; it now compares the captured request with the actual resource while retaining an independent custom-prompt case. The production prompt itself was not changed.
 5. Shared crosswalk outcomes E03, E05–E08 and E14 remain open as whole outcomes because they also belong to later steps; B1 evidence does not imply those later portions ran. State availability and initialization are not implemented by accepting the setting.
 
+**Subsequent progress:** [B2](IMPL-B2-COMPLETED.md) implemented the state storage and category-domain foundation. CLI discovery and nonblocking integration remain assigned to B3; B1's recorded evidence is unchanged.
+
 ## Verification and limitations
 
 - Initial focused configuration RED: `uv run --locked --extra dev --python 3.13 pytest -q tests/unit/test_slice3_config.py` showed **16 failures, 5 passes** before configuration implementation; the failures included absent defaults, override grammar and CLI support. The subsequently extended focused file passed **33 tests**.
