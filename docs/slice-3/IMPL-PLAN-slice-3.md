@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A in progress. A1 and A2 are complete; A3 remains open. Phases B and C have not started, and their evidence remains unrun.
+**Status:** Phase A complete; A1–A3 design and technical readiness are recorded. Phases B and C have not started, and their evidence remains unrun.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -86,7 +86,7 @@ These are existing files and observed behavior at the stated baseline. Recheck c
 | Resources and packaging | `resources.py`, `prompts/`, `schemas/`, `pyproject.toml` | Keep the two existing prompt inputs and four packaged prompt/schema resources. SQLite uses the standard-library backend selected in the HLD. |
 | User documentation | `README.md`, `examples/config.yaml` | Document actual frozen options, precedence, defaults, error behavior, and single-image examples after implementation. |
 
-**A1/A2-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py`, the separate `state/resolution.py`, `storage.py`, `categories.py`, `accumulation.py` modules, and focused state/prompt tests. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1. See [A1](IMPL-A1-COMPLETED.md) and [A2](IMPL-A2-COMPLETED.md); selected paths do not claim implementation exists.
+**A1/A2-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py`, `src/image_clarus/state/__init__.py`, `src/image_clarus/state/resolution.py`, `src/image_clarus/state/storage.py`, `src/image_clarus/state/categories.py`, `src/image_clarus/state/accumulation.py`, `tests/unit/test_prompt_expansion.py`, `tests/unit/test_state_storage.py`, `tests/unit/test_state_resolution.py`, `tests/unit/test_state_categories.py`, and `tests/integration/test_state_cli.py`. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1; A3 records the readiness clarifications. See [A1](IMPL-A1-COMPLETED.md), [A2](IMPL-A2-COMPLETED.md) and [A3](IMPL-A3-COMPLETED.md); selected paths do not claim implementation exists.
 
 **Dependency direction:** CLI/orchestration supplies resolved configuration and shared services; stages use prompt expansion; prompt expansion reads a safe configuration view and state-domain values; state domains use storage; location resolution selects a backend independently. Provider adapters remain transport boundaries. JSON parsing/extraction stays in a metadata/domain component rather than the stage coordinator. Audit changed imports against the existing graph; do not turn this slice into a repository-wide rewrite of documented historical cycles.
 
@@ -98,7 +98,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 - [x] Step A1 - Freeze configuration and prompt contracts [DESIGN]
 - [x] Step A2 - Freeze state and accumulation contracts [DESIGN]
-- [ ] Step A3 - Verify implementation readiness [DESIGN]
+- [x] Step A3 - Verify implementation readiness [DESIGN]
 
 ### Phase B Implementation
 
@@ -141,7 +141,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Outputs:** Configuration, macro, request, validation, and test contracts in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); confirmed touchpoints and updated plan references.
 
-**A1 result:** Configuration names and overrides, secret-safe macro and request contracts, optional-hash compatibility, selected paths, and planned evidence are frozen in the linked record. A2 owns state storage and lifecycle and must reconcile its snapshot and diagnostic interfaces with A1 before A3. This is design evidence, not implemented Slice 3 behavior.
+**A1 result:** Configuration names and overrides, secret-safe macro and request contracts, optional-hash compatibility, selected paths, and planned evidence are frozen in the linked record. A2 reconciled state storage and lifecycle, and A3 records the subsequent readiness clarifications. This is design evidence, not implemented Slice 3 behavior.
 
 **Acceptance**
 
@@ -173,7 +173,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Outputs:** State, discovery, schema/migration, accumulation, diagnostics, and test contracts in [IMPL-A2-COMPLETED.md](IMPL-A2-COMPLETED.md); confirmed implementation paths and dependency directions.
 
-**A2 result:** The linked design freezes resolution, SQLite/memory interfaces and migrations, diagnostics, category extraction and post-stage eligibility. It reconciles the state snapshot and service lifetime with A1. The design is not implemented; A3 remains responsible for the readiness assessment.
+**A2 result:** The linked design freezes resolution, SQLite/memory interfaces and migrations, diagnostics, category extraction and post-stage eligibility. It reconciles the state snapshot and service lifetime with A1. A3 subsequently resolved technical readiness details; the design is not implemented.
 
 **Acceptance**
 
@@ -201,12 +201,14 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Outputs:** [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md), with the technical readiness findings and any unresolved blockers; updated plan cross-references.
 
+**A3 result:** The linked record maps all requirements and acceptance outcomes, resolves the state-design readiness findings in A2, and identifies the B1–B6 handoff. Phase A technical readiness is complete; implementation still requires the orchestrator to assign the relevant step.
+
 **Acceptance**
 
-- [ ] A1/A2 supply the exact contracts needed by B1–B6, and the crosswalk has no unowned acceptance outcome.
-- [ ] Shared services and dependencies are compatible; no unresolved design blocker is silently pushed into CODE work.
-- [ ] Summary/detail headings, output links, evidence IDs, and scope boundaries agree.
-- [ ] The readiness record supports orchestration advancing to Phase B without another REQ acceptance gate.
+- [x] A1/A2 supply the exact contracts needed by B1–B6, and the crosswalk has no unowned acceptance outcome.
+- [x] Shared services and dependencies are compatible; no unresolved design blocker is silently pushed into CODE work.
+- [x] Summary/detail headings, output links, evidence IDs, and scope boundaries agree.
+- [x] The readiness record supports orchestration advancing to Phase B without another REQ acceptance gate.
 
 **Dependencies:** A1, A2.
 
@@ -641,9 +643,9 @@ These items have resolution owners and are not new Product Owner acceptance gate
 
 ### 10.3 Missing inputs and product decisions
 
-No missing repository input or unresolved Product Owner decision prevents drafting this plan. The inspected tree contains no Slice 3 implementation plan or state/macro implementation; the additions above are planned work. Recheck the baseline when an execution step is assigned.
+No missing repository input or unresolved Product Owner decision blocks the A3 technical readiness handoff. The plan and A1–A3 records now exist; state and macro implementation remains planned. Recheck the baseline when an execution step is assigned.
 
-Remaining mechanics are assigned to A1/A2. A decision is escalated only if its proposed resolution changes approved product behavior or scope. Do not infer approval for an extra capability from its usefulness.
+A1/A2 mechanics and A3 readiness clarifications are recorded in their completion artifacts. A decision is escalated only if its proposed resolution changes approved product behavior or scope. Do not infer approval for an extra capability from its usefulness.
 
 ### 10.4 Deviations and deferrals
 

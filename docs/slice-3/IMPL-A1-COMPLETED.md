@@ -109,7 +109,7 @@ Keep format-1 envelope and approved fields `provider_alias`, `model_alias`, `mod
 
 S3-04 deliberately changes the historical required hash; the parent REQ's generic provenance wording and HLD historical descriptions are not permission to restore mandatory prompt hashing. Preserve other existing provenance and historic records. S3-09 supersedes the historical no-memory-fallback state decision during ordinary processing. No changes to provider retries, taxonomy imports, XMP publication, or other future capabilities are authorized. A2 owns storage schemas, migration/concurrency, initialization recognition, exact traversal and post-image eligibility. A2 must reconcile its state snapshot and fallback/diagnostic interfaces with this A1 contract before A3; those are A2 responsibilities, not unresolved B1/B4 prompt or configuration decisions. No product-scope conflict was introduced.
 
-**Subsequent progress:** A2 completed the state design and reconciled its invocation-local service, copied `state.categories.known` snapshot, nonpersistent fallback and visible diagnostics with this contract; see [A2](IMPL-A2-COMPLETED.md). The original A1 evidence above remains historical. A3 readiness and implementation remain open.
+**Subsequent progress:** A2 completed the state design and reconciled its invocation-local service, copied `state.categories.known` snapshot, nonpersistent fallback and visible diagnostics with this contract; see [A2](IMPL-A2-COMPLETED.md). [A3](IMPL-A3-COMPLETED.md) subsequently completed technical readiness. The original A1 evidence above remains historical; implementation remains open.
 
 ## 6. Verification and acceptance
 
