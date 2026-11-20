@@ -18,7 +18,8 @@ stages:
   json:
     model: text
     validation_retries: 0
-    # Optional guidance, not a required taxonomy. [] means no preference.
+    include_prompt_sha256: false
+    # Advisory complete paths or single segments; [] means no preference.
     preferred_categories: []
   xmp:
     # Omit for the same default; "" means no prefix and no tag deletions.
@@ -34,6 +35,19 @@ stages:
     custom_title_property: null
     custom_caption_property: null
     custom_tags_property: null
+# Null permits discovery; a selected path names the initialized directory itself.
+state:
+  directory: null
+  accumulate_categories: true
+# Optional per-macro presentation settings; these never change stored paths.
+prompt_expansion:
+  macros:
+    state.categories.known:
+      delimiter: "/"
+      max_depth: null
+    config.stages.json.preferred_categories:
+      delimiter: "/"
+      max_depth: null
 pipeline:
   missing_prerequisite: fail
   on_stage_failure: stop

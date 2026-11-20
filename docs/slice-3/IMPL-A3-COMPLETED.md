@@ -62,7 +62,7 @@ All paths for new modules are **planned**, not claims that they already exist. E
 
 Observed RED/GREEN must be recorded during each CODE step; this table is expected behavior from inspection, not a claim a RED test was executed. A1 retains envelope helpers in `stages/structure.py`; B5 uses deferred/stage-local macro imports, and A2's state modules must not reverse dependency into stages. No unapproved dependency or new product domain is needed.
 
-**Subsequent progress:** [B1](IMPL-B1-COMPLETED.md) implemented its configuration and envelope scope, [B2](IMPL-B2-COMPLETED.md) implemented state storage and category operations, [B3](IMPL-B3-COMPLETED.md) implemented initialization and state selection, [B4](IMPL-B4-COMPLETED.md) implemented the macro engine, [B5](IMPL-B5-COMPLETED.md) integrated it in model stages, and [B6](IMPL-B6-COMPLETED.md) implemented accumulation. B7 remains open; this does not alter the historical A3 readiness evidence.
+**Subsequent progress:** [B1](IMPL-B1-COMPLETED.md) implemented its configuration and envelope scope, [B2](IMPL-B2-COMPLETED.md) implemented state storage and category operations, [B3](IMPL-B3-COMPLETED.md) implemented initialization and state selection, [B4](IMPL-B4-COMPLETED.md) implemented the macro engine, [B5](IMPL-B5-COMPLETED.md) integrated it in model stages, [B6](IMPL-B6-COMPLETED.md) implemented accumulation, and [B7](IMPL-B7-COMPLETED.md) documented usage. Phase C remains open; this does not alter the historical A3 readiness evidence.
 
 ## 4. Verification and evidence limits
 

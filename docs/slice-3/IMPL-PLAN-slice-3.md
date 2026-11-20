@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete. Phase B is in progress: B1–B6 are complete; B7 remains open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phases A and B complete. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -108,7 +108,7 @@ All headings below exactly match their corresponding detailed step headings.
 - [x] Step B4 - Implement safe namespaced macro expansion [CODE]
 - [x] Step B5 - Integrate fully user-owned prompts [CODE]
 - [x] Step B6 - Integrate category accumulation after processing [CODE]
-- [ ] Step B7 - Document Slice 3 usage and compatibility [DOCS]
+- [x] Step B7 - Document Slice 3 usage and compatibility [DOCS]
 
 ### Phase C Verification and closeout
 
@@ -399,10 +399,10 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Documentation covers every delivered control and its default/precedence with syntax verified against the implementation.
-- [ ] Examples contain only synthetic data and no private guidance, credentials, infrastructure identifiers, or local development paths.
-- [ ] State and prompt limitations are accurate; no native batch, search, scheduler, taxonomy import, or model-quality claim is implied.
-- [ ] The plan and documentation agree with the frozen contracts and actual behavior.
+- [x] Documentation covers every delivered control and its default/precedence with syntax verified against the implementation.
+- [x] Examples contain only synthetic data and no private guidance, credentials, infrastructure identifiers, or local development paths.
+- [x] State and prompt limitations are accurate; no native batch, search, scheduler, taxonomy import, or model-quality claim is implied.
+- [x] The plan and documentation agree with the frozen contracts and actual behavior.
 
 **Dependencies:** B1–B6.
 

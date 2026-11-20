@@ -20,6 +20,7 @@ Once uv's tool executable directory is on your `PATH`, run from any directory wi
 image-clarus --version
 image-clarus --help
 image-clarus process --help
+image-clarus init --help
 image-clarus search --help
 ```
 
@@ -40,6 +41,7 @@ uv sync --locked
 uv run --locked image-clarus --version
 uv run --locked image-clarus --help
 uv run --locked image-clarus process --help
+uv run --locked image-clarus init --help
 uv run --locked image-clarus search --help
 ```
 
@@ -56,6 +58,49 @@ Precedence, lowest to highest: built-in defaults, one selected YAML file, repeat
 Paths in YAML are relative to that file; explicit config and prompt/schema paths supplied on the command line or through `--set` are relative to the current working directory. `--set` values are YAML: preserve the inner quotes for an empty string, as in `--set 'stages.xmp.tag_root=""'`. Likewise quote the YAML string `off` in `--set 'stages.desc.reasoning_effort="off"'`, or YAML may parse it as a boolean. Do not put API keys in arguments or `--set`. JSON validation retries default to zero; `stages.json.validation_retries` permits 0–2 additional validation attempts, not network retries.
 
 Configuration syntax, unknown keys and global structure are checked for the whole file; stage-specific settings and dependencies are validated for selected stages. All selected stages are preflighted before any stage runs. Thus `xmp` alone needs a usable ExifTool but no model, provider credential, prompt, schema file or description; unrelated `desc`/`json` invocations do not require ExifTool or valid unused XMP values. Unknown keys remain errors even in an unselected stage.
+
+## Prompts and macros
+
+Both `--desc-prompt FILE` and `--json-prompt FILE` replace their stage's instructions completely. The built-in description prompt is `Fully describe and explain everything about this image.` The built-in JSON prompt includes advisory preferred categories; replacement prompts may remove that guidance. Required image data, description and schema are still supplied as inputs, but no separate category instruction is injected. Prompt files can contain optional macros in either stage, for example:
+
+```text
+Use these preferred paths as optional guidance: {{config.stages.json.preferred_categories}}
+Previously observed paths: {{state.categories.known}}
+```
+
+Macro names have `config` or `state` followed by dot-separated segments beginning with a letter or underscore and containing letters, digits, underscores or hyphens. Whitespace, expressions and indexing are not supported. Strings expand as raw text; other values use compact JSON with sorted object keys. Expansion is single-pass; `\{{` emits literal `{{`. Unknown, malformed, forbidden or unclosed references cause a sanitized stage error; prompts of outputs already skipped are not read or expanded. `config` exposes a filtered resolved configuration, not credentials: `api_key` and `api_key_env` are omitted even from containing objects, and configured credential values are filtered from the snapshot. This does not sanitize arbitrary text you write in a prompt. The currently available state domain is `state.categories.known`; unavailable state produces a visible state error and an empty list instead of blocking the stage. State values may contain sensitive metadata; referencing them sends them to the chosen provider.
+
+Under `prompt_expansion.macros`, options apply independently to the exact full macro name. `delimiter` defaults to `/` and must be a nonempty string; `max_depth` defaults to `null` (unlimited), accepts a nonnegative integer, and `0` produces `[]`. For configured macros the value must be an array of strings. Positive depth truncates each path at that many delimiter-separated segments and deduplicates identical results in first-occurrence order. For example, at depth 2 both `food/desserts/cookies` and `food/desserts/cakes` become `food/desserts`. This changes only prompt output, not the prompt file, configuration or complete stored paths. Unconfigured arrays are serialized normally.
+
+Use bracketed JSON-string keys for dotted macro names in CLI overrides; ordinary dotted syntax would split the macro name. Values are YAML and overrides are applied left to right; a later parent replaces its subtree and a later child changes that result. For example (a manual provider call, subject to the authorization above):
+
+```sh
+image-clarus process ./photo.jpg --config ./examples/config.yaml --stages json \
+  --set 'stages.json.preferred_categories=[food, food/desserts/cookies]' \
+  --set 'prompt_expansion.macros["config.stages.json.preferred_categories"].max_depth=2' \
+  --set 'prompt_expansion.macros["state.categories.known"].delimiter="/"' \
+  --set 'prompt_expansion.macros["state.categories.known"].max_depth=0' \
+  --set stages.json.include_prompt_sha256=true
+```
+
+`stages.json.include_prompt_sha256` is a strict boolean, default `false`. When enabled, new JSON includes the SHA-256 of the exact original prompt-file bytes, not the expanded prompt or complete request. Existing artifacts with a valid hash remain accepted; when present the hash must be valid. `prompt_id`, model/provider identifiers, `description_sha256` and custom-schema identity remain supported. Changing this option or prompt does not invalidate an existing output or bypass the normal skip; use `--regenerate` to replace selected JSON explicitly.
+
+## Optional application state
+
+Run `image-clarus init` in the desired collection directory to initialize `.image-clarus/state.sqlite3`; repeat initialization of a valid repository is a no-op. An existing incomplete or invalid directory is not replaced: initialization fails, preserving its contents. Normal processing never creates a persistent repository. State supplements rather than replaces sidecars, and absent persistent state is temporary memory for that invocation only.
+
+Selection is, in order: dedicated `--state-dir DIR`, `--set state.directory=...`, YAML `state.directory`, nearest initialized CWD ancestor, nearest initialized image-directory ancestor, then memory. The explicit directory is `.image-clarus` itself, not its parent. `state.directory` defaults to `null`; `--set state.directory=null` clears a YAML selection and permits discovery. YAML relative paths use the config file directory; CLI paths use CWD; `~` is expanded. The dedicated flag wins over `--set` regardless of argument order.
+
+For example, with initialized `collection/.image-clarus` and `collection/nested/.image-clarus`, processing from `collection/nested` selects the nested repository. From `collection`, it selects the collection repository even when the image is in an unrelated initialized `other` collection: CWD ancestry wins. To share one repository across unrelated collections, select it explicitly:
+
+```sh
+# From a directory containing shared and collection; manual provider call.
+image-clarus process ./collection/photo.jpg --config ./examples/config.yaml --stages json --state-dir ./shared/.image-clarus
+```
+
+Discovery skips an accessible uninitialized `.image-clarus` directory with no database, but a selected corrupt, inaccessible or incompatible repository is an error, not permission to search for another persistent store. Processing reports state errors visibly on stderr even if stages succeed, falls back to invocation-local memory, and does not claim the failed state operation persisted. An `init` failure itself is an error. SQLite shares state across processes with short transactions; it does not lock sidecars or make state and sidecar updates atomic. Protect the state directory as it can contain sensitive category metadata.
+
+`state.accumulate_categories` is a strict boolean and defaults to `true`. After all selected stages finish, completed JSON or JSON skipped because an existing valid envelope was found contributes recognized complete paths, including leaf and single-segment paths; a later selected-stage failure does not undo eligible accumulation. A skipped artifact is read without regeneration, changing its bytes or another model call. Set `--set state.accumulate_categories=false` to disable updates from both new and skipped JSON. Other JSON skips, failures, unselected JSON and interruptions do not contribute. Built-in 2.0.0 and recognized custom identities use the conventional `metadata.tag_candidates` array of segment arrays, independent of XMP mappings; built-in 1.0.0 contributes none. Missing or empty candidates contribute none; malformed candidates or unknown identities reject the optional contribution without changing the primary stage result. Extraction uses the envelope and category shape, not the current payload schema; an envelope-valid skipped JSON can therefore contribute even if unrelated payload fields are missing. State updates preserve full paths regardless of prompt depth, XMP root or tag limit; there is no historical import or automatic taxonomy reconciliation.
 
 ## Process one image
 
@@ -92,7 +137,7 @@ Each stage prints a completed, skipped or failed summary on stdout; diagnostics 
 
 New built-in payloads retain `subjects`, `objects`, `actions`, `setting`, `visual_characteristics` and `keywords`, and add required `title`, `caption` and `tag_candidates`. The short caption does not replace the comprehensive description. `""` for title or caption and `[]` for candidates mean unavailable. Candidates are arrays of tag-segment arrays, in descending rank: `[["food", "pepper"], ["plate"]]` represents a categorized assignment and an uncategorized one. The configured XMP root is not part of these JSON paths, and an ancestor is not separately assigned merely because a descendant is selected.
 
-`stages.json.preferred_categories` defaults to `[]`; an ordered list such as `[food, objects]` is optional guidance to the JSON model, not evidence or a closed taxonomy. Unlisted categories and uncategorized tags are allowed. Entries must be unique exact single segments. Segments must be nonempty valid UTF-8, with no leading/trailing whitespace, `/`, `|`, or C0/C1 controls (including DEL); spelling and case are preserved, not normalized or split. The category list is sent separately to the provider; prompt and description hashes do not fingerprint it or the complete request.
+`stages.json.preferred_categories` defaults to `[]`; an ordered list such as `[food, food/desserts/cookies]` is advisory, not evidence or a closed taxonomy. Unlisted categories and uncategorized tags are allowed. Entries must be unique complete paths, each made of nonempty slash-separated segments. Each segment must be valid UTF-8, with no leading/trailing whitespace, `/`, `|`, or C0/C1 controls (including DEL); spelling and case are preserved. The built-in JSON prompt includes the preferences through a macro; a replacement prompt can omit them entirely. Prompt and description hashes do not fingerprint the expanded guidance or complete request.
 
 `stages.xmp.tag_limit` defaults to `10` and accepts any nonnegative integer. XMP validates every candidate before selecting the first N distinct complete paths, without semantic reranking. A concept in two hierarchies counts twice. Custom duplicate paths are deduplicated in first-occurrence order before truncation; duplicates in built-in 2.0.0 are invalid. Zero or an empty candidate list means no tag changes, including under `overwrite`.
 
@@ -145,3 +190,4 @@ ExifTool synthetic round trips are not digiKam interoperability tests. In manual
 - [High-Level Design](docs/HLD-image-clarus.md)
 - [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — complete; see the [C5 closeout](docs/slice-1/IMPL-C5-COMPLETED.md)
 - [Slice 2 requirements](docs/slice-2/REQ-slice-2.md), [discovery](docs/slice-2/DISCOVERY-slice-2.md), and [implementation plan](docs/slice-2/IMPL-PLAN-slice-2.md) — complete; see the [C5 closeout](docs/slice-2/IMPL-C5-COMPLETED.md) for the accepted prompt-control gap and evidence boundaries
+- [Slice 3 requirements](docs/slice-3/REQ-slice-3.md) and [implementation plan](docs/slice-3/IMPL-PLAN-slice-3.md)

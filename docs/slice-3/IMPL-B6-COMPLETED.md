@@ -12,6 +12,8 @@
 
 **Review correction:** An independent review found that the original accumulation module imported the JSON stage, contrary to the frozen dependency direction. The CLI now injects the shared strict envelope reader; state no longer imports a stage. The CLI loads accumulation only when JSON is selected and accumulation is enabled. The existing CLI and XMP paths can still import the JSON stage independently, so this correction does not claim XMP-only execution avoids that import.
 
+**Subsequent B7 progress:** [B7](IMPL-B7-COMPLETED.md) documented usage and compatibility. The B6 evidence below remains historical; Phase C remains open.
+
 ## Behavior and acceptance evidence
 
 1. After the selected pipeline returns and before the invocation-local state service closes, the CLI invokes optional accumulation once. Only selected JSON results completed or skipped as `output_exists` qualify; other results and interrupted work do not. A later-stage failure does not undo eligible JSON or alter its result. The coordinator remains free of category policy.

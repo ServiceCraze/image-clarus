@@ -62,7 +62,7 @@ flowchart TB
   CFG -.-> MODELS
 ```
 
-**CLI and command routing.** Route `init`, `process` and `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`. `init` and the state capabilities below are architectural direction, not claims of existing implementation.
+**CLI and command routing.** Route `init`, `process` and `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`. Slice 3 implements `init` and the state capabilities below; search remains a stub.
 
 **Configuration loader.** Discover, parse, merge defaults and CLI overrides, and validate general configuration; provide an immutable resolved configuration to consumers. The coordinator passes the entire resolved configuration to each stage without extracting stage-specific subsets.
 
@@ -188,7 +188,7 @@ The JSON stage consumes the persisted description and produces schema-validated 
 
 ### 4.5 Application state and resolution
 
-The planned application-state facility is independent of processing stages and invocation mechanisms: single-image CLI, separately launched processes, digiKam scripting and eventual native batching use the same state and interpolation capabilities. It is not a mandatory image database, centralized server or persistent job queue. Separate responsibilities for state resolution, storage and domain operations allow independently evolving domains. Known hierarchical category paths are the first consumer; native batch execution history is a possible future consumer, not an implementation commitment.
+The application-state facility is independent of processing stages and invocation mechanisms: single-image CLI, separately launched processes, digiKam scripting and eventual native batching use the same state and interpolation capabilities. It is not a mandatory image database, centralized server or persistent job queue. Separate responsibilities for state resolution, storage and domain operations allow independently evolving domains. Known hierarchical category paths are the first consumer; native batch execution history is a possible future consumer, not an implementation commitment.
 
 Use embedded SQLite through Python's built-in `sqlite3` as the initial persistent backend, with storage internal to the application-owned `.image-clarus/` directory. Provide an in-memory backend when no state directory is explicitly selected and discovery finds no initialized repository. Persistent state survives separate invocations and supports independent processes accessing shared state safely, including schema versioning and migrations. Keep transactions short and never hold one during model inference. SQLite state concurrency is separate from the lock-free sidecar-write contract in §7.
 
@@ -210,7 +210,7 @@ The end-state CLI has these subcommands:
 - `image-clarus search` — search previously generated sidecars without model calls.
 - `image-clarus init` — explicitly initialize persistent application state in the current working directory.
 
-**Accepted CLI conventions:** The executable is `image-clarus`, with `process` and `search` subcommands, planned `init`, and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
+**Accepted CLI conventions:** The executable is `image-clarus`, with `process`, `search`, and `init` subcommands, and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
 
 **Illustrative syntax:** Examples such as `--stages=desc,json` and `--set path=value` show intended option/value shapes, not a frozen argument grammar. The implementation plan for the relevant slice will settle exact argument placement (`=` versus a separate value), repeatability, positional arguments, `--set` value parsing, option conflicts, and output/result schemas.
 
@@ -334,7 +334,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 ### 10.1 Decided
 
-- Single CLI `image-clarus` with `process`, `search` and planned explicit state `init`, including top-level and subcommand help plus `image-clarus --version`.
+- Single CLI `image-clarus` with `process`, `search` and explicit state `init`, including top-level and subcommand help plus `image-clarus --version`.
 - Application releases use Semantic Versioning; Slice 1 starts at `0.1.0` and stays on the `0.1.x` line. The JSON metadata schema version is independent of the application version.
 - Independent `desc`, `json`, `xmp` stages using persisted file handoffs; ordered registry; image-first execution; selectable subsets with no automatic prerequisite expansion.
 - Coordinator delegates configuration interpretation and completion policy to each stage and applies configurable continuation policy to structured results.
