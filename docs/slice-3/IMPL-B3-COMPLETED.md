@@ -18,6 +18,8 @@
 4. The invocation-local service uses a selected SQLite repository or memory. Open/read/update failures produce sanitized stderr independent of logging level; read failure returns an empty snapshot, and update failure is not retried in memory. Subsequent memory-only operations work without claiming persistence. The service closes after pipeline processing and on an injected stage-setup failure. Stop-token errors propagate rather than becoming state fallback.
 5. A synthetic loopback-provider CLI test generates new description and JSON sidecars with missing, corrupt and incompatible explicitly selected repositories at all four supported logging levels. It verifies successful primary output, visible sanitized state errors, source-image integrity, no missing-repository creation and byte-for-byte preservation of a different discoverable repository. A separate CLI case publishes XMP through real ExifTool with unavailable state and no provider request. Tests use no live model or private images.
 
+**Subsequent B4 progress:** [B4](IMPL-B4-COMPLETED.md) implemented the independent macro engine; model-stage integration remains B5. The B3 evidence above is historical.
+
 ## Verification and limitations
 
 - The first resolution/service test attempts failed collection because the new modules did not exist; these establish missing modules, not behavioral RED for every initial B3 behavior. The initial implementation's focused configuration, resolution, service and CLI tests passed after implementation. The audit-driven path regressions provided observed behavioral RED (**5 failures**) and GREEN (**5 passes**); other matrix and publication tests were supplemental after implementation. The initial test-order limitation is retained as historical evidence.

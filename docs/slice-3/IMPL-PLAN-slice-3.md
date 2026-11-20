@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete. Phase B is in progress: B1–B3 are complete; B4–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phase A complete. Phase B is in progress: B1–B4 are complete; B5–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -86,7 +86,7 @@ These are existing files and observed behavior at the stated baseline. Recheck c
 | Resources and packaging | `resources.py`, `prompts/`, `schemas/`, `pyproject.toml` | Keep the two existing prompt inputs and four packaged prompt/schema resources. SQLite uses the standard-library backend selected in the HLD. |
 | User documentation | `README.md`, `examples/config.yaml` | Document actual frozen options, precedence, defaults, error behavior, and single-image examples after implementation. |
 
-**A1/A2-selected additions:** B2–B3 implemented the `state` package, storage, category, resolution and invocation-local service modules and their tests. `src/image_clarus/prompt_expansion.py`, `src/image_clarus/state/accumulation.py` and `tests/unit/test_prompt_expansion.py` remain planned for later steps. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1; A3 records the readiness clarifications. See [A1](IMPL-A1-COMPLETED.md), [A2](IMPL-A2-COMPLETED.md), [A3](IMPL-A3-COMPLETED.md), [B2](IMPL-B2-COMPLETED.md) and [B3](IMPL-B3-COMPLETED.md).
+**A1/A2-selected additions:** B2–B3 implemented the `state` package, storage, category, resolution and invocation-local service modules and their tests. B4 implemented `src/image_clarus/prompt_expansion.py` and its unit tests; `src/image_clarus/state/accumulation.py` remains planned for B6. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence. A2 reconciles the per-invocation state service, snapshot and diagnostics with A1; A3 records the readiness clarifications. See [A1](IMPL-A1-COMPLETED.md), [A2](IMPL-A2-COMPLETED.md), [A3](IMPL-A3-COMPLETED.md), [B2](IMPL-B2-COMPLETED.md), [B3](IMPL-B3-COMPLETED.md) and [B4](IMPL-B4-COMPLETED.md).
 
 **Dependency direction:** CLI/orchestration supplies resolved configuration and shared services; stages use prompt expansion; prompt expansion reads a safe configuration view and state-domain values; state domains use storage; location resolution selects a backend independently. Provider adapters remain transport boundaries. JSON parsing/extraction stays in a metadata/domain component rather than the stage coordinator. Audit changed imports against the existing graph; do not turn this slice into a repository-wide rewrite of documented historical cycles.
 
@@ -105,7 +105,7 @@ All headings below exactly match their corresponding detailed step headings.
 - [x] Step B1 - Extend configuration and JSON hash compatibility [CODE]
 - [x] Step B2 - Implement state storage and category operations [CODE]
 - [x] Step B3 - Implement initialization and state resolution [CODE]
-- [ ] Step B4 - Implement safe namespaced macro expansion [CODE]
+- [x] Step B4 - Implement safe namespaced macro expansion [CODE]
 - [ ] Step B5 - Integrate fully user-owned prompts [CODE]
 - [ ] Step B6 - Integrate category accumulation after processing [CODE]
 - [ ] Step B7 - Document Slice 3 usage and compatibility [DOCS]
@@ -315,11 +315,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Tests cover both namespaces and a non-category hierarchical-string array, demonstrating a generic mechanism.
-- [ ] Default, `null`, positive, zero, negative, delimiter, deduplication, and per-macro independence behave as specified.
-- [ ] Snapshot comparisons show no prompt/config/state mutation after expansion, including depth zero.
-- [ ] Direct, environment-resolved, and containing-object credential cases cannot expose secret values in expansions or diagnostics.
-- [ ] Unavailable state values use the frozen nonblocking behavior; no stage-specific prompt instruction is embedded in the engine.
+- [x] Tests cover both namespaces and a non-category hierarchical-string array, demonstrating a generic mechanism.
+- [x] Default, `null`, positive, zero, negative, delimiter, deduplication, and per-macro independence behave as specified.
+- [x] Snapshot comparisons show no prompt/config/state mutation after expansion, including depth zero.
+- [x] Direct, environment-resolved, and containing-object credential cases cannot expose secret values in expansions or diagnostics.
+- [x] Unavailable state values use the frozen nonblocking behavior; no stage-specific prompt instruction is embedded in the engine.
 
 **Dependencies:** B1, B2; B3 diagnostic/service contracts available for integration.
 
