@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Proposed implementation plan. Execution has not started; all step and evidence checkboxes are initially unchecked.
+**Status:** Phase A in progress. A1 is complete; A2 and A3 remain open. Phases B and C have not started, and their evidence remains unrun.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -86,7 +86,7 @@ These are existing files and observed behavior at the stated baseline. Recheck c
 | Resources and packaging | `resources.py`, `prompts/`, `schemas/`, `pyproject.toml` | Keep the two existing prompt inputs and four packaged prompt/schema resources. SQLite uses the standard-library backend selected in the HLD. |
 | User documentation | `README.md`, `examples/config.yaml` | Document actual frozen options, precedence, defaults, error behavior, and single-image examples after implementation. |
 
-**Proposed additions, subject to Phase A:** a prompt-expansion module under `src/image_clarus/`; a state package separating resolution, storage, and category operations; focused macro/state tests under `tests/unit/` and `tests/integration/`. A neutral shared metadata-validation module is an option if necessary to preserve XMP independence. None of these names or interfaces is claimed to exist. A1–A2 record the selected paths and interfaces before dependent CODE work.
+**A1-selected additions, not yet implemented:** `src/image_clarus/prompt_expansion.py` and `tests/unit/test_prompt_expansion.py`, with a read-only state-view interface. A1 retains the existing shared envelope helpers in `stages/structure.py` and specifies deferred/stage-local prompt imports to preserve XMP independence; see [A1](IMPL-A1-COMPLETED.md). A2 selects the separate state resolution, storage, and domain paths and reconciles its service lifetime and diagnostics with A1 before A3. Proposed paths are not claims that implementation exists.
 
 **Dependency direction:** CLI/orchestration supplies resolved configuration and shared services; stages use prompt expansion; prompt expansion reads a safe configuration view and state-domain values; state domains use storage; location resolution selects a backend independently. Provider adapters remain transport boundaries. JSON parsing/extraction stays in a metadata/domain component rather than the stage coordinator. Audit changed imports against the existing graph; do not turn this slice into a repository-wide rewrite of documented historical cycles.
 
@@ -96,7 +96,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 ### Phase A Discovery and contract freeze
 
-- [ ] Step A1 - Freeze configuration and prompt contracts [DESIGN]
+- [x] Step A1 - Freeze configuration and prompt contracts [DESIGN]
 - [ ] Step A2 - Freeze state and accumulation contracts [DESIGN]
 - [ ] Step A3 - Verify implementation readiness [DESIGN]
 
@@ -141,13 +141,15 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Outputs:** Configuration, macro, request, validation, and test contracts in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); confirmed touchpoints and updated plan references.
 
+**A1 result:** Configuration names and overrides, secret-safe macro and request contracts, optional-hash compatibility, selected paths, and planned evidence are frozen in the linked record. A2 owns state storage and lifecycle and must reconcile its snapshot and diagnostic interfaces with A1 before A3. This is design evidence, not implemented Slice 3 behavior.
+
 **Acceptance**
 
-- [ ] A1 records exact YAML and CLI examples for all new settings, including usable per-macro overrides, defaults, types, and precedence.
-- [ ] A1 provides request examples for built-in and replacement prompts in both stages and identifies every hardcoded instruction path to remove.
-- [ ] A1 defines secret exclusion, source immutability, eligible-array behavior, and nonblocking unavailable-state expansion with observable tests.
-- [ ] A1 defines old/new envelope validation and source-byte hash behavior without changing the approved fields or skip contract.
-- [ ] A1 classifies actual conflicts and contains no unresolved implementation choice needed by B1 or B4; any scope change has an explicit Product Owner disposition.
+- [x] A1 records exact YAML and CLI examples for all new settings, including usable per-macro overrides, defaults, types, and precedence.
+- [x] A1 provides request examples for built-in and replacement prompts in both stages and identifies every hardcoded instruction path to remove.
+- [x] A1 defines secret exclusion, source immutability, eligible-array behavior, and nonblocking unavailable-state expansion with observable tests.
+- [x] A1 defines old/new envelope validation and source-byte hash behavior without changing the approved fields or skip contract.
+- [x] A1 classifies actual conflicts and contains no unresolved implementation choice needed by B1 or B4; any scope change has an explicit Product Owner disposition.
 
 **Dependencies:** Current accepted requirements and orchestrator assignment. A2 may proceed alongside A1, with their shared configuration and lifecycle contracts reconciled before A3.
 
