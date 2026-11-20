@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phases A and B complete. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phases A and B complete. Phase C is in progress: C1 is complete; C2 and C3 remain open. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -112,7 +112,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 ### Phase C Verification and closeout
 
-- [ ] Step C1 - Verify requests persistence and state failure behavior [TEST]
+- [x] Step C1 - Verify requests persistence and state failure behavior [TEST]
 - [ ] Step C2 - Run regression packaging and quality checks [TEST]
 - [ ] Step C3 - Reconcile evidence and close Slice 3 [DOCS]
 
@@ -430,11 +430,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] The runtime outcomes assigned to C1 in §6 have passing observed evidence. C2-owned prompt-edit, regression, and package checks remain pending C2. Blocked or failed required C1 cases stay unchecked unless an explicitly approved exception is recorded.
-- [ ] Persistence/sharing evidence uses independent processes, not only object reuse or threads.
-- [ ] Failure scenarios demonstrate diagnostic visibility, primary-outcome independence, preserved sidecars, and no alternate persistent writes.
-- [ ] Concurrency/inference evidence proves the required state behavior without adding stronger sidecar-race guarantees.
-- [ ] Live provider calls, extra model-quality benchmarks, and new digiKam manual acceptance were not made prerequisites.
+- [x] The runtime outcomes assigned to C1 in §6 have passing observed evidence. C2-owned prompt-edit, regression, and package checks remain pending C2. Blocked or failed required C1 cases stay unchecked unless an explicitly approved exception is recorded.
+- [x] Persistence/sharing evidence uses independent processes, not only object reuse or threads.
+- [x] Failure scenarios demonstrate diagnostic visibility, primary-outcome independence, preserved sidecars, and no alternate persistent writes.
+- [x] Concurrency/inference evidence proves the required state behavior without adding stronger sidecar-race guarantees.
+- [x] Live provider calls, extra model-quality benchmarks, and new digiKam manual acceptance were not made prerequisites.
 
 **Dependencies:** B1–B6; B7 examples available when used for verification.
 

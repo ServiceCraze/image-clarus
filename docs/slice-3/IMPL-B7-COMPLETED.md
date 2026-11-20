@@ -2,6 +2,8 @@
 
 **Status:** Complete. Phase B is complete; Phase C verification and closeout have not started.
 
+**Subsequent C1 progress:** [C1](IMPL-C1-COMPLETED.md) completed runtime request, state and concurrency evidence. C2/C3 remain open; the B7 verification below is historical.
+
 **Scope deviations:** None.
 
 ## Files created, updated, removed
