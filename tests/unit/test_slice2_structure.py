@@ -512,7 +512,9 @@ def test_category_guidance_snapshot_reused_on_retry(slice2_context):
         assert user_content[2]["text"] == expected
 
 
-@pytest.mark.parametrize("categories", [["bad/path"], ["duplicate", "duplicate"], [42]])
+@pytest.mark.parametrize(
+    "categories", [["bad//path"], ["duplicate", "duplicate"], [42]]
+)
 def test_invalid_category_snapshot_fails_before_provider(slice2_context, categories):
     slice2_context.config["stages"]["json"]["preferred_categories"] = categories
     result = run_structure(slice2_context)
@@ -585,9 +587,7 @@ def test_existing_v1_json_skipped_without_model_call(slice2_context, tmp_path):
             "model_alias": "text",
             "model_id": "synthetic",
             "prompt_id": "builtin:image-structure",
-            "prompt_sha256": hashlib.sha256(
-                resources.structure_prompt().read_bytes()
-            ).hexdigest(),
+            "prompt_sha256": "a" * 64,
             "description_sha256": hashlib.sha256(c.desc.read_bytes()).hexdigest(),
         },
     }
@@ -671,9 +671,7 @@ def test_explicit_regenerate_replaces_complete_artifact(slice2_context):
             "model_alias": "text",
             "model_id": "synthetic",
             "prompt_id": "builtin:image-structure",
-            "prompt_sha256": hashlib.sha256(
-                resources.structure_prompt().read_bytes()
-            ).hexdigest(),
+            "prompt_sha256": "a" * 64,
             "description_sha256": hashlib.sha256(c.desc.read_bytes()).hexdigest(),
         },
     }
@@ -752,6 +750,7 @@ def test_prompt_fingerprint_is_effective_prompt_bytes(slice2_context, tmp_path):
     prompt = tmp_path / "fictional-prompt.txt"
     prompt.write_bytes(prompt_bytes)
     c.config["stages"]["json"]["prompt_file"] = prompt
+    c.config["stages"]["json"]["include_prompt_sha256"] = True
     c.replies[:] = [
         json.dumps(
             {

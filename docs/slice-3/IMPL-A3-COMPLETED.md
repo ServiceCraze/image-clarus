@@ -62,6 +62,8 @@ All paths for new modules are **planned**, not claims that they already exist. E
 
 Observed RED/GREEN must be recorded during each CODE step; this table is expected behavior from inspection, not a claim a RED test was executed. A1 retains envelope helpers in `stages/structure.py`; B5 uses deferred/stage-local macro imports, and A2's state modules must not reverse dependency into stages. No unapproved dependency or new product domain is needed.
 
+**Subsequent progress:** [B1](IMPL-B1-COMPLETED.md) implemented its configuration and envelope scope. B2–B7 remain open; this does not alter the historical A3 readiness evidence.
+
 ## 4. Verification and evidence limits
 
 - Programmatic crosswalk inspection: 12/12 S3 requirement IDs mapped, 14/14 unique acceptance outcomes owned, and 13/13 summary/detail headings matched at review time. All E01–E14 remain `Not run` until their assigned later evidence exists.

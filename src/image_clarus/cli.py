@@ -74,6 +74,7 @@ def _main(state):
         help="Default: desc,json,xmp; explicit subsets do not add prerequisites",
     )
     process.add_argument("--set", metavar="PATH=VALUE", action="append")
+    process.add_argument("--state-dir", metavar="DIR", action=OnceAction)
     for option in ("--desc-prompt", "--json-prompt", "--json-schema"):
         process.add_argument(option, metavar="FILE", action=OnceAction)
     process.add_argument("--regenerate", action="store_true")
@@ -139,6 +140,7 @@ def _main(state):
                 overrides=args.set or (),
                 missing_prerequisite=args.missing_prerequisite,
                 regenerate=args.regenerate,
+                state_dir=args.state_dir,
             )
         except ConfigurationError as error:
             print(f"image-clarus: {error}", file=sys.stderr)

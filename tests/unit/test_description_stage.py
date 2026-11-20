@@ -8,6 +8,7 @@ import pytest
 from image_clarus.artifacts import ArtifactService
 from image_clarus.pipeline import run_pipeline
 from image_clarus.providers.openai_compatible import OpenAICompatible
+from image_clarus.resources import description_prompt
 from image_clarus.stages.description import run_description
 
 PNG = base64.b64decode(
@@ -115,7 +116,7 @@ def test_explicit_regeneration_replaces_existing(context, original):
 @pytest.mark.parametrize("override", [False, True])
 def test_prompt_selection_is_exact(context, tmp_path, override):
     image, config, services, requests, _ = context
-    expected = "Fully describe and explain everything about this image."
+    expected = description_prompt().read_bytes().decode("utf-8")
     if override:
         prompt = tmp_path / "prompt.txt"
         expected = "Custom instructions.\nSecond line.\n"

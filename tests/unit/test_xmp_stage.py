@@ -518,3 +518,19 @@ def test_planner_never_invokes_provider_or_json_generation(tmp_path, monkeypatch
     monkeypatch.setattr(socket, "socket", forbidden)
     result = calculate(tmp_path, payload(title="Fictional", tag_candidates=[["leaf"]]))
     assert result.updates == {"tags": ["ai/leaf"], "title": "Fictional"}
+
+
+@pytest.mark.parametrize(
+    "digest,valid",
+    [(None, True), ("a" * 64, True), ("A" * 64, False), ("a" * 64 + "\n", False)],
+)
+def test_optional_prompt_hash_at_xmp_publication_boundary(tmp_path, digest, valid):
+    value = envelope(payload(title="Fictional", tag_candidates=[["food", "leaf"]]))
+    value["provenance"].pop("prompt_sha256")
+    if digest is not None:
+        value["provenance"]["prompt_sha256"] = digest
+    result = xmp.prepare_updates(json.dumps(value).encode(), None, settings(), tmp_path)
+    if valid:
+        assert result.updates == {"title": "Fictional", "tags": ["ai/food/leaf"]}
+    else:
+        assert (result.status, result.error_category) == ("failed", "invalid_artifact")

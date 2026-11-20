@@ -216,3 +216,21 @@ def test_json_only_missing_description_can_skip_without_running_desc(rig):
     assert out == "json: skipped — reason=missing_prerequisite\n" and not err
     assert not rig.requests and not rig.desc.exists() and not rig.structured.exists()
     assert_source(rig)
+
+
+@pytest.mark.parametrize("digest", [None, "a" * 64, "invalid"])
+def test_xmp_cli_accepts_optional_hash_and_rejects_invalid(rig, exiftool, digest):
+    value = copy.deepcopy(envelope())
+    value["provenance"].pop("prompt_sha256", None)
+    if digest is not None:
+        value["provenance"]["prompt_sha256"] = digest
+    raw = json.dumps(value).encode()
+    rig.structured.write_bytes(raw)
+    out = run_xmp(rig, code=1 if digest == "invalid" else 0)
+    if digest == "invalid":
+        assert out.startswith("xmp: failed — category=invalid_artifact")
+        assert not rig.xmp.exists()
+    else:
+        assert out.startswith("xmp: completed")
+        assert rig.xmp.exists()
+    assert rig.structured.read_bytes() == raw

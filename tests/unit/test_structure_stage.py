@@ -95,6 +95,7 @@ def run(c):
 
 def test_generation_uses_exact_snapshots_and_provenance(context):
     c = context
+    c.config["stages"]["json"]["include_prompt_sha256"] = True
     result = run(c)
     assert result is not None and result.status == "completed"
     value = json.loads(c.output.read_bytes())
@@ -421,10 +422,7 @@ def test_builtin_resources(context):
     result = json.loads(c.output.read_bytes())
     assert result["schema_version"] == "2.0.0"
     assert result["provenance"]["prompt_id"] == "builtin:image-structure"
-    assert (
-        result["provenance"]["prompt_sha256"]
-        == hashlib.sha256(resources.structure_prompt().read_bytes()).hexdigest()
-    )
+    assert "prompt_sha256" not in result["provenance"]
     assert (
         c.requests[0]["messages"][0]["content"].encode()
         == resources.structure_prompt().read_bytes()
@@ -669,3 +667,79 @@ def test_feedback_resolves_boolean_subschema_targets_behind_refs(context):
         for token in entry["schema_path"].split("/")[1:]:
             node = node[token.replace("~1", "/").replace("~0", "~")]
         assert node is False
+
+
+def test_default_omits_prompt_hash(context):
+    assert run(context).status == "completed"
+    assert "prompt_sha256" not in json.loads(context.output.read_bytes())["provenance"]
+
+
+@pytest.mark.parametrize(
+    "prompt_hash,valid",
+    [
+        (None, True),
+        ("a" * 64, True),
+        ("A" * 64, False),
+        ("a" * 63, False),
+        ("a" * 64 + "\n", False),
+        (12, False),
+    ],
+)
+def test_shared_envelope_optional_hash(context, prompt_hash, valid):
+    from image_clarus.stages.structure import _valid_envelope
+
+    assert run(context).status == "completed"
+    value = json.loads(context.output.read_bytes())
+    value["provenance"].pop("prompt_sha256", None)
+    if prompt_hash is not None:
+        value["provenance"]["prompt_sha256"] = prompt_hash
+    assert _valid_envelope(json.dumps(value).encode()) is valid
+
+
+def test_hierarchical_preferred_categories_reach_provider(context):
+    context.config["stages"]["json"]["preferred_categories"] = [
+        "food",
+        "food/desserts/café",
+    ]
+    assert run(context).status == "completed"
+    assert (
+        '["food", "food/desserts/café"]'
+        in context.requests[0]["messages"][1]["content"][2]["text"]
+    )
+
+
+@pytest.mark.parametrize("with_hash", [False, True])
+def test_existing_hash_variants_skip_without_inputs(context, with_hash):
+    assert run(context).status == "completed"
+    value = json.loads(context.output.read_bytes())
+    if with_hash:
+        value["provenance"]["prompt_sha256"] = "a" * 64
+    raw = json.dumps(value).encode()
+    context.output.write_bytes(raw)
+    context.desc.unlink()
+    context.prompt.unlink()
+    context.schema.unlink()
+    result = run(context)
+    assert (result.status, result.reason_code) == ("skipped", "output_exists")
+    assert context.output.read_bytes() == raw
+    assert len(context.requests) == 1
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/food", "food/", "food//leaf", "food/ leaf", "food/leaf|bad", "food/leaf\x80"],
+)
+def test_invalid_preferred_hierarchy_fails_before_provider(context, path):
+    context.config["stages"]["json"]["preferred_categories"] = [path]
+    result = run(context)
+    assert (result.status, result.error_category) == ("failed", "configuration")
+    assert not context.requests
+
+
+def test_present_null_prompt_hash_is_invalid(context):
+    from image_clarus.stages.structure import _valid_envelope
+
+    assert run(context).status == "completed"
+    value = json.loads(context.output.read_bytes())
+    value["provenance"]["prompt_sha256"] = None
+    assert not _valid_envelope(json.dumps(value).encode())

@@ -84,7 +84,10 @@ EFFORTS = {
 }
 ALIAS = re.compile(r"^[A-Za-z0-9_-]+$")
 ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+MACRO_NAME = re.compile(r"(?:config|state)(?:\.[A-Za-z_][A-Za-z0-9_-]*)+")
 DEFAULTS = {
+    "state": {"directory": None, "accumulate_categories": True},
+    "prompt_expansion": {"macros": {}},
     "providers": {},
     "models": {},
     "stages": {
@@ -102,6 +105,7 @@ DEFAULTS = {
             "regenerate": False,
             "validation_retries": 0,
             "preferred_categories": [],
+            "include_prompt_sha256": False,
         },
         "xmp": {
             "tag_root": "ai",
@@ -154,6 +158,12 @@ def _valid_tag_segment(value):
         and bool(value)
         and value == value.strip()
         and not any(c in "/|" or ord(c) < 32 or 127 <= ord(c) <= 159 for c in value)
+    )
+
+
+def _valid_tag_path(value):
+    return isinstance(value, str) and all(
+        _valid_tag_segment(part) for part in value.split("/")
     )
 
 
@@ -217,6 +227,11 @@ def _override_path(parts):
     """Only disclose schema-owned segments; aliases and unknown input are private."""
     if not parts or parts[0] not in DEFAULTS:
         return "<unknown>"
+    if parts[:2] == ["prompt_expansion", "macros"] and len(parts) > 2:
+        result = "prompt_expansion.macros.<name>"
+        if len(parts) > 3 and parts[3] in {"delimiter", "max_depth"}:
+            result += "." + parts[3]
+        return result
     root = parts[0]
     safe = [root]
     rest = parts[1:]
@@ -288,6 +303,12 @@ def _path(value, base):
 
 
 def _normalize_paths(data, base):
+    state = data.get("state")
+    if isinstance(state, dict) and "directory" in state:
+        try:
+            state["directory"] = _path(state["directory"], base)
+        except ConfigurationError:
+            pass  # A higher-priority layer may repair the value.
     for root, stage, field in PATH_FIELDS:
         stages = data.get(root, {})
         if not isinstance(stages, dict):
@@ -305,6 +326,13 @@ def _normalize_paths(data, base):
 
 def _validate_keys(data):
     """Reject unknown keys in every layer without validating replaceable values."""
+
+    def leaf(value, path):
+        # A malformed scalar may be repaired later, but a mapping at a leaf
+        # has no permitted child keys, regardless of later replacement.
+        if isinstance(value, dict):
+            _mapping(value, (), path)
+
     _mapping(data, DEFAULTS)
     for group, fields in (("providers", PROVIDER_FIELDS), ("models", MODEL_FIELDS)):
         entries = data.get(group)
@@ -316,6 +344,9 @@ def _validate_keys(data):
                     )
                 if isinstance(entry, dict):
                     _mapping(entry, fields, f"{group}.<name>")
+                    for key, value in entry.items():
+                        if key != "reasoning_effort_mapping":
+                            leaf(value, f"{group}.<name>.{key}")
                     mapping = entry.get("reasoning_effort_mapping")
                     if isinstance(mapping, dict):
                         _mapping(
@@ -323,6 +354,11 @@ def _validate_keys(data):
                             {"parameter", "values"},
                             f"{group}.<name>.reasoning_effort_mapping",
                         )
+                        if "parameter" in mapping:
+                            leaf(
+                                mapping["parameter"],
+                                f"{group}.<name>.reasoning_effort_mapping.parameter",
+                            )
                         values = mapping.get("values")
                         if isinstance(values, dict):
                             _mapping(
@@ -337,16 +373,42 @@ def _validate_keys(data):
                                         {"omit"},
                                         f"{group}.<name>.reasoning_effort_mapping.values",
                                     )
+                                    if "omit" in value:
+                                        leaf(
+                                            value["omit"],
+                                            f"{group}.<name>.reasoning_effort_mapping.values.off.omit",
+                                        )
     stages = data.get("stages")
     if isinstance(stages, dict):
         _mapping(stages, DEFAULTS["stages"], "stages")
         for stage, values in stages.items():
             if isinstance(values, dict):
                 _mapping(values, DEFAULTS["stages"][stage], f"stages.{stage}")
-    for section in ("pipeline", "logging"):
+                for key, value in values.items():
+                    leaf(value, f"stages.{stage}.{key}")
+    for section in ("pipeline", "logging", "state", "prompt_expansion"):
         values = data.get(section)
         if isinstance(values, dict):
             _mapping(values, DEFAULTS[section], section)
+            for key, value in values.items():
+                if section != "prompt_expansion":
+                    leaf(value, f"{section}.{key}")
+    expansion = data.get("prompt_expansion")
+    macros = expansion.get("macros") if isinstance(expansion, dict) else None
+    if isinstance(macros, dict):
+        for name, options in macros.items():
+            if not isinstance(name, str) or not MACRO_NAME.fullmatch(name):
+                raise ConfigurationError(
+                    "prompt_expansion.macros: invalid macro name; use a namespaced reference"
+                )
+            if isinstance(options, dict):
+                _mapping(
+                    options,
+                    {"delimiter", "max_depth"},
+                    "prompt_expansion.macros.<name>",
+                )
+                for key, value in options.items():
+                    leaf(value, f"prompt_expansion.macros.<name>.{key}")
 
 
 def _validate_shape(data, stages):
@@ -429,14 +491,14 @@ def _validate_shape(data, stages):
             if key == "preferred_categories":
                 if (
                     not isinstance(value, list)
-                    or not all(_valid_tag_segment(item) for item in value)
+                    or not all(_valid_tag_path(item) for item in value)
                     or len(value) != len(set(value))
                 ):
                     raise ConfigurationError(
-                        "stages.json.preferred_categories: invalid categories; set a list of unique valid tag segments"
+                        "stages.json.preferred_categories: invalid categories; set a list of unique valid slash-separated paths"
                     )
                 continue
-            if key == "regenerate":
+            if key in {"regenerate", "include_prompt_sha256"}:
                 if type(value) is not bool:
                     raise ConfigurationError(
                         f"stages.{stage}.{key}: expected a boolean; set true or false"
@@ -456,6 +518,36 @@ def _validate_shape(data, stages):
                 raise ConfigurationError(
                     f"stages.{stage}.{key}: expected a string; set a string"
                 )
+    state = data["state"]
+    _mapping(state, DEFAULTS["state"], "state")
+    if state["directory"] is not None and not isinstance(state["directory"], Path):
+        raise ConfigurationError(
+            "state.directory: invalid path; set a nonempty path or null"
+        )
+    if type(state["accumulate_categories"]) is not bool:
+        raise ConfigurationError(
+            "state.accumulate_categories: expected a boolean; set true or false"
+        )
+    expansion = data["prompt_expansion"]
+    _mapping(expansion, DEFAULTS["prompt_expansion"], "prompt_expansion")
+    macros = expansion["macros"]
+    if not isinstance(macros, dict):
+        raise ConfigurationError(
+            "prompt_expansion.macros: expected a mapping; set a mapping"
+        )
+    for options in macros.values():
+        _mapping(options, {"delimiter", "max_depth"}, "prompt_expansion.macros.<name>")
+        if "delimiter" in options and (
+            not _valid_utf8_text(options["delimiter"]) or not options["delimiter"]
+        ):
+            raise ConfigurationError(
+                "prompt_expansion.macros.<name>.delimiter: expected a nonempty UTF-8 string; set a delimiter"
+            )
+        depth = options.get("max_depth")
+        if depth is not None and (type(depth) is not int or depth < 0):
+            raise ConfigurationError(
+                "prompt_expansion.macros.<name>.max_depth: expected a nonnegative integer or null; set a valid depth"
+            )
     for section in ("pipeline", "logging"):
         values = data.get(section, {})
         _mapping(values, DEFAULTS[section], section)
@@ -854,6 +946,7 @@ def resolve_config(
     json_schema=None,
     regenerate=False,
     missing_prerequisite=None,
+    state_dir=None,
 ):
     """Resolve the complete config; environment credentials are never copied into it."""
     config = deepcopy(DEFAULTS)
@@ -898,7 +991,35 @@ def resolve_config(
     override_parts = []
     for override in overrides:
         name, separator, value = override.partition("=")
-        parts = name.split(".")
+        macro_prefix = "prompt_expansion.macros"
+        if name.startswith(macro_prefix + "["):
+            try:
+                macro_name, end = json.JSONDecoder().raw_decode(
+                    name[len(macro_prefix) + 1 :]
+                )
+                suffix = name[len(macro_prefix) + 1 + end :]
+                if (
+                    not isinstance(macro_name, str)
+                    or not MACRO_NAME.fullmatch(macro_name)
+                    or not suffix.startswith("]")
+                ):
+                    raise ValueError
+                suffix = suffix[1:]
+                if suffix not in ("", ".delimiter", ".max_depth"):
+                    raise ValueError
+                parts = ["prompt_expansion", "macros", macro_name] + (
+                    [suffix[1:]] if suffix else []
+                )
+            except (ValueError, RecursionError):
+                raise ConfigurationError(
+                    "Invalid override: prompt_expansion.macros: invalid bracketed macro path; use a JSON-quoted namespaced name and supported option"
+                ) from None
+        elif name.startswith(macro_prefix + "."):
+            raise ConfigurationError(
+                "Invalid override: prompt_expansion.macros: ambiguous macro path; use a JSON-quoted bracketed name"
+            )
+        else:
+            parts = name.split(".")
         safe_path = _override_path(parts)
         override_paths.append(safe_path)
         override_parts.append(parts)
@@ -956,6 +1077,15 @@ def resolve_config(
     complete = deepcopy(DEFAULTS)
     _merge(complete, config)
     config = complete
+    if state_dir is not None:
+        if not isinstance(config["state"], dict):
+            config["state"] = deepcopy(DEFAULTS["state"])
+        try:
+            config["state"]["directory"] = _path(state_dir, Path.cwd())
+        except ConfigurationError:
+            raise ConfigurationError(
+                "state.directory: invalid path; set a nonempty path"
+            ) from None
     for stage, field, value in (
         ("desc", "prompt_file", desc_prompt),
         ("json", "prompt_file", json_prompt),

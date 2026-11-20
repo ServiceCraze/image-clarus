@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phase A complete; A1–A3 design and technical readiness are recorded. Phases B and C have not started, and their evidence remains unrun.
+**Status:** Phase A complete. Phase B is in progress: B1 is complete; B2–B7 remain open. Phase C has not started. Cross-step acceptance evidence remains open until all assigned portions are verified.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -102,7 +102,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 ### Phase B Implementation
 
-- [ ] Step B1 - Extend configuration and JSON hash compatibility [CODE]
+- [x] Step B1 - Extend configuration and JSON hash compatibility [CODE]
 - [ ] Step B2 - Implement state storage and category operations [CODE]
 - [ ] Step B3 - Implement initialization and state resolution [CODE]
 - [ ] Step B4 - Implement safe namespaced macro expansion [CODE]
@@ -235,11 +235,11 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Tests demonstrate CLI > YAML > defaults for the new controls, including literal dotted macro keys and negative-depth rejection.
-- [ ] Single and hierarchical preferred paths pass; XMP segment/root validation and unrelated stage configuration remain unchanged.
-- [ ] Default generation omits the hash; explicit YAML/CLI enablement includes the expected fixture-source hash.
-- [ ] Shared validation and XMP accept old valid artifacts with the field and new valid artifacts without it, and reject an invalid present hash.
-- [ ] Tests preserve `prompt_id`, raw-description hashing, model identifiers, custom-schema hashing, and create-only/regeneration behavior.
+- [x] Tests demonstrate CLI > YAML > defaults for the new controls, including literal dotted macro keys and negative-depth rejection.
+- [x] Single and hierarchical preferred paths pass; XMP segment/root validation and unrelated stage configuration remain unchanged.
+- [x] Default generation omits the hash; explicit YAML/CLI enablement includes the expected fixture-source hash.
+- [x] Shared validation and XMP accept old valid artifacts with the field and new valid artifacts without it, and reject an invalid present hash.
+- [x] Tests preserve `prompt_id`, raw-description hashing, model identifiers, custom-schema hashing, and create-only/regeneration behavior.
 
 **Dependencies:** A3.
 
