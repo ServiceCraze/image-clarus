@@ -106,7 +106,7 @@ def _validation_errors(schema, instance):
     from jsonschema.validators import _META_SCHEMAS
     from referencing import Registry
 
-    from image_clarus.stages.structure import _resolve_ref, _schema_nodes
+    from image_clarus.schema_feedback import _resolve_ref, _schema_nodes
 
     nodes = _schema_nodes(schema)
     active = []
@@ -179,7 +179,8 @@ def _validation_errors(schema, instance):
 def _main():
     try:
         request = json.load(sys.stdin)
-        from image_clarus.config import ConfigurationError, _check_schema
+        from image_clarus.config_errors import ConfigurationError
+        from image_clarus.schema_validation import _check_schema
 
         try:
             _check_schema(_Snapshot(request["schema"]))
@@ -189,7 +190,7 @@ def _main():
             if request["operation"] == "preflight":
                 result = {"status": "ok"}
             elif request["operation"] == "validate":
-                from image_clarus.stages.structure import _feedback
+                from image_clarus.schema_feedback import _feedback
 
                 schema = json.loads(request["schema"])
                 errors = _validation_errors(schema, request["instance"])
