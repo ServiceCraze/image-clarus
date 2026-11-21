@@ -4,7 +4,7 @@
 
 **Subsequent C2 progress:** [C2](IMPL-C2-COMPLETED.md) completed regression and package checks and corrected the identified new dependency cycle. C3 remains open; C1 evidence is historical.
 
-**Subsequent C3 progress:** [C3](IMPL-C3-COMPLETED.md) reconciles the cross-step evidence and tracks the remaining orchestration disposition.
+**Subsequent C3 progress:** [C3](IMPL-C3-COMPLETED.md) completed the cross-step reconciliation and Slice 3 closeout.
 
 **Scope deviations:** None. Fault-injection limits are stated below; no live model or new manual interoperability test was required.
 

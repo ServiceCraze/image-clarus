@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "image-clarus"
-version = "0.3.2"
+version = "0.3.3"
 description = "Image descriptions and structured metadata"
 readme = "README.md"
 requires-python = ">=3.12"

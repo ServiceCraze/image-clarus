@@ -311,7 +311,7 @@ Build independently usable, numbered slices. Each slice has its own implementati
 | --- | --- | --- |
 | **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
 | **Slice 2 (complete and accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author and sanitized fixtures; accepted prompt-control gap carried forward |
-| **Slice 3 (implementation and verification complete; closeout pending)** | User-owned prompts and application state | Namespaced macros, hierarchical category guidance, reusable SQLite/memory state, nonblocking accumulation and opt-in prompt hash; see [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md) for closeout status |
+| **Slice 3 (complete)** | User-owned prompts and application state | Namespaced macros, hierarchical category guidance, reusable SQLite/memory state, nonblocking accumulation and opt-in prompt hash; see [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md) and its closeout |
 | Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |

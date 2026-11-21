@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phases A and B complete. C1 and C2 are complete. C3 evidence reconciliation is substantially complete; closeout remains open pending orchestration disposition of recorded test-order deviations.
+**Status:** Complete. Phases A, B and C, including C3 evidence reconciliation and Slice 3 closeout, are complete.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -23,7 +23,7 @@
 3. Each record includes the exact step heading and status; decisions and rationale; files created, updated, and removed; actual commands and results; blockers, limitations, and unchecked criteria; and `Scope deviations: None` or the specific approval reference, reason, owner, and carry-forward.
 4. Reviewers read the completion record first, then examine the implementation and evidence supporting its acceptance rows. A record's existence is not proof that its criteria passed.
 5. Keep summary checkboxes, detailed acceptance, completion records, phase status, requirement mappings, and overall status consistent. Check only work supported by actual evidence. Orchestration advancement records acceptance; it does not turn an unexecuted test into a pass.
-6. CODE steps follow focused test → observed RED → implementation → observed GREEN → relevant regression. Record commands and the expected reason for failure. Supplemental tests against existing behavior may start GREEN; describe them honestly. If the required test-first sequence cannot be demonstrated, record the exception for orchestration disposition rather than inventing evidence.
+6. Use focused unit tests as the primary development execution harness; tests and implementation may evolve together. A test may initially pass or fail without a process violation. Run relevant regression checks, record actual commands and results, and never invent historical RED evidence.
 7. Preserve existing patterns and production consumers. For each replaced path, audit remaining callers, tests, resources, and exports. Remove confirmed orphaned production code and obsolete tests or fixtures. Retaining a confirmed orphan requires the established explicit Product Owner exception, documented purpose, and an adjacent code comment; tests or unsupported exports alone are not a retention reason.
 8. Use synthetic inputs, independent prompt fixtures, controlled local provider stubs, and fictitious credentials and infrastructure identifiers in publishable work. Record actual privacy-scan scope. No live provider call or new digiKam manual acceptance exercise is required by this plan.
 9. **The delivering step owns version synchronization.** For each assigned step (A1–A3, B1–B7, C1–C3) that delivers repository changes, apply the project's patch-version increment convention at that step's delivery boundary, not later in C2 or closeout. The same delivering step updates the authoritative `pyproject.toml` version, synchronizes `uv.lock`, updates affected exact-version assertions (including `tests/unit/test_cli.py` and `tests/unit/test_resources.py` where applicable), verifies those updates, and records them in its completion record. This applies to code, test, and documentation deliveries under the project convention. Do not preselect future versions or modify repository files merely because this plan is drafted.
@@ -114,7 +114,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 - [x] Step C1 - Verify requests persistence and state failure behavior [TEST]
 - [x] Step C2 - Run regression packaging and quality checks [TEST]
-- [ ] Step C3 - Reconcile evidence and close Slice 3 [DOCS]
+- [x] Step C3 - Reconcile evidence and close Slice 3 [DOCS]
 
 ## 4. Detailed steps
 
@@ -195,7 +195,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 1. Verify all S3 requirements and all 14 S3-12 outcomes have implementation owners and observable evidence.
 2. Check A1/A2 interfaces together: settings reach the right consumers; optional state never enters a fatal stage prerequisite; XMP remains independent; post-image work has one owner.
-3. Replace provisional module/test references with the chosen paths where needed. Confirm each CODE step has frozen inputs, expected RED cases, dependencies, and bounded outputs.
+3. Replace provisional module/test references with the chosen paths where needed. Confirm each CODE step has frozen inputs, test scenarios, dependencies, and bounded outputs.
 4. Resolve technical contradictions and record any actual scope conflict with its disposition. Routine design choices stay with the assigned designers and reviewers.
 5. Confirm the deviations ledger and evidence status. Record readiness through the orchestrator's normal advancement; do not request a second acceptance of the already accepted REQ.
 
@@ -214,7 +214,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 ### Phase B Implementation
 
-**Entry:** A3 readiness is recorded and the orchestrator assigns the next step. Every CODE step follows the test-first protocol. Tests named below are existing extension points unless explicitly described as proposed; A1/A2 settle additions.
+**Entry:** A3 readiness is recorded and the orchestrator assigns the next step. CODE steps use unit tests as the development harness. Tests named below are existing extension points unless explicitly described as proposed; A1/A2 settle additions.
 
 ### Step B1 - Extend configuration and JSON hash compatibility [CODE]
 
@@ -224,12 +224,12 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Add failing focused tests for settings/defaults/overrides, full preferred-category paths, shared-validator compatibility, and default hash omission. Use independent prompt fixtures for exact text/hash assertions.
+1. Add focused tests for settings/defaults/overrides, full preferred-category paths, shared-validator compatibility, and default hash omission. Use independent prompt fixtures for exact text/hash assertions.
 2. Extend defaults, known keys, type/shape validation, path origins, and CLI handling according to A1. Keep new state availability failures out of fatal configuration preflight and preserve unrelated selected-stage isolation.
 3. Implement full preferred-path validation in config and JSON processing without relaxing XMP segment/root validation.
 4. Make `prompt_sha256` optional in every shared-envelope consumer while retaining validation when present. Implement generation omission by default and explicit YAML/CLI enablement with the existing raw source-byte calculation.
 5. Preserve the other approved envelope fields, schema-version behavior, existing JSON skip/regeneration, and XMP compatibility. If A1 chose a shared-validation relocation, move only the needed functionality and update genuine consumers.
-6. Reconcile obsolete assertions and run affected configuration, JSON, XMP, and diagnostics regressions. Record RED/GREEN and any retained compatibility boundary.
+6. Reconcile obsolete assertions and run affected configuration, JSON, XMP, and diagnostics regressions. Record observed results and any retained compatibility boundary.
 
 **Outputs:** Implemented settings/validation/hash behavior; focused tests and cleaned affected references; [IMPL-B1-COMPLETED.md](IMPL-B1-COMPLETED.md).
 
@@ -251,7 +251,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Write failing tests for the backend/domain contract, memory lifetime, persistence, full category paths, deduplication, schema/version handling, and non-destructive failures.
+1. Write tests for the backend/domain contract, memory lifetime, persistence, full category paths, deduplication, schema/version handling, and non-destructive failures.
 2. Implement the selected interfaces with SQLite through `sqlite3` and the in-memory backend. Keep repository selection separate; category operations use the storage boundary rather than selecting folders themselves.
 3. Implement initialization/open distinctions, short transactions, migration handling, concurrent access, and bounded contention behavior from A2. Normal open must not create absent persistent state.
 4. Preserve complete category information independently of prompt formatting and depth. Do not add a second production domain, historical import command, or taxonomy inference.
@@ -277,7 +277,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Add failing tests for `init`, no automatic creation, every precedence boundary, conflicting/nested locations, and invalid explicit selections.
+1. Add tests for `init`, no automatic creation, every precedence boundary, conflicting/nested locations, and invalid explicit selections.
 2. Route `init` independently of the image-processing argument and provider/stage validation path. Apply A2's safe repeated/concurrent initialization behavior.
 3. Integrate resolution and state service lifetime with single-image processing. Honor CLI/YAML choice, CWD ancestry, then image ancestry, then memory, with the path semantics frozen in Phase A.
 4. Implement visible sanitized state diagnostics and the specified nonpersistent fallback. Do not insert a failed state result into primary stages or silently substitute another persistent repository.
@@ -304,7 +304,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Write failing tests using independent prompt fixtures, both namespaces, eligible non-category arrays, nested configuration objects, and synthetic inline/environment credentials.
+1. Write tests using independent prompt fixtures, both namespaces, eligible non-category arrays, nested configuration objects, and synthetic inline/environment credentials.
 2. Implement the frozen grammar and value serialization over a safe resolved-config view and the state interface. Do not expose credentials by expanding a parent object or let sanitization alter provider configuration.
 3. Implement per-macro delimiter/depth controls: default/unlimited, explicit `null`, positive depth, zero as `[]`, negative rejection, and deduplication after truncation. Apply them to eligible arrays in either namespace.
 4. Verify expansion is a derived output: prompt source, resolved configuration, full hierarchy, and backend representation remain independent.
@@ -331,7 +331,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Add failing captured-request tests for built-in and replacement prompts in both stages and replacement prompts omitting category guidance. Explicitly cover all four prompt/namespace combinations with authored fixture prompts: description/config, description/state, JSON/config, and JSON/state.
+1. Add captured-request tests for built-in and replacement prompts in both stages and replacement prompts omitting category guidance. Explicitly cover all four prompt/namespace combinations with authored fixture prompts: description/config, description/state, JSON/config, and JSON/state.
 2. Expand prompt snapshots immediately before use while preserving stage skip/preflight behavior and the original prompt bytes for explicitly enabled hashing.
 3. Consolidate existing default instructional framing into the two prompt texts as A1 specifies. Preserve the exact built-in description text. Update the built-in JSON prompt to include preferred-category guidance through its configuration macro, removing the obsolete `when supplied separately` wording from `prompts/image-structure.txt` while retaining guidance that categories are optional, advisory, and not a closed taxonomy.
 4. Remove the superseded mandatory category payload and hardcoded contextual instructions. Preserve required image/description/schema data, transport/protocol behavior, reasoning mapping, and bounded validation feedback.
@@ -358,7 +358,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Actions**
 
-1. Add failing tests for generated and `output_exists` JSON accumulation, default-on/off settings, post-selected-stage timing, and state-update failure with unchanged primary results.
+1. Add tests for generated and `output_exists` JSON accumulation, default-on/off settings, post-selected-stage timing, and state-update failure with unchanged primary results.
 2. Invoke the A2 post-image operation after selected-stage processing. Keep JSON parsing/extraction in the chosen domain/metadata component and keep the coordinator free of category policy.
 3. Accumulate complete valid paths under the frozen extraction rules. Reuse a selected skipped JSON artifact without a provider request, sidecar regeneration, or changing its primary skip result.
 4. Honor configuration disabling accumulation for both generated and skipped JSON. Do not apply prompt expansion depth to state capture.
@@ -487,7 +487,7 @@ All headings below exactly match their corresponding detailed step headings.
 **Acceptance**
 
 - [x] Every in-scope requirement and acceptance outcome is supported by recorded evidence or an explicitly approved exception; nothing is silently deferred.
-- [ ] Phase and overall status match actual evidence and the orchestrator's closeout decision.
+- [x] Phase and overall status match actual evidence and the orchestrator's closeout decision.
 - [x] Historical acceptance remains intact, and remaining parent requirements are accurately allocated without new commitments.
 - [x] The deviations/deferrals ledger and evidence limitations are explicit and consistent.
 
@@ -653,7 +653,7 @@ A1/A2 mechanics and A3 readiness clarifications are recorded in their completion
 
 **In-scope deferrals:** None.
 
-**Test-order process deviations:** B2, B3, B4 and B6 recorded missing-module collection failures rather than individual behavioral RED observations for all initial work. Later behavioral and integration evidence is recorded in their completion records. The missing historical RED observations cannot be recreated; orchestration disposition is pending, and no Product Owner approval is implied. See [C3](IMPL-C3-COMPLETED.md).
+**Test-order disposition:** The Product Owner rejects mandatory RED-before-implementation sequencing. Unit tests are the development harness, and initial pass or fail is not a process violation. B2, B3, B4 and B6 preserve their actual historical observations and later verification; no absent RED result is invented. Test order is not a closeout gate. See [C3](IMPL-C3-COMPLETED.md).
 
 If an exception is explicitly approved during execution, record the affected requirement, exact change, reason, approval reference, owner, and carry-forward here and in the relevant completion record. Later parent capabilities already excluded from Slice 3 are not new deviations.
 

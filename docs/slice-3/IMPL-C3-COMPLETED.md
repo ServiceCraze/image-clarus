@@ -1,8 +1,8 @@
-# Step C3 - Reconcile evidence and close Slice 3 [DOCS] (IN PROGRESS)
+# Step C3 - Reconcile evidence and close Slice 3 [DOCS] (COMPLETED)
 
-**Status:** Evidence and roadmap reconciliation complete. Closeout is pending orchestration disposition of the documented test-order deviations below; no approval is assumed. The filename is the plan's designated record path, not a claim that the step is complete.
+**Status:** Complete. The Product Owner directed closeout based on functional acceptance and verification evidence and rejected mandatory RED-before-implementation sequencing.
 
-**Scope deviations:** None. **In-scope deferrals:** None. Initial test-order deviations are process-evidence limitations, not changes to product scope.
+**Scope deviations:** None. **In-scope deferrals:** None.
 
 ## Requirement and acceptance crosswalk
 
@@ -29,14 +29,15 @@ The following summarizes recorded automated evidence; linked step records provid
 
 - C2's full Linux suites at **0.2.18** passed **1,212 tests each** on Python 3.12.14 and 3.13.15 with ExifTool 13.55 and no skips; its isolated installed-wheel checks and prompt-edit run retain their actual versions and limits in C2.
 - After the authorized schema dependency separations, the Linux development full suite at **0.3.1** passed **1,217 tests** with ExifTool on PATH. Ruff and format checks passed. A static scan of 27 source modules, including ordinary deferred and relative imports, found no static cycle; dynamic imports are outside that scan. See [dependency assessment](cycle-dependencies-C2.md). The 0.2.18 minimum-runtime and wheel runs were not rerun at 0.3.1.
-- This documentation/closeout delivery is **0.3.2**. `uv lock --locked` resolved 21 packages; `uv run --locked pytest -q tests/unit/test_cli.py tests/unit/test_resources.py tests/unit/test_schema_dependency_boundaries.py tests/unit/test_schema_extracted_units.py` passed **65 tests** on rerun; CLI version, Ruff and format checks passed. The first focused run reported **1 failed, 64 passed**: the signal preflight test observed an empty worker PID marker after the file appeared. The rerun passed; this does not establish a product defect or fix the test synchronization race. No full-suite or installed-wheel run is claimed at 0.3.2.
+- At **0.3.2**, `uv lock --locked` resolved 21 packages; `uv run --locked pytest -q tests/unit/test_cli.py tests/unit/test_resources.py tests/unit/test_schema_dependency_boundaries.py tests/unit/test_schema_extracted_units.py` passed **65 tests** on rerun; CLI version, Ruff and format checks passed. The first focused run reported **1 failed, 64 passed**: the signal preflight test observed an empty worker PID marker after the file appeared. The rerun passed; this does not establish a product defect or fix the test synchronization race. No full-suite or installed-wheel run is claimed at 0.3.2.
+- Closeout and the Product Owner's test-order decision are delivered as **0.3.3**. `uv lock --locked` resolved 21 packages; the same four-file focused command passed **65 tests**, CLI reported `image-clarus 0.3.3`, and Ruff check and format check passed (159 files). No full suite or installed-wheel run is claimed at 0.3.3.
 - The independently reviewed dependency metadata leaves `jsonschema` and `referencing` unbounded while the worker uses a private `jsonschema` API. The locked tests establish the tested dependency resolution, not compatibility with every permitted future or older version; dependency bounds and broader verification are separate follow-up.
 
 ## History, scope and limitations
 
 Slice 2 remains accepted, including its historically recorded prompt-control exception and Product Owner-reported digiKam observations. Slice 3 request evidence supports remedying the identified hardcoded prompt-framing gap without rewriting that history. Native batch, search, scheduling, historical taxonomy import and additional state domains remain outside Slice 3; no new future slice, release date or feature commitment is assigned. State concurrency does not change lock-free sidecar last-replacement-wins limitations. Permission and migration injections, synthetic providers and test-only migrations are not claims of physical failures, live provider use or power-loss durability.
 
-B2, B3, B4 and B6 initially recorded missing-module collection failures rather than observed behavioral RED for every initial behavior. Later direct, audit-driven and integration tests are recorded in their respective records; absent historical failures cannot be reconstructed. The plan requires orchestration disposition of the test-order deviations. No explicit approval has been recorded, so this record leaves the closeout decision pending rather than treating the assignment as a waiver.
+B2, B3, B4 and B6 initially recorded missing-module collection failures rather than observed behavioral RED for every initial behavior. Later direct, audit-driven and integration tests are recorded in their respective records; absent historical failures are not invented. The Product Owner rejected mandatory RED-before-implementation sequencing: unit tests are the development harness and an initial pass or fail is not a violation. C3 closes on functional acceptance and verification evidence, not a test-order gate.
 
 ## Files and closeout
 
@@ -47,6 +48,6 @@ B2, B3, B4 and B6 initially recorded missing-module collection failures rather t
 ## C3 acceptance
 
 - [x] Every in-scope requirement and acceptance outcome is supported by recorded evidence or an explicitly approved exception; nothing is silently deferred.
-- [ ] Phase and overall status match actual evidence and the orchestrator's closeout decision.
+- [x] Phase and overall status match actual evidence and the orchestrator's closeout decision.
 - [x] Historical acceptance remains intact, and remaining parent requirements are accurately allocated without new commitments.
 - [x] The deviations/deferrals ledger and evidence limitations are explicit and consistent.
