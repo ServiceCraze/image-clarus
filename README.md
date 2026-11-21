@@ -63,12 +63,16 @@ Configuration syntax, unknown keys and global structure are checked for the whol
 
 Both `--desc-prompt FILE` and `--json-prompt FILE` replace their stage's instructions completely. The built-in description prompt is `Fully describe and explain everything about this image.` The built-in JSON prompt includes advisory preferred categories; replacement prompts may remove that guidance. Required image data, description and schema are still supplied as inputs, but no separate category instruction is injected. Prompt files can contain optional macros in either stage, for example:
 
+<!-- {% raw %} -->
+
 ```text
 Use these preferred paths as optional guidance: {{config.stages.json.preferred_categories}}
 Previously observed paths: {{state.categories.known}}
 ```
 
 Macro names have `config` or `state` followed by dot-separated segments beginning with a letter or underscore and containing letters, digits, underscores or hyphens. Whitespace, expressions and indexing are not supported. Strings expand as raw text; other values use compact JSON with sorted object keys. Expansion is single-pass; `\{{` emits literal `{{`. Unknown, malformed, forbidden or unclosed references cause a sanitized stage error; prompts of outputs already skipped are not read or expanded. `config` exposes a filtered resolved configuration, not credentials: `api_key` and `api_key_env` are omitted even from containing objects, and configured credential values are filtered from the snapshot. This does not sanitize arbitrary text you write in a prompt. The currently available state domain is `state.categories.known`; unavailable state produces a visible state error and an empty list instead of blocking the stage. State values may contain sensitive metadata; referencing them sends them to the chosen provider.
+
+<!-- {% endraw %} -->
 
 Under `prompt_expansion.macros`, options apply independently to the exact full macro name. `delimiter` defaults to `/` and must be a nonempty string; `max_depth` defaults to `null` (unlimited), accepts a nonnegative integer, and `0` produces `[]`. For configured macros the value must be an array of strings. Positive depth truncates each path at that many delimiter-separated segments and deduplicates identical results in first-occurrence order. For example, at depth 2 both `food/desserts/cookies` and `food/desserts/cakes` become `food/desserts`. This changes only prompt output, not the prompt file, configuration or complete stored paths. Unconfigured arrays are serialized normally.
 
