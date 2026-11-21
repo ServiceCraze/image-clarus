@@ -1,6 +1,8 @@
 # image-clarus
 
-Image Clarus is an open-source CLI for describing one image, generating structured metadata and publishing selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible models; XMP publication consumes persisted JSON without a model. Search and batch processing are not implemented. The Product Owner has reported successful manual digiKam interoperability checks, subject to the documented limits below.
+[Image Clarus](https://github.com/ServiceCraze/image-clarus) is an open-source CLI for describing one image, generating structured metadata and publishing selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible LLM models; XMP publication consumes persisted JSON without a model. Search and batch processing are not implemented. The Product Owner has reported successful manual digiKam interoperability checks, subject to the documented limits below.
+
+You can use local, remote, or a combination of AI models.  Description requires vision.  JSON generation can use any model that can read the text and generate JSON.
 
 ## Install
 
