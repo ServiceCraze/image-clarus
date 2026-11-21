@@ -1,8 +1,12 @@
 # image-clarus
 
-[Image Clarus](https://github.com/ServiceCraze/image-clarus) is an open-source CLI for describing one image, generating structured metadata and publishing selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible LLM models; XMP publication consumes persisted JSON without a model. Search and batch processing are not implemented. The Product Owner has reported successful manual digiKam interoperability checks, subject to the documented limits below.
+[Image Clarus](https://github.com/ServiceCraze/image-clarus) is an open-source CLI for using AI to describe your images, generate structured metadata and publish selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible LLM models; XMP publication consumes persisted JSON without a model. 
 
-You can use local, remote, or a combination of AI models.  Description requires vision.  JSON generation can use any model that can read the text and generate JSON.
+You can use local, remote, or a combination of AI models.  Description requires vision.  JSON generation can use any model that can read the text and generate JSON.  Brought to you by [Service Craze](https://www.servicecraze.com/).
+
+XMP is an XML file commonly used by image apps to hold metadata outside your image file.  This works well with [digiKam](https://www.digikam.org/), an open source digital asset manager and image editor.  Once your XMP is populated, you can immediately use digiKam to search your images and view images matching hierarchical tags (e.g., "food/desserts").
+
+Built-in search and batch commands are not implemented yet, though you can run batch jobs today with standard shell tools (like find or xargs) and search your tagged library directly in digiKam.
 
 ## Install
 
