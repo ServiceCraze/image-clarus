@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 
-**Status:** Phases A and B complete. Phase C is in progress: C1 and C2 are complete; C3 remains open. Cross-step acceptance evidence remains open until all assigned portions are verified.
+**Status:** Phases A and B complete. C1 and C2 are complete. C3 evidence reconciliation is substantially complete; closeout remains open pending orchestration disposition of recorded test-order deviations.
 
 **Governing REQ:** [REQ-slice-3.md](REQ-slice-3.md), accepted by the Product Owner.
 
@@ -486,10 +486,10 @@ All headings below exactly match their corresponding detailed step headings.
 
 **Acceptance**
 
-- [ ] Every in-scope requirement and acceptance outcome is supported by recorded evidence or an explicitly approved exception; nothing is silently deferred.
+- [x] Every in-scope requirement and acceptance outcome is supported by recorded evidence or an explicitly approved exception; nothing is silently deferred.
 - [ ] Phase and overall status match actual evidence and the orchestrator's closeout decision.
-- [ ] Historical acceptance remains intact, and remaining parent requirements are accurately allocated without new commitments.
-- [ ] The deviations/deferrals ledger and evidence limitations are explicit and consistent.
+- [x] Historical acceptance remains intact, and remaining parent requirements are accurately allocated without new commitments.
+- [x] The deviations/deferrals ledger and evidence limitations are explicit and consistent.
 
 **Dependencies:** C1, C2, all earlier assigned steps.
 
@@ -512,7 +512,7 @@ All headings below exactly match their corresponding detailed step headings.
 
 ## 6. Acceptance to evidence
 
-The Expected evidence column specifies future proof, not completed verification. Completion records must name actual test cases, commands, and results.
+The Expected evidence column specifies the original planned proof. The initial statuses below are historical; the current E01–E14 evidence and limitations are reconciled in [C3](IMPL-C3-COMPLETED.md).
 
 | ID | S3-12 area | Expected observable evidence | Evidence owner | Initial status |
 | --- | --- | --- | --- | --- |
@@ -643,7 +643,7 @@ These items have resolution owners and are not new Product Owner acceptance gate
 
 ### 10.3 Missing inputs and product decisions
 
-No missing repository input or unresolved Product Owner decision blocks the A3 technical readiness handoff. The plan and A1–A3 records now exist; state and macro implementation remains planned. Recheck the baseline when an execution step is assigned.
+No missing repository input or unresolved Product Owner decision blocked the A3 technical readiness handoff. State and macro implementation subsequently completed in B1–B6; C3 closeout status is recorded above.
 
 A1/A2 mechanics and A3 readiness clarifications are recorded in their completion artifacts. A decision is escalated only if its proposed resolution changes approved product behavior or scope. Do not infer approval for an extra capability from its usefulness.
 
@@ -652,6 +652,8 @@ A1/A2 mechanics and A3 readiness clarifications are recorded in their completion
 **Scope deviations:** None.
 
 **In-scope deferrals:** None.
+
+**Test-order process deviations:** B2, B3, B4 and B6 recorded missing-module collection failures rather than individual behavioral RED observations for all initial work. Later behavioral and integration evidence is recorded in their completion records. The missing historical RED observations cannot be recreated; orchestration disposition is pending, and no Product Owner approval is implied. See [C3](IMPL-C3-COMPLETED.md).
 
 If an exception is explicitly approved during execution, record the affected requirement, exact change, reason, approval reference, owner, and carry-forward here and in the relevant completion record. Later parent capabilities already excluded from Slice 3 are not new deviations.
 

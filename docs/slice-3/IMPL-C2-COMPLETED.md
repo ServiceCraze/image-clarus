@@ -2,6 +2,8 @@
 
 **Status:** Complete. The Product Owner authorized the targeted correction of the newly identified prompt-expansion import cycle; C3 has not started.
 
+**Subsequent progress:** C3 is now in progress; its current status, later schema-cycle corrections and delivery versions are recorded in [C3](IMPL-C3-COMPLETED.md). The C2 results below retain their original versions.
+
 **Scope deviations:** None. Two publishable planning documents were sanitized during the scoped privacy audit; their historical technical meaning is unchanged. The privacy corrections were delivered in `0.2.17`, and the authorized dependency-cycle correction in `0.2.18`. The version was subsequently changed to `0.3.0` at the Product Owner's request; the verification results below retain the versions actually tested.
 
 ## Files created, updated, removed

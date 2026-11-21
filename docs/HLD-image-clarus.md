@@ -311,6 +311,7 @@ Build independently usable, numbered slices. Each slice has its own implementati
 | --- | --- | --- |
 | **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
 | **Slice 2 (complete and accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author and sanitized fixtures; accepted prompt-control gap carried forward |
+| **Slice 3 (implementation and verification complete; closeout pending)** | User-owned prompts and application state | Namespaced macros, hierarchical category guidance, reusable SQLite/memory state, nonblocking accumulation and opt-in prompt hash; see [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md) for closeout status |
 | Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |
@@ -360,7 +361,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - Initial schema versioning, bounded validation retries, selected-stage missing-input behavior, continuation, logging/result output, and single-image exit behavior are recorded in A2/A3 and exercised in Slice 1; see the [C5 evidence crosswalk](slice-1/IMPL-C5-COMPLETED.md). Subsequent Slice 2 behavior is recorded in its own plan; other later-slice capabilities remain unimplemented unless separately recorded.
 - A5 freezes artifact-service transaction/state/fault semantics and the backup-retention config leaf in [IMPL-A5-COMPLETED.md](slice-1/IMPL-A5-COMPLETED.md). B5 implemented the original service; the approved mode correction has automated evidence and an operator-reported NTFS/FUSE probe. The Product Owner accepted the documented test-order evidence exception. See the [correction record](slice-1/IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md). Do not add filesystem-specific branches or claim crash-proof writes without observed evidence.
 - Slice 2 A3 records the preliminary JSON-to-XMP mapping and preservation contract; accepted C3 records Product Owner-reported digiKam interoperability and its limits.
-- For the planned state and prompt facilities, subsequent design must settle storage schema, migrations and concurrent failure handling, nested discovery details, macro grammar/serialization and secret-safe interpolation behavior without narrowing §4.4–4.5.
+- Slice 3 A1/A2 settled the state and prompt facilities, including storage and migration mechanics, discovery, macro grammar and secret-safe interpolation; implementation and evidence are recorded in the [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md). Its final closeout status is tracked there.
 
 ### 10.4 Deferred without narrowing the end-state requirements
 
