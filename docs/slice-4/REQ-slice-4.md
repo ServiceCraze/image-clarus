@@ -126,6 +126,8 @@ This document states required behavior and observable acceptance outcomes, not a
 ### S4-10 - Category-guidance timing under concurrency
 
 - Preserve existing state-macro expansion and category accumulation semantics. Under concurrency, a description may begin before a previous image's JSON categories have been accumulated; this timing dependence is accepted.
+- Resolve state **per image**, using the existing Slice 3 precedence: explicit CLI selection, YAML selection, nearest initialized CWD ancestor, nearest initialized image-directory ancestor, then in-memory state. Do not select one persistent repository for an entire batch merely because an earlier image resolved to it. Images sharing an explicitly selected or CWD-discovered repository continue to share that repository; when neither takes precedence, images in different collections can resolve to their respective repositories.
+- Apply the existing visible, nonblocking state-failure behavior to each affected image without silently selecting another persistent repository. Keep the resolved state associated with that image for its prompt expansion and eligible category accumulation across selected stages, including concurrent execution.
 - Under sequential image-first execution, eligible JSON category accumulation for one image should occur before the following image begins, so the next image can use the latest available category guidance.
 - No additional model call, taxonomy normalization, or cross-stage synchronization barrier is required solely to make category prompts deterministic.
 
@@ -167,7 +169,7 @@ This document states required behavior and observable acceptance outcomes, not a
 
 - Provide a CLI operation conceptually equivalent to `image-clarus state categories list` to show the category paths currently held in the selected state repository.
 - Use existing category state and state-directory selection semantics. Report inaccessible or invalid state visibly instead of silently presenting an empty persistent collection.
-- Do not regenerate images, call a model, or change state as part of listing.
+- Listing must be **read-only**, including repository opening and validation: do not initialize, migrate, clear, update or otherwise mutate persistent state, regenerate images, or call a model. If the repository cannot be listed without migration, report the condition rather than migrating it as part of list. The management-command selection context and precise diagnostic/exit form remain design work.
 
 ### S4-16 - Clear categories
 
@@ -202,11 +204,12 @@ This document states required behavior and observable acceptance outcomes, not a
 | Work budget | `--max-work-files N` admits at most N distinct initially identified LLM-work images; regeneration counts; runtime skips do not replenish; XMP-only work is not capped. In a synthetic 10,000-image `desc,json,xmp` batch with limit 1,000, verify at most 1,000 distinct images receive LLM work, an admitted image may execute both LLM stages for one slot, and all 10,000 reach XMP evaluation through progressive routing when admitted LLM stages succeed and execution is not interrupted or aborted; missing inputs produce ordinary prerequisite outcomes, not necessarily writes |
 | Concurrency | Default inter-stage overlap occurs on different images with one active worker per selected stage; disabling it yields image-first sequential behavior |
 | Category timing | Skipped valid JSON can still accumulate categories during execution without model inference; dry-run does not accumulate; sequential mode exposes completed prior-image categories to subsequent prompts |
+| Per-image state resolution | A multi-collection batch preserves CLI > YAML > CWD ancestry > each image's ancestry > memory, including separate image-ancestor repositories when higher-priority choices are absent; prompt reads and eligible accumulation use each image's selected state in sequential and concurrent modes |
 | Rechecks and failures | Actual stage execution detects changes since planning and retains recovery, prerequisite, continuation and error semantics |
 | Dry-run | Correct plan/aggregate counts, work-budget behavior and a clearly labeled memory estimate, with no inference, ExifTool operation, sidecar-content reads or mutations |
 | Verbose and metrics | Single-image and batch execution show useful timing/status; batch progress and final counts distinguish predicted skips from actual results and failures |
 | Interruption/resume | Graceful stop preserves completed artifacts and reports partial results; a later run skips prior valid outputs |
-| Categories list/clear | List reflects persistent categories; clear removes categories only, leaving sidecars and unrelated state intact |
+| Categories list/clear | List reflects persistent categories without modifying state; it reports unavailable/invalid state and, when a repository cannot be listed without migration, reports that condition rather than silently migrating or presenting a failed read as an empty persistent collection. Clear removes categories only, leaving sidecars and unrelated state intact |
 | Categories rebuild | Rebuild from recognized existing JSON replaces the category set using existing extraction logic, honors independent traversal depth, and performs no model inference |
 | Regression | Prior accepted stage, artifact, state, config, XMP and source-image contracts remain intact |
 
@@ -217,6 +220,8 @@ Use synthetic fixtures and isolated repositories for verification, with limited 
 The implementation plan must resolve exact option/configuration keys beyond those approved here, stage descriptor representation, plan entry representation, directory sorting, queue shutdown/forwarding mechanics, concurrency toggle syntax, progress output format and channels, category-command CLI grammar, and error/result aggregation. These are design decisions **within** the requirements, not permission to expand the product scope.
 
 The Product Owner decided that budget-excluded images bypass selected LLM stages but remain eligible for selected non-LLM stages, subject to their normal prerequisites and continuation policy. XMP-only runs remain uncapped. The plan must resolve provisional-bypass validation and downstream coordination without treating a prediction as a validated stage result or sacrificing the required early forwarding.
+
+The Product Owner also selected existing per-image state resolution for batches and a read-only category-list operation. Preserve existing user-facing behavior where applicable; state-management command discovery context and other unselected policy questions remain design work rather than being inferred from these decisions.
 
 After Product Owner review of this Slice 4 REQ, reconcile the parent REQ/HLD and relevant user documentation. In particular:
 
