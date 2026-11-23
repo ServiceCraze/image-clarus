@@ -154,6 +154,8 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Completion:** A1's selected contracts, evidence and product-behavior approval handoff are recorded in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md). A2–A4 must reconcile shared choices and A5 owns the Phase A gate; no implementation is implied.
 
+**Subsequent Product Owner decision:** Classify each selection literal-first: an existing exact file or directory wins even when its name contains glob metacharacters; otherwise use the A1 Bash-style glob rules. Shell expansion remains external and quoting alone is not observable. The A1 record contains the updated contract and acceptance scenarios.
+
 **Acceptance**
 
 - [x] Every supported selection/control has a documented valid, invalid, and empty-case outcome, including duplicate identities and explicit/discovered symlink boundaries.
