@@ -14,7 +14,7 @@ The tool will use configurable vision and language models to produce descriptive
 
 ## Guiding requirements
 
-- Linux is the required platform; portability to other operating systems is desirable for an open-source project.
+- Linux and Windows are expected deployment platforms; design and implement for both using portable facilities from the outset. Linux remains the required development and test platform; Windows runtime testing and a cross-platform CI matrix are not required. Do not claim Windows runtime verification without executing it.
 - Prefer one CLI with subcommands rather than separate programs for generation and search.
 - Processing stages must be independently invocable and composable. The user may invoke any chosen stage(s) for one image, or use file selection to process multiple images.
 - The built-in behavior must remain useful for a simple interactive command. Configuration and CLI overrides support automated jobs; do not hard-code special scheduling behavior.
@@ -225,7 +225,7 @@ Use one shared safe-write mechanism for generated `.desc.txt`, `.desc.json`, and
 
 - Do not implement filesystem-specific branches unless a demonstrated compatibility problem requires them; allow a configurable alternate method if testing warrants it.
 - Expected environments include common Linux filesystems (such as XFS and ext4), NTFS (including FUSE-backed mounts), VFAT removable media, and virtual or memory-backed filesystems.
-- Linux is the required test platform; a full cross-platform CI matrix is not required, though portability to other operating systems is desirable.
+- Linux is the required test platform; Windows is an expected deployment platform to design and implement for, but a full cross-platform CI matrix or a Windows test machine is not required.
 - Tests should cover available development filesystems and representative compatibility cases. Testing every filesystem, driver, and operating-system combination is **not** required.
 - Never promise fully crash-proof writes on filesystems that cannot guarantee them. Recovery behavior is required.
 

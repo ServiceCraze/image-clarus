@@ -58,6 +58,7 @@ This document states required behavior and observable acceptance outcomes, not a
 - Discover eligible files in the current directory before descending into its subdirectories, using deterministic traversal order so a work budget selects a predictable set when the collection is unchanged. Actual execution order may differ under concurrent processing.
 - Preserve configurable extension eligibility and a CLI override. Initial supported candidates remain `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff` unless the selected adapter's actual format support requires an explicit failure. File-extension eligibility does not promise successful model decoding.
 - Batch processing must not require persistent job state or a particular photo-management program.
+- Design and implement discovery for both Linux and Windows using portable Python filesystem APIs, without a Bash dependency or POSIX-only path assumptions. Interpret paths according to the host: Windows accepts drive, UNC, backslash and forward-slash syntax; Linux retains POSIX path behavior. Keep literal-first selection and the approved glob concepts. Define portable ordering, matching, symlink and path-identity behavior with explicit filesystem limitations. Linux can exercise Windows path parsing with pure-path tests; this does not establish Windows filesystem or runtime behavior. Linux remains the required test platform; no Windows machine or cross-platform CI matrix is required.
 
 ### S4-02 - Symlink boundaries
 

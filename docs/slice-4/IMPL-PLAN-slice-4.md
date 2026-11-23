@@ -156,6 +156,8 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Subsequent Product Owner decision:** Classify each selection literal-first: an existing exact file or directory wins even when its name contains glob metacharacters; otherwise use the A1 Bash-style glob rules. Shell expansion remains external and quoting alone is not observable. The A1 record contains the updated contract and acceptance scenarios.
 
+**Subsequent Product Owner decision — platform design:** Discovery must be designed and implemented for Linux and Windows, using native portable Python path/filesystem facilities and host-appropriate syntax; this is Slice 4 work, not a later portability project. B2 must exercise Windows drive, UNC and separator interpretation with host-independent pure-path tests on Linux as well as actual Linux traversal tests. Such tests do not prove Windows filesystem/runtime behavior; no Windows machine or cross-platform CI is required. A1's subsequent platform contract governs.
+
 **Acceptance**
 
 - [x] Every supported selection/control has a documented valid, invalid, and empty-case outcome, including duplicate identities and explicit/discovered symlink boundaries.
@@ -320,6 +322,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 3. Deduplicate with the frozen image identity rules before admission and execution. Preserve deterministic first occurrence and selection provenance across overlaps and multiple roots; do not repeatedly traverse aliases contrary to the contract.
 4. Expose reusable traversal/selection primitives with separate image and JSON-sidecar eligibility. Apply rebuild's independently resolved depth without importing stage/LLM/XMP/state-storage logic.
 5. Implement designed no-match, empty, missing/unreadable, and enumeration-error outcomes. Use synthetic directory trees and metadata-access spies to prove no image/sidecar content reads or mutations.
+6. Implement the A1 cross-platform path contract using portable Python APIs and no Bash dependency; parse Windows drive/UNC and both native separator forms before wildcard components. Exercise pure Windows path interpretation on Linux and real Linux traversal separately, including platform-specific identity, ordering, case, encoding and symlink boundaries; do not label pure-path checks as Windows runtime validation. Review affected subprocess and filesystem operations for portability without expanding into unrelated platform remediation.
 
 **Outputs:** Reusable discovery/identity implementation, synthetic traversal tests, and [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md).
 
@@ -329,6 +332,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Depth and symlink behavior match A1/A3, including independent rebuild controls.
 - [ ] The default candidate set visibly covers `jpg`, `jpeg`, `png`, `webp`, `tif` and `tiff`, subject to documented adapter support; configuration/CLI overrides work without claiming eligible extensions are decodable.
 - [ ] Discovery handles empty/errors as designed and performs no stage, state, or content operations.
+- [ ] Portable design and host-independent Windows drive/UNC/separator parsing tests, plus real Linux traversal, cover the A1 platform contract without claiming unperformed Windows runtime verification.
 
 **Dependencies:** B1 and completed A1/A3 contracts.
 
@@ -841,7 +845,7 @@ The parent REQ uses named areas rather than numbered requirements. This matrix a
 
 | Parent area | Slice 4 allocation | Remaining allocation and prerequisites | Evidence or limit |
 | --- | --- | --- | --- |
-| Runtime dependencies, packaging, license and version | Preserve Python 3.12+, development 3.13, uv/Hatch, version reporting, existing Apache-2.0 artifacts and selected-stage ExifTool isolation. | Later goals include broader platform automation; no exhaustive OS/filesystem matrix. | C3 fresh runtime/package checks; existing license history remains. |
+| Runtime dependencies, packaging, license and version | Preserve Python 3.12+, development 3.13, uv/Hatch, version reporting, existing Apache-2.0 artifacts and selected-stage ExifTool isolation; design Slice 4 discovery for Linux and Windows. | Broader platform automation remains later work; Windows runtime execution and an exhaustive OS/filesystem matrix are not required. | C3 fresh runtime/package checks and B2 pure Windows path parsing on Linux; no unperformed Windows runtime claim. |
 | Processing stages and artifacts | Preserve independent `desc`/`json`/`xmp`, registry order, persisted handoffs, source integrity and approved regeneration/update policies; add reusable capabilities. | Later extensions require their own stage/provider/schema design. | E02/E03/E10/E16. |
 | Input selection and traversal | Deliver native files/directories/patterns, deterministic recursion, depth, formats, identity handling and symlink policy. | Later goals include exclusion filters and expanded decoder support; require selection/adapter design. | E01/E17; extension eligibility alone is not decoder support. |
 | Batch planning and execution | Deliver metadata Option A, initial image admission, corrections, progressive routing, default optional concurrency and sequential mode. | Later goals include Option B, retaining Option A, and extra workers/model-aware scheduling if separately approved. | E03–E07/E18; no persistent queue or hard memory/runtime cap. |

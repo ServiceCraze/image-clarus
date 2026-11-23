@@ -23,7 +23,7 @@ This design establishes component boundaries, configuration semantics, artifact 
 - One configurable CLI, with minimal orchestration and no internal scheduler, mandatory persistent job queue, or mandatory centralized image database. Optional embedded application state is distinct from an image database or job queue.
 - Reuse cross-cutting services without encoding stage-specific behavior in the coordinator.
 - Source-image integrity, preservation of unrelated metadata, and recoverable sidecar writes.
-- Linux is required; other OS support is desirable without a mandatory cross-platform CI matrix.
+- Linux and Windows are expected deployment platforms; use cross-platform design and implementation from the outset. Linux is the required development/test platform; Windows runtime testing and a cross-platform CI matrix are not required, and unexecuted Windows behavior must not be presented as verified.
 - Public project examples and test fixtures must contain no identifying photo or device metadata.
 
 ## 2. System architecture
@@ -351,7 +351,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - **XMP:** Use sanitized representative digiKam fixtures, ExifTool round trips, field-specific policies, shared flat-keyword preservation, and digiKam read/edit checks. No private EXIF/GPS/device data in public fixtures.
 - **Batch and search:** Test streaming traversal order, independent failure/skip counts, deterministic case-insensitive matching, selected JSON fields, and machine-readable output when those slices are implemented.
 - **Slice 4 planned verification:** Exercise metadata-only planning and dry-run boundaries, deterministic initial admission, corrective overruns from missing or invalid existing sidecars, continued exclusion of initially known budget-excluded work, distinct planned/actual counts, actual concurrent stage overlap and sequential mode. Verify additive rebuild retains existing categories, continues past invalid/unreadable inputs, reports partial failures, leaves empty results unchanged, and respects concurrent state updates; verify read-only listing and per-image state selection. Cover progress, failure and interruption/resume. Use synthetic inputs and keep execution results distinct from predictions.
-- **Platforms:** Required Linux testing and representative available filesystems. macOS and Windows remain desirable portability targets; no exhaustive OS/filesystem CI matrix.
+- **Platforms:** Required Linux testing and representative available filesystems; Windows is an expected deployment platform and must be designed for, with host-independent Windows path parsing tests runnable on Linux. macOS is a desirable portability target. No Windows runtime test or exhaustive OS/filesystem CI matrix is required; report actual platform coverage without claiming unperformed runtime tests.
 
 ## 10. Decision register and open questions
 
