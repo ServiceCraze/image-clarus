@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** Proposed plan for review. No Slice 4 implementation step or acceptance test has been executed by authoring this plan. All step and evidence checkboxes start unchecked.
+**Status:** In progress. A1 design is complete; A2–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -90,7 +90,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 ### Phase A Discovery and design completion
 
-- [ ] Step A1 - Freeze selection and configuration contracts [DESIGN]
+- [x] Step A1 - Freeze selection and configuration contracts [DESIGN]
 - [ ] Step A2 - Freeze stage routing and execution contracts [DESIGN]
 - [ ] Step A3 - Freeze state and category management contracts [DESIGN]
 - [ ] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
@@ -152,12 +152,14 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Outputs:** Selection/identity/ordering and configuration/startup tables in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md); exact CLI/YAML examples; selected discovery interfaces and proposed test locations.
 
+**Completion:** A1's selected contracts, evidence and product-behavior approval handoff are recorded in [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md). A2–A4 must reconcile shared choices and A5 owns the Phase A gate; no implementation is implied.
+
 **Acceptance**
 
-- [ ] Every supported selection/control has a documented valid, invalid, and empty-case outcome, including duplicate identities and explicit/discovered symlink boundaries.
-- [ ] Defaults and overrides retain existing precedence; process/rebuild/category-macro depth are distinct.
-- [ ] Dry-run startup and failure paths have a demonstrable metadata-only boundary, while real execution retains selected-stage preflight.
-- [ ] New product-behavior decisions have an outcome, rationale, acceptance scenario, and required approval before A5.
+- [x] Every supported selection/control has a documented valid, invalid, and empty-case outcome, including duplicate identities and explicit/discovered symlink boundaries.
+- [x] Defaults and overrides retain existing precedence; process/rebuild/category-macro depth are distinct.
+- [x] Dry-run startup and failure paths have a demonstrable metadata-only boundary, while real execution retains selected-stage preflight.
+- [x] New product-behavior decisions have an outcome, rationale, acceptance scenario, and required approval before A5.
 
 **Dependencies:** Governing requirements and assignment; reconcile shared controls with A2–A4 before A5.
 
