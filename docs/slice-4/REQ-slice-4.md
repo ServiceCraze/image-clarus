@@ -97,23 +97,27 @@ This document states required behavior and observable acceptance outcomes, not a
 ### S4-07 - Execution remains authoritative
 
 - Queue consumption must reuse the existing single-image stage behavior, including validation/recovery, skip rechecks, regeneration, failure classification, and safe writes. A file may have changed since planning, including due to a different process; actual stage results override predictions in reporting.
+- If an image initially predicted to need no selected LLM work is found to need corrective LLM inference because a sidecar is missing or invalid, permit that work even when the initial admission budget is exhausted. Existing recovery, validation, failure and continuation policies still govern whether work proceeds; a prediction is never itself a validated result.
 - Where a planned bypass requires execution-time behavior (notably category accumulation from an existing valid JSON artifact), execute that behavior without introducing a model call merely to confirm a skip.
 - Initial plan membership and `--max-work-files` admission **do not change retroactively** due to runtime skips, newly created sidecars, or external work. Report predicted-versus-actual outcomes accurately.
 - Planning must not introduce a second, divergent implementation of stage completion semantics; isolate reusable inspection/decision logic as needed while keeping content-based validation in execution.
 
 ## 5. Work limits and concurrency
 
-### S4-08 - `--max-work-files` limits distinct images needing LLM work
+### S4-08 - `--max-work-files` limits initial LLM-work admission
 
 - Provide optional positive-integer `--max-work-files N` with configuration support. Without a limit, no LLM work-file budget is imposed.
 - An image consumes **one** unit if the initial metadata-only plan identifies at least one **selected** `usesLLM` stage that needs execution; it does not consume one unit per stage. Existing-output bypasses do not consume units unless regeneration makes the selected LLM stage require work.
-- Admit up to N qualifying images in deterministic discovery order. One admitted image may execute every selected LLM stage while consuming one slot; images requiring no LLM work consume none. The limit counts images, not stage executions, model requests, retries or non-LLM operations.
-- The limit uses the **initial plan**. Runtime rechecks do not reclaim or replace budgeted images, and a file needing multiple LLM stages still counts once.
+- Admit up to N qualifying images in deterministic discovery order. One admitted image may execute every selected LLM stage while consuming one slot; images initially predicted to require no LLM work consume no initial admission slots. The admission limit counts images, not stage executions, model requests, retries or non-LLM operations.
+- The limit applies to **initial planned admission**, not a hard maximum on actual distinct images receiving LLM work. Runtime skips do not reclaim or replace admitted slots. A file needing multiple LLM stages still counts once for initial admission.
+- Images known at planning to need LLM work but excluded by the budget remain excluded from LLM stages. Separately, images initially predicted to need no selected LLM work may receive corrective inference after authoritative validation discovers missing or invalid sidecars, even when the budget is exhausted. Such corrective overruns may exceed N by any amount; they are not inherently capped at twice N. Normal recovery, validation and continuation policies apply.
 - Non-LLM stages do not consume the budget. An `xmp`-only run may process all 10,000 eligible images even with `--max-work-files 1000`; the limit is not an overall cap on discovered or non-LLM-processed files.
 - In mixed-stage runs, images excluded from LLM work bypass selected LLM stages but remain eligible for all selected non-LLM stages, subject to normal prerequisites, skips, failures, interruption and continuation policies. A missing prerequisite produces its ordinary outcome, not an additional LLM call. Users budget LLM workload by image while inter-stage concurrency allows stages for different images to overlap.
 - The limit does not promise a hard bound on memory, runtime, or total provider requests, and its relationship to non-LLM execution must be clearly reported.
 
 **Routing example:** For 10,000 images with `desc,json,xmp` selected, assume 6,000 have both description and JSON, 1,000 have description only, and 3,000 have neither. Without a limit, their initial predicted queues are 6,000 XMP, 1,000 JSON and 3,000 description; the remaining images advance to XMP as upstream work finishes. With `--max-work-files 1000`, if deterministic discovery admits 1,000 images that need both LLM stages, the initial predicted queues are 1,000 description, zero JSON and 9,000 XMP (6,000 with existing JSON and 3,000 excluded from LLM work). The admitted 1,000 move through JSON and then XMP as work completes. If admitted LLM stages succeed and execution is not interrupted or aborted, XMP evaluates all 10,000; missing JSON yields the ordinary prerequisite outcome, not necessarily an XMP write. The admitted 1,000 may produce 2,000 LLM stage executions while consuming 1,000 image slots. These are provisional routing predictions, not proof of sidecar validity.
+
+**Corrective-overrun example:** With 1,000 initially admitted images, if one additional image initially predicted to need no LLM work requires a corrective description execution and applicable policies permit it, actual distinct LLM-work images become 1,001. If all admitted images execute both LLM stages, actual description executions are 1,001 and JSON executions 1,000. Report the one corrective-overrun image separately from the 1,000 initially admitted images.
 
 ### S4-09 - Inter-stage concurrency enabled by default
 
@@ -146,7 +150,7 @@ This document states required behavior and observable acceptance outcomes, not a
 - Dry-run performs **no model calls, XMP processing, image/sidecar-content reads, artifact writes, category accumulation, or persistent-state mutations**. Directory entry and file-existence metadata may be inspected.
 - Apply the same selection, depth, symlink, selected-stage, regeneration and work-budget rules as an execution plan. Show planned work admission, stage routing and counts, which files are counted toward the LLM work budget and when the budget is reached.
 - Permit aggregate summaries without retaining all per-file plan records. Per-file output, when requested, may be streamed rather than accumulated in memory. Dry-run must report a memory estimate, clearly labeled as an estimate rather than a measurement or guaranteed bound; its scope and estimation method are design work.
-- Dry-run results are predictions; malformed existing outputs, XMP no-change decisions and external modifications may produce different actual outcomes.
+- Dry-run results and memory estimates cannot predict all execution-time corrections; malformed existing outputs, XMP no-change decisions and external modifications may produce different actual outcomes and corrective LLM overruns.
 
 ### S4-13 - `--verbose` for single and batch execution
 
@@ -157,7 +161,7 @@ This document states required behavior and observable acceptance outcomes, not a
 
 ### S4-14 - Batch summary and metrics
 
-- Report at least eligible files discovered, files admitted as planned LLM work, planned bypasses by stage, actual completed/skipped/failed stage counts, runtime deviations from the plan, and total elapsed time.
+- Report eligible files discovered, the initial admitted LLM-work image count, distinct additional images receiving corrective LLM work (corrective overruns), actual distinct images receiving LLM work, actual per-stage execution counts, planned bypasses by stage, completed/skipped/failed stage counts, runtime deviations from the plan, and total elapsed time.
 - Distinguish the number of **files** from the number of **stage operations**, especially when one file needs both `desc` and `json`.
 - Provide authoritative file/stage outcome reporting independent of digiKam status or provider request dashboards. The summary must reflect partial completion and failure/interruption without rewriting valid sidecars.
 
@@ -178,11 +182,12 @@ This document states required behavior and observable acceptance outcomes, not a
 
 ### S4-17 - Rebuild categories from existing JSON
 
-- Provide a CLI operation conceptually equivalent to `image-clarus state categories rebuild` that **replaces** the known-category set using existing `.desc.json` sidecars in a selected collection.
+- Provide a CLI operation conceptually equivalent to `image-clarus state categories rebuild` that **adds** categories from existing `.desc.json` sidecars in a selected collection to the selected repository's existing categories; rebuild never deletes known categories or changes other state domains.
 - Reuse the **same supported JSON envelope, recognized schema identities, candidate extraction, validation, deduplication and full-path storage rules** as existing Slice 3 accumulation. Do not derive categories from XMP, invent new taxonomy rules, or regenerate JSON.
 - Rebuild supports recursive discovery by default, independent `--max-depth` configuration/override, and the S4-02 symlink policy.
-- Report how many candidate files were inspected, how many supplied eligible categories, and invalid/unreadable inputs. A failed rebuild must not falsely report a complete replacement; preserve other state domains and avoid exposing a partially replaced category set as successful.
-- Use the chosen state repository explicitly and consistently; warn/document that rebuilding a shared repository from a limited collection replaces the repository's category set with only that selection's categories.
+- Continue past invalid or unreadable inputs and report inspected files, successes, skips and failures, including how many supplied eligible categories. Valid accumulation may remain after partial failure without rollback; report partial outcomes accurately. An empty result makes no changes. Concurrent updates follow the existing state-storage concurrency contract.
+- For example, if 997 of 1,000 JSON inputs are processed successfully and three fail, retain prior categories, accumulate eligible categories from successful inputs, and report the three failures.
+- Use the chosen state repository explicitly and consistently without silently substituting another persistent repository. To reconstruct categories from a selected collection, users can explicitly clear and then rebuild; rebuild alone retains prior categories. Concurrent activity follows the existing state-storage concurrency contract.
 
 ## 8. Compatibility and acceptance
 
@@ -201,7 +206,8 @@ This document states required behavior and observable acceptance outcomes, not a
 | Single-image compatibility | Existing `process image.jpg --stages ...` behavior remains correct; an explicit image symlink still resolves as before |
 | Planning | For known sidecar arrangements, metadata-only planning predicts per-stage work and bypasses without opening image/sidecar content or modifying state |
 | Queue bypass | Existing descriptions and JSON reach downstream selected stages before unrelated upstream inference finishes; selected subsets do not implicitly run missing stages |
-| Work budget | `--max-work-files N` admits at most N distinct initially identified LLM-work images; regeneration counts; runtime skips do not replenish; XMP-only work is not capped. In a synthetic 10,000-image `desc,json,xmp` batch with limit 1,000, verify at most 1,000 distinct images receive LLM work, an admitted image may execute both LLM stages for one slot, and all 10,000 reach XMP evaluation through progressive routing when admitted LLM stages succeed and execution is not interrupted or aborted; missing inputs produce ordinary prerequisite outcomes, not necessarily writes |
+| Work budget | `--max-work-files N` admits at most N initially identified LLM-work images; regeneration counts, runtime skips do not replenish slots, and known budget-excluded images remain excluded from LLM work. An admitted image may execute both LLM stages for one slot; XMP-only work is uncapped. For the synthetic 10,000-image example with limit 1,000, verify all 10,000 reach XMP evaluation through progressive routing when admitted LLM stages succeed and execution is not interrupted or aborted; missing inputs produce ordinary prerequisite outcomes, not necessarily writes |
+| Corrective overruns | When an initially no-LLM-work image has a missing or invalid sidecar at execution and existing policies permit correction, inference can occur even with admission full; verify actual distinct LLM-work images can exceed N, known budget-excluded images remain excluded, and initial admission, corrective-overrun images, actual distinct images and per-stage executions are separately reported |
 | Concurrency | Default inter-stage overlap occurs on different images with one active worker per selected stage; disabling it yields image-first sequential behavior |
 | Category timing | Skipped valid JSON can still accumulate categories during execution without model inference; dry-run does not accumulate; sequential mode exposes completed prior-image categories to subsequent prompts |
 | Per-image state resolution | A multi-collection batch preserves CLI > YAML > CWD ancestry > each image's ancestry > memory, including separate image-ancestor repositories when higher-priority choices are absent; prompt reads and eligible accumulation use each image's selected state in sequential and concurrent modes |
@@ -210,7 +216,7 @@ This document states required behavior and observable acceptance outcomes, not a
 | Verbose and metrics | Single-image and batch execution show useful timing/status; batch progress and final counts distinguish predicted skips from actual results and failures |
 | Interruption/resume | Graceful stop preserves completed artifacts and reports partial results; a later run skips prior valid outputs |
 | Categories list/clear | List reflects persistent categories without modifying state; it reports unavailable/invalid state and, when a repository cannot be listed without migration, reports that condition rather than silently migrating or presenting a failed read as an empty persistent collection. Clear removes categories only, leaving sidecars and unrelated state intact |
-| Categories rebuild | Rebuild from recognized existing JSON replaces the category set using existing extraction logic, honors independent traversal depth, and performs no model inference |
+| Categories rebuild | Rebuild adds recognized JSON categories without deleting existing categories or other domains, deduplicates, honors independent traversal depth, and invokes neither XMP nor inference. Invalid/unreadable inputs do not prevent processing others; successes, skips and failures are reported, valid partial accumulation remains, empty results make no changes, and concurrent updates respect the existing storage contract. Explicit clear followed by rebuild permits reconstruction |
 | Regression | Prior accepted stage, artifact, state, config, XMP and source-image contracts remain intact |
 
 Use synthetic fixtures and isolated repositories for verification, with limited optional real-image/manual testing. Measure actual concurrency, progress, and summary behavior rather than relying only on inferred outcomes. The implementation plan defines precise commands, test harnesses, and evidence capture.
@@ -219,16 +225,13 @@ Use synthetic fixtures and isolated repositories for verification, with limited 
 
 The implementation plan must resolve exact option/configuration keys beyond those approved here, stage descriptor representation, plan entry representation, directory sorting, queue shutdown/forwarding mechanics, concurrency toggle syntax, progress output format and channels, category-command CLI grammar, and error/result aggregation. These are design decisions **within** the requirements, not permission to expand the product scope.
 
-The Product Owner decided that budget-excluded images bypass selected LLM stages but remain eligible for selected non-LLM stages, subject to their normal prerequisites and continuation policy. XMP-only runs remain uncapped. The plan must resolve provisional-bypass validation and downstream coordination without treating a prediction as a validated stage result or sacrificing the required early forwarding.
+The Product Owner decided that initially known LLM-work images excluded by the admission budget bypass selected LLM stages but remain eligible for selected non-LLM stages, subject to normal prerequisites and continuation policy. Unexpected corrective inference for images initially predicted to need no LLM work may exceed the initial budget; XMP-only runs remain uncapped. Category rebuild is additive and best-effort, rather than replacement.
 
 The Product Owner also selected existing per-image state resolution for batches and a read-only category-list operation. Preserve existing user-facing behavior where applicable; state-management command discovery context and other unselected policy questions remain design work rather than being inferred from these decisions.
 
-After Product Owner review of this Slice 4 REQ, reconcile the parent REQ/HLD and relevant user documentation. In particular:
+**Slice 4 Phase A design-completion requirement:** The implementation plan must make completion of Phase A a prerequisite for Phase B. No significant design decision may remain TBD at Phase A close. Produce decision tables and documented contracts covering (1) sidecar bypass predictions, validation, recovery, post-planning changes and corrective overruns; (2) queue routing and downstream coordination in concurrent and sequential modes; (3) category operations, errors, interruption and concurrent access; (4) management-command state selection and multi-collection processing; and (5) duplicate selections, failure continuation, work accounting and progress. Each significant decision needs an outcome, rationale and associated acceptance scenario. Product behavior decisions require Product Owner approval before Phase A closes; minor coding choices may remain for implementation. Resolve early forwarding without treating a prediction as validated or sacrificing overlap of unrelated images.
 
-- The HLD's previous **image-first default for multi-image execution** must be revised to reflect **inter-stage concurrency enabled by default**, with image-first retained as an explicit mode.
-- Preserve the parent REQ's **recursive-by-default** traversal rule; add the approved depth, symlink and work-budget semantics rather than reversing that default.
-- Update the roadmap/allocation to identify native batch, `--verbose`, and category list/clear/rebuild as Slice 4 scope, without implying native search is delivered.
-- Preserve prior-slice closeout and historical decision records; reconcile forward rather than rewriting history.
+The parent REQ and HLD have already been reconciled to the planned concurrent default, recursive traversal, depth and symlink controls, and Slice 4 roadmap. Reconcile these documents forward as decisions evolve; preserve prior-slice closeout and historical records. Native search remains outside Slice 4.
 
 ## 10. Completion boundary
 
