@@ -89,6 +89,7 @@ This document states required behavior and observable acceptance outcomes, not a
 ### S4-06 - Front-loaded bypass and queue routing
 
 - When adding an image to a selected stage's queue, use its capability metadata and the planned skip decision to bypass prospective existing-output work and immediately forward the image to the next **selected** stage. The next stage applies the same rule, potentially forwarding further without waiting for upstream LLM inference.
+- Initial routing also bypasses selected LLM stages for images excluded by the work budget, forwarding them to the earliest remaining selected non-LLM stage. Admitted images progress through selected stages as their work completes or skips; non-LLM stages receive images progressively, including those routed directly to them. Apply capabilities generically, not stage-name-specific XMP budgeting.
 - Example: among 1,000 eligible files, 400 with existing descriptions can reach `json` immediately while the `desc` worker processes the other 600. Subsequent existing-JSON candidates can similarly advance to XMP.
 - After a stage handles an image, forward it according to the established stage continuation and prerequisite policies, whether the stage completed or skipped due to an existing output. Failures, missing prerequisites and interruptions are **not** equivalent to successful `output_exists` skips.
 - A selected subset, such as `--stages json,xmp` or `--stages desc`, must execute without adding omitted prerequisite stages. Preserve dependency handling using persisted artifacts.
@@ -106,9 +107,13 @@ This document states required behavior and observable acceptance outcomes, not a
 
 - Provide optional positive-integer `--max-work-files N` with configuration support. Without a limit, no LLM work-file budget is imposed.
 - An image consumes **one** unit if the initial metadata-only plan identifies at least one **selected** `usesLLM` stage that needs execution; it does not consume one unit per stage. Existing-output bypasses do not consume units unless regeneration makes the selected LLM stage require work.
+- Admit up to N qualifying images in deterministic discovery order. One admitted image may execute every selected LLM stage while consuming one slot; images requiring no LLM work consume none. The limit counts images, not stage executions, model requests, retries or non-LLM operations.
 - The limit uses the **initial plan**. Runtime rechecks do not reclaim or replace budgeted images, and a file needing multiple LLM stages still counts once.
 - Non-LLM stages do not consume the budget. An `xmp`-only run may process all 10,000 eligible images even with `--max-work-files 1000`; the limit is not an overall cap on discovered or non-LLM-processed files.
+- In mixed-stage runs, images excluded from LLM work bypass selected LLM stages but remain eligible for all selected non-LLM stages, subject to normal prerequisites, skips, failures, interruption and continuation policies. A missing prerequisite produces its ordinary outcome, not an additional LLM call. Users budget LLM workload by image while inter-stage concurrency allows stages for different images to overlap.
 - The limit does not promise a hard bound on memory, runtime, or total provider requests, and its relationship to non-LLM execution must be clearly reported.
+
+**Routing example:** For 10,000 images with `desc,json,xmp` selected, assume 6,000 have both description and JSON, 1,000 have description only, and 3,000 have neither. Without a limit, their initial predicted queues are 6,000 XMP, 1,000 JSON and 3,000 description; the remaining images advance to XMP as upstream work finishes. With `--max-work-files 1000`, if deterministic discovery admits 1,000 images that need both LLM stages, the initial predicted queues are 1,000 description, zero JSON and 9,000 XMP (6,000 with existing JSON and 3,000 excluded from LLM work). The admitted 1,000 move through JSON and then XMP as work completes. If admitted LLM stages succeed and execution is not interrupted or aborted, XMP evaluates all 10,000; missing JSON yields the ordinary prerequisite outcome, not necessarily an XMP write. The admitted 1,000 may produce 2,000 LLM stage executions while consuming 1,000 image slots. These are provisional routing predictions, not proof of sidecar validity.
 
 ### S4-09 - Inter-stage concurrency enabled by default
 
@@ -137,7 +142,7 @@ This document states required behavior and observable acceptance outcomes, not a
 
 - Provide `--dry-run` on `process` (single-image or multi-image) to show the planned selection and prospective per-stage work/bypasses without executing stages.
 - Dry-run performs **no model calls, XMP processing, image/sidecar-content reads, artifact writes, category accumulation, or persistent-state mutations**. Directory entry and file-existence metadata may be inspected.
-- Apply the same selection, depth, symlink, selected-stage, regeneration and work-budget rules as an execution plan. Show which files are counted toward the LLM work budget and when the budget is reached.
+- Apply the same selection, depth, symlink, selected-stage, regeneration and work-budget rules as an execution plan. Show planned work admission, stage routing and counts, which files are counted toward the LLM work budget and when the budget is reached.
 - Permit aggregate summaries without retaining all per-file plan records. Per-file output, when requested, may be streamed rather than accumulated in memory. Dry-run must report a memory estimate, clearly labeled as an estimate rather than a measurement or guaranteed bound; its scope and estimation method are design work.
 - Dry-run results are predictions; malformed existing outputs, XMP no-change decisions and external modifications may produce different actual outcomes.
 
@@ -194,7 +199,7 @@ This document states required behavior and observable acceptance outcomes, not a
 | Single-image compatibility | Existing `process image.jpg --stages ...` behavior remains correct; an explicit image symlink still resolves as before |
 | Planning | For known sidecar arrangements, metadata-only planning predicts per-stage work and bypasses without opening image/sidecar content or modifying state |
 | Queue bypass | Existing descriptions and JSON reach downstream selected stages before unrelated upstream inference finishes; selected subsets do not implicitly run missing stages |
-| Work budget | `--max-work-files N` admits at most N distinct initially identified LLM-work images; regeneration counts; runtime skips do not replenish; XMP-only work is not capped |
+| Work budget | `--max-work-files N` admits at most N distinct initially identified LLM-work images; regeneration counts; runtime skips do not replenish; XMP-only work is not capped. In a synthetic 10,000-image `desc,json,xmp` batch with limit 1,000, verify at most 1,000 distinct images receive LLM work, an admitted image may execute both LLM stages for one slot, and all 10,000 reach XMP evaluation through progressive routing when admitted LLM stages succeed and execution is not interrupted or aborted; missing inputs produce ordinary prerequisite outcomes, not necessarily writes |
 | Concurrency | Default inter-stage overlap occurs on different images with one active worker per selected stage; disabling it yields image-first sequential behavior |
 | Category timing | Skipped valid JSON can still accumulate categories during execution without model inference; dry-run does not accumulate; sequential mode exposes completed prior-image categories to subsequent prompts |
 | Rechecks and failures | Actual stage execution detects changes since planning and retains recovery, prerequisite, continuation and error semantics |
@@ -211,7 +216,7 @@ Use synthetic fixtures and isolated repositories for verification, with limited 
 
 The implementation plan must resolve exact option/configuration keys beyond those approved here, stage descriptor representation, plan entry representation, directory sorting, queue shutdown/forwarding mechanics, concurrency toggle syntax, progress output format and channels, category-command CLI grammar, and error/result aggregation. These are design decisions **within** the requirements, not permission to expand the product scope.
 
-The Product Owner must explicitly decide whether selected non-LLM stages run for images excluded because the initial LLM work budget is exhausted in a mixed-stage batch. XMP-only runs remain uncapped; do not infer the mixed-stage policy from that separate decision. The plan must also resolve provisional-bypass validation and downstream coordination without treating a prediction as a validated stage result or sacrificing the required early forwarding.
+The Product Owner decided that budget-excluded images bypass selected LLM stages but remain eligible for selected non-LLM stages, subject to their normal prerequisites and continuation policy. XMP-only runs remain uncapped. The plan must resolve provisional-bypass validation and downstream coordination without treating a prediction as a validated stage result or sacrificing the required early forwarding.
 
 After Product Owner review of this Slice 4 REQ, reconcile the parent REQ/HLD and relevant user documentation. In particular:
 
