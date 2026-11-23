@@ -55,7 +55,7 @@ This document states required behavior and observable acceptance outcomes, not a
 
 - Extend the existing `process` operation to accept a single image, a directory, or supported path patterns that select multiple images. Preserve the existing single-image invocation and stage identifiers `desc`, `json`, `xmp`.
 - Directory traversal is **recursive by default**, with no depth limit unless configured or overridden. `--max-depth 0` processes files in the selected directory only; `1` includes immediate subdirectories; positive N includes directories through N levels. No limit means unrestricted recursion.
-- Follow the parent requirement to consider eligible files in a directory before descending into its subdirectories. Define a reproducible traversal order so a work budget selects a predictable set when the collection is unchanged.
+- Discover eligible files in the current directory before descending into its subdirectories, using deterministic traversal order so a work budget selects a predictable set when the collection is unchanged. Actual execution order may differ under concurrent processing.
 - Preserve configurable extension eligibility and a CLI override. Initial supported candidates remain `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff` unless the selected adapter's actual format support requires an explicit failure. File-extension eligibility does not promise successful model decoding.
 - Batch processing must not require persistent job state or a particular photo-management program.
 
@@ -138,7 +138,7 @@ This document states required behavior and observable acceptance outcomes, not a
 - Provide `--dry-run` on `process` (single-image or multi-image) to show the planned selection and prospective per-stage work/bypasses without executing stages.
 - Dry-run performs **no model calls, XMP processing, image/sidecar-content reads, artifact writes, category accumulation, or persistent-state mutations**. Directory entry and file-existence metadata may be inspected.
 - Apply the same selection, depth, symlink, selected-stage, regeneration and work-budget rules as an execution plan. Show which files are counted toward the LLM work budget and when the budget is reached.
-- Permit aggregate summaries without retaining all per-file plan records. Per-file output, when requested, may be streamed rather than accumulated in memory. A memory estimate, if reported, must be labeled an estimate rather than a measurement.
+- Permit aggregate summaries without retaining all per-file plan records. Per-file output, when requested, may be streamed rather than accumulated in memory. Dry-run must report a memory estimate, clearly labeled as an estimate rather than a measurement or guaranteed bound; its scope and estimation method are design work.
 - Dry-run results are predictions; malformed existing outputs, XMP no-change decisions and external modifications may produce different actual outcomes.
 
 ### S4-13 - `--verbose` for single and batch execution
@@ -198,7 +198,7 @@ This document states required behavior and observable acceptance outcomes, not a
 | Concurrency | Default inter-stage overlap occurs on different images with one active worker per selected stage; disabling it yields image-first sequential behavior |
 | Category timing | Skipped valid JSON can still accumulate categories during execution without model inference; dry-run does not accumulate; sequential mode exposes completed prior-image categories to subsequent prompts |
 | Rechecks and failures | Actual stage execution detects changes since planning and retains recovery, prerequisite, continuation and error semantics |
-| Dry-run | Correct plan/aggregate counts and work-budget behavior with no inference, ExifTool operation, sidecar-content reads or mutations |
+| Dry-run | Correct plan/aggregate counts, work-budget behavior and a clearly labeled memory estimate, with no inference, ExifTool operation, sidecar-content reads or mutations |
 | Verbose and metrics | Single-image and batch execution show useful timing/status; batch progress and final counts distinguish predicted skips from actual results and failures |
 | Interruption/resume | Graceful stop preserves completed artifacts and reports partial results; a later run skips prior valid outputs |
 | Categories list/clear | List reflects persistent categories; clear removes categories only, leaving sidecars and unrelated state intact |
@@ -210,6 +210,8 @@ Use synthetic fixtures and isolated repositories for verification, with limited 
 ## 9. Design decisions and parent-document reconciliation
 
 The implementation plan must resolve exact option/configuration keys beyond those approved here, stage descriptor representation, plan entry representation, directory sorting, queue shutdown/forwarding mechanics, concurrency toggle syntax, progress output format and channels, category-command CLI grammar, and error/result aggregation. These are design decisions **within** the requirements, not permission to expand the product scope.
+
+The Product Owner must explicitly decide whether selected non-LLM stages run for images excluded because the initial LLM work budget is exhausted in a mixed-stage batch. XMP-only runs remain uncapped; do not infer the mixed-stage policy from that separate decision. The plan must also resolve provisional-bypass validation and downstream coordination without treating a prediction as a validated stage result or sacrificing the required early forwarding.
 
 After Product Owner review of this Slice 4 REQ, reconcile the parent REQ/HLD and relevant user documentation. In particular:
 

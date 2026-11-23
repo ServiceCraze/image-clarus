@@ -1,6 +1,6 @@
 # REQ - image-clarus
 
-**Status:** End-state requirements captured; Slice 1 implementation and closeout complete; later-slice capabilities remain planned.
+**Status:** End-state requirements captured; Slices 1–3 implementation and closeout complete. Slice 4 is planned; its [requirements](slice-4/REQ-slice-4.md) are a draft and its features are not yet implemented.
 
 **Date:** 2026-11-13
 
@@ -47,19 +47,32 @@ Given `2023_04_23_15_05_42.jpg`:
 - The default is to **create only missing outputs**; an existing `.desc.txt` or `.desc.json` is not regenerated without an explicit override.
 - Regeneration of owned description and JSON sidecars may replace the complete corresponding artifact when explicitly requested.
 - An XMP update is a separate file-writing operation with field-specific update policies rather than blanket replacement.
+- Represent reusable stage capabilities `usesLLM` and `skipIfValidOutputExists` independently of stage names. Description and JSON have both capabilities; XMP has neither, though it can report `no_change` during execution. Effective bypass eligibility respects regeneration and stage configuration; existence alone does not establish output validity.
 - Do not require automatic source-image change detection. Most camera photos are treated as immutable; a user can request regeneration with a different model or prompt.
 
 ## Input selection and traversal
 
 - Accept a single image path, a directory, and file patterns/filters that can select multiple files.
-- Allow recursive directory traversal, **enabled by default**, with an option to disable it.
-- Within recursive traversal, process eligible files in the current directory before descending into another directory. A depth-first approach without a persistent queue is acceptable.
+- Allow recursive directory traversal, **enabled by default with unlimited depth**, with an option to disable it. `--max-depth 0` selects files in the starting directory only; positive N permits N directory levels below it. The limit is configurable and overridable.
+- Within recursive traversal, discover eligible files in the current directory before descending into its subdirectories, using deterministic ordering for an unchanged collection. Execution order may differ under concurrent processing. A depth-first approach without a persistent queue is acceptable.
+- Do not follow symbolic links encountered during discovery, including links to images or directories. An explicitly selected image symlink retains existing target-resolution behavior; an explicitly selected directory symlink may designate the starting root, without following discovered links below it. Apply the same boundary to category rebuild.
 - Default file eligibility uses a configurable image-extension allowlist. Initial candidate defaults may include `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff`, but actual decoding must be compatible with the configured vision model or its adapter.
 - Extension selection is not a guarantee that a model can decode the file. Handle unsupported and corrupt images explicitly.
 - Allow CLI overrides for configured image formats.
 - Exclusion patterns (e.g., thumbnails, backups) are desired in a later slice.
 - For a selected stage, use existing output sidecars to decide whether work is already complete. A missing prerequisite does not create a false completion marker.
 - Native multi-image batch processing must support independent, unattended collection processing. digiKam scripting may provide interactive image selection and batch invocation, but is complementary to native batching rather than a substitute.
+
+## Batch planning and execution
+
+- Complete a metadata-only initial batch plan before execution using directory entries, eligible image paths and relevant sidecar existence metadata. Planning may read configuration but must not open images or sidecar contents, invoke ExifTool or a model, or mutate state or artifacts. Sidecar existence is a provisional bypass prediction, not content validation or evidence that XMP is synchronized.
+- Use stage capabilities and selected-stage order to forward prospective existing-output bypasses to subsequent selected stages without waiting for unrelated upstream inference. Execution remains authoritative: reuse stage validation, recovery, skip and prerequisite logic, recheck changed files, and perform required execution-time behavior such as accumulating categories from valid skipped JSON. Do not add omitted prerequisite stages or a second divergent completion implementation.
+- Support optional positive `--max-work-files N` and configuration for a limit on **distinct images initially identified as requiring at least one selected LLM stage**, counting an image once even if multiple LLM stages require work. Regeneration affects the initial classification; runtime changes neither replenish nor revise admission. Non-LLM work consumes no budget, so XMP-only selections are not capped by it. The budget does not guarantee a bound on memory, time or provider requests.
+- Provide optional inter-stage concurrency enabled by default, with at most one active worker per selected stage; different stages may work on different images concurrently. A configuration and CLI control disables concurrency and selects image-first sequential execution. No multiple workers within one stage, model-aware scheduler or persistent queue is required for Slice 4.
+- During concurrent processing category guidance can reflect timing of other images' completed JSON. In sequential image-first mode, eligible category accumulation for an image should occur before the next image starts. Existing state and sidecar concurrency guarantees remain separate.
+- Support `--dry-run` on single-image and multi-image processing with the same selection, regeneration and work-budget rules; show predictions and a clearly labeled memory estimate without stage execution, content reads, model/ExifTool calls, state mutation or artifact writes. The estimation method and scope are design work; do not present it as a measurement or guaranteed bound. Retain this metadata-only planning option if content-aware planning is added later; that later option is outside Slice 4.
+
+The Slice 4 design must reconcile early forwarding with authoritative rechecks and define routing if a predicted bypass proves invalid or disappears. Mixed-stage handling of non-LLM work for images excluded by the LLM budget requires an explicit Product Owner decision before that behavior is implemented; preserve the work limit and XMP-only behavior. These details are not determined by the provisional plan alone.
 
 ## Stage dependencies
 
@@ -123,6 +136,7 @@ The generated metadata format must be versioned independently from the applicati
   5. If not found, in-memory state.
 - Current-working-directory discovery takes precedence over image-directory discovery even if the image belongs to another initialized collection. Explicit selection must support sharing state across unrelated photo collections. Discovery must support nested initialized state directories according to this precedence.
 - Keep discovery behavior separable from persistence so its precedence can become configurable in a future release without redesigning the state facility. Detailed discovery algorithms, persistence implementation and interfaces belong to design.
+- Provide category-state list, clear and rebuild operations. List is read-only; clear removes only the selected repository's category domain. Rebuild replaces that domain from existing JSON sidecars using the same supported envelopes, schema identities and full-path extraction/validation rules as ordinary accumulation, never XMP or model calls. It has independently configurable recursive depth and reports invalid/unreadable inputs; do not report a partial replacement as successful or silently select another repository. Explain that rebuilding a shared repository from a limited collection replaces its categories with that selection. Dedicated state-command failures may fail those commands without changing ordinary processing's nonblocking state rule.
 
 ## XMP metadata integration
 
@@ -183,14 +197,16 @@ Configuration precedence, highest first:
 - Configuration/authentication failures should ordinarily be treated as terminal. Transient model unavailability may be retried with backoff when configured. Failed files in a multi-file run may be skipped or abort the run according to policy.
 - Do not write a completed output file when its generation or validation failed.
 - Provide configurable logging level and destination (console, file, or both) and suitable process exit codes. Batch invocations should summarize completed, skipped, and failed work.
+- Provide `--verbose` for single-image and batch processing with stage/image progress, reasons and elapsed time. Batch reporting distinguishes planned bypasses from actual skips, completions, failures and interrupted/not-attempted work, and reports discovered eligible files, admitted LLM-work files, per-stage counts, plan deviations and total elapsed time. File counts and stage-operation counts are distinct; 100% accounted progress does not imply success. Preserve concise output when verbosity is not selected.
 
 ## External scheduling, stop and resume
 
 - Do not implement an internal scheduler as a requirement. External schedulers can fulfill scheduling needs using Image Clarus execution controls; the CLI must be usable from systemd services/timers, cron, scripts or other external orchestrators.
 - A scheduler may invoke only description processing, only JSON processing, only XMP processing, or combined stages.
-- Separate processes for different stages may run concurrently when externally orchestrated; internal model-aware pipeline concurrency is **not required**. Avoid introducing unnecessary shared mutable queues or mandatory databases.
+- Separate processes for different stages may run concurrently when externally orchestrated. Slice 4 also plans default inter-stage concurrency with one worker per selected stage and an opt-out; model-aware scheduling, multiple workers per stage and a mandatory database are not required.
 - On a graceful stop request, cancel any model request still in flight when safe; once a file-writing operation has started, allow that operation to finish safely before exit.
 - Resume by rescanning eligible files and skipping already completed output sidecars. Do not require persistent in-memory job state.
+- Coordinate worker shutdown on SIGINT/SIGTERM: stop accepting additional work, safely handle in-flight inference and writes, and report actual partial outcomes. Continue or abort according to configured failure and prerequisite policies; a later invocation rescans rather than relying on a durable job queue.
 - Support externally controlled run bounds or time-window behavior where useful for long-running batch invocation, without requiring an internal clock-based scheduler. Precise controls may be designed in the appropriate slice.
 - The initial sidecar-write architecture uses no application-level file locks. Sidecar safe-write and recovery guarantees apply to an individual operation; when processes concurrently update the same output, the last successful replacement wins. Lost updates, including concurrent XMP edits, and backup/cleanup races are accepted limitations; do not promise serialized sidecar updates or conflict detection. This sidecar limitation does not remove the separate requirement for concurrent shared-state access.
 
@@ -233,8 +249,10 @@ The Product Owner subsequently clarified that application-state errors must be v
 The project follows **REQ → High-Level Design → Implementation Plan → Implementation**. This document records **end-state requirements**, not a commitment to deliver all features in the first slice. Each numbered delivery slice has its own implementation plan; `Phase A`, `Phase B`, `Phase C`, and step identifiers are scoped within that plan and are not slice names.
 
 - **First buildable slice (Slice 1):** single-image Description and Structure (`desc` and `json`) processing, with each stage independently invocable and composable through the persisted `.desc.txt` handoff; model/provider configuration, configurable prompts and schema, JSON validation/provenance, and correct output handling. XMP, multi-image selection/traversal, batch processing, and search remain later slices.
-- **Completed Slice 1:** The [implementation plan](slice-1/IMPL-PLAN-slice-1.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md) record the implemented single-image `desc` + `json` delivery and its evidence. XMP, multi-image selection/traversal, batch processing, and search remain later-slice work.
-- **Further buildable slices:** XMP integration; selection and traversal; deterministic search; external batch operation and operational controls. Their ordering remains indicative; each slice's own implementation plan defines its phases, steps, and validation.
+- **Completed Slice 1:** The [implementation plan](slice-1/IMPL-PLAN-slice-1.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md) record the implemented single-image `desc` + `json` delivery and its evidence. At that closeout XMP, multi-image selection/traversal, batch processing, and search remained later-slice work.
+- **Completed Slices 2–3:** Slice 2 delivered XMP integration and Slice 3 delivered user-owned prompts, macros and application state; their plans and closeouts preserve acceptance and evidence limits.
+- **Planned Slice 4:** Native batch selection/planning and execution, diagnostics and category-state management, subject to the draft [Slice 4 REQ](slice-4/REQ-slice-4.md) and subsequent implementation planning. Native deterministic search remains an independent later requirement.
+- **Further buildable slices:** Remaining capabilities and ordering are indicative; each slice's own implementation plan defines its phases, steps, and validation.
 - **Later goals:** exclusion filters, expanded format/provider support, richer search configuration, and embeddings-based semantic search. Not all later goals need be part of release one.
 - Apache-2.0 is the intended license; verify publication notices. Installation packaging, CLI framework and detailed option grammar, specific model-client libraries, structured-generation prompt/schema/provenance details, and exact XMP field mappings remain for implementation planning.
 

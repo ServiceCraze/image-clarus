@@ -1,6 +1,6 @@
 # HLD - Image Clarus
 
-**Status:** Slice 1 and Slice 2 implementation and closeout are complete. The Product Owner accepted the Slice 2 prompt-control gap for future remedy; see the [Slice 2 plan](slice-2/IMPL-PLAN-slice-2.md) for evidence and limitations.
+**Status:** Slices 1–3 implementation and closeout are complete. Slice 3 remedied the accepted Slice 2 prompt-control gap; historical evidence remains in the [Slice 2 plan](slice-2/IMPL-PLAN-slice-2.md). Slice 4 is planned, not implemented; its [REQ](slice-4/REQ-slice-4.md) remains draft.
 
 **Date:** 2026-11-14
 
@@ -32,14 +32,21 @@ This design establishes component boundaries, configuration semantics, artifact 
 
 ```mermaid
 flowchart TB
-  CLI["CLI - init, process and search"] --> CFG["Configuration loader"]
+  CLI["CLI - init, process, state and search"] --> CFG["Configuration loader"]
   CLI --> COORD["Process coordinator"]
   CLI --> RESOLVE["State resolution and initialization"]
+  CLI --> CATOPS["Category list, clear and rebuild - planned"]
+  CATOPS --> DOMAINS
+  CATOPS --> DISC
   RESOLVE --> STORE["Embedded state storage"]
   STORE --> SQLITE["SQLite or in-memory backend"]
   DOMAINS["State domains - categories and future domains"] --> STORE
   CLI --> SEARCH["Search service"]
   COORD --> DISC["Image discovery"]
+  COORD --> PLAN["Metadata-only batch planning - planned"]
+  PLAN --> REG
+  PLAN --> QUEUES["Per-stage queue coordination - planned"]
+  QUEUES --> REG
   COORD --> REG["Ordered stage registry"]
   REG --> DESC["Description stage"]
   REG --> JSON["JSON stage"]
@@ -62,17 +69,17 @@ flowchart TB
   CFG -.-> MODELS
 ```
 
-**CLI and command routing.** Route `init`, `process` and `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`. Slice 3 implements `init` and the state capabilities below; search remains a stub.
+**CLI and command routing.** Route `init`, `process` and `search`, global options, application version display, and help. Support `image-clarus --version`, `image-clarus --help`, and subcommand help, including `image-clarus search --help`. Slice 3 implements `init` and the state capabilities below; search remains a stub. Category list, clear and rebuild commands are planned for Slice 4.
 
 **Configuration loader.** Discover, parse, merge defaults and CLI overrides, and validate general configuration; provide an immutable resolved configuration to consumers. The coordinator passes the entire resolved configuration to each stage without extracting stage-specific subsets.
 
 **Application state and prompt interpolation.** Independent state resolution, storage, and domain operations expose reusable state across stages and invocation mechanisms. A separate interpolation facility supplies author-selected non-sensitive configuration and state values to replaceable prompts; it does not require a category-specific injection. Their contracts are described in §§4.4–4.5.
 
-**Image discovery.** Stream eligible source image paths from files, directories, and patterns. It does not decide stage eligibility or processing success.
+**Image discovery.** Discover eligible source image paths from files, directories, and patterns. It does not decide stage eligibility or processing success. Slice 4 adds reproducible traversal and a metadata-only plan, whose completion precedes batch execution; an aggregate dry-run need not retain every per-file record.
 
-**Process coordinator.** Iterate images and selected stages in registry order, invoke stages, collect structured results, and apply configured continuation policy. It does not infer prerequisites, parse stage output, choose provider parameters, or implement artifact-specific overwrite decisions.
+**Process coordinator.** Invoke selected stages in registry order per image, collect structured results, and apply configured continuation policy. Slice 4 plans in-memory per-stage queue coordination for concurrent batches and an image-first sequential mode. The coordinator does not infer prerequisites, parse stage output, choose provider parameters, or implement artifact-specific overwrite decisions.
 
-**Ordered stage registry.** Built-in ordered definitions with stable public identifiers `desc`, `json`, `xmp`. Registry order determines execution order, regardless of the order in `--stages`; selection does not cause omitted prerequisite stages to run. No dynamic plugin framework or dependency-graph engine is needed initially.
+**Ordered stage registry.** Built-in ordered definitions with stable public identifiers `desc`, `json`, `xmp`. Registry order determines execution order, regardless of the order in `--stages`; selection does not cause omitted prerequisite stages to run. Slice 4 adds reusable `usesLLM` and `skipIfValidOutputExists` capability metadata for planning, not stage-name branching. No dynamic plugin framework or dependency-graph engine is needed initially.
 
 **Stages.** Each stage owns its input validation, prerequisites, completion/skip decision, create/overwrite/update policy, transformation, and result reporting. Stages use common configuration, provider, and artifact interfaces rather than duplicating infrastructure.
 
@@ -123,10 +130,12 @@ The XMP stage may also read existing XMP content for merging. For Slice 2, JSON 
 ### 3.2 Orchestration and stage autonomy
 
 - With no stage selection, `process` selects all registered stages. `--stages=desc,json` selects only those stages; `--stages=json` does not automatically run `desc`.
-- The default for multiple images is **image-first**: run the selected stages for image A, then proceed to image B.
+- Slice 4 plans inter-stage concurrency **enabled by default** for multiple images: at most one active worker per selected stage, with different images able to occupy different stages. Disabling concurrency uses **image-first** sequential execution. Current single-image behavior remains unchanged until the planned implementation.
 - Every selected stage independently evaluates its inputs and outputs. For example, an existing description may be skipped while missing JSON is created and XMP is updated.
 - A failed earlier stage does not intrinsically make every later stage ineligible. An existing valid JSON file may still allow XMP work, subject to the configured continuation policy.
 - Stage logic owns the distinction between create-only, regenerate, and merge/update. The coordinator must not treat the existence of any sidecar as a universal completed flag.
+- In the Slice 4 plan, `desc` and `json` have both `usesLLM` and `skipIfValidOutputExists`; `xmp` has neither and evaluates `no_change` during execution. Regeneration and stage configuration affect bypass decisions. Metadata-only existence predicts a possible bypass, not valid output.
+- A predicted bypass is forwarded to the next selected stage without waiting for unrelated upstream inference. Execution-time rechecks and existing stage validation, recovery and continuation remain authoritative; skipped valid JSON still contributes eligible categories without an extra model call. Report actual outcomes separately from predictions. In sequential mode, eligible category accumulation for an image should precede the next image; concurrent guidance may reflect timing.
 
 ### 3.3 Missing inputs and failures
 
@@ -202,6 +211,8 @@ Use embedded SQLite through Python's built-in `sqlite3` as the initial persisten
 
 Current-working-directory discovery wins over image-directory discovery even when an image belongs to another initialized collection; nested initialized directories must be supported. Explicit selection allows one repository to be shared across unrelated collections. During ordinary image processing, state failures—including a missing, invalid, corrupted or inaccessible CLI- or YAML-selected directory—must produce visible error output without by themselves preventing otherwise valid stages or sidecar publication. Do not silently select another persistent repository; nonpersistent state may be used for the invocation. State-management commands such as `init` may fail independently. Keep discovery locations and ordering separable from persistence so a future release can make them configurable without redesigning storage; configurable precedence is not introduced here. Nested selection details, state-failure reporting, SQLite schema, migration SQL, macro grammar and implementation algorithms belong to subsequent design.
 
+Slice 4 plans category list, clear and rebuild operations with their own implementation-plan phase. Listing reads the selected state; clear removes its category domain only. Rebuild replaces that domain from a selected collection's existing JSON using the same envelope, schema-identity and category extraction rules as ordinary accumulation, not XMP or inference. Its traversal depth is independently configured, recursive and unlimited by default, with the same symlink policy as batch discovery. Report invalid/unreadable input and never report a partial replacement as successful; mutations preserve other domains and must not silently substitute another persistent store. Warn that a limited rebuild replaces the shared repository's categories with the selected collection's categories. State-command failures may fail those commands; ordinary processing keeps its nonblocking policy.
+
 ## 5. CLI and operational architecture
 
 The end-state CLI has these subcommands:
@@ -209,18 +220,21 @@ The end-state CLI has these subcommands:
 - `image-clarus process` — process selected image files using selected stages.
 - `image-clarus search` — search previously generated sidecars without model calls.
 - `image-clarus init` — explicitly initialize persistent application state in the current working directory.
+- Category-state `list`, `clear`, and `rebuild` operations — planned for Slice 4; exact command grammar is design work.
 
 **Accepted CLI conventions:** The executable is `image-clarus`, with `process`, `search`, and `init` subcommands, and help at the top level and each subcommand. Stable stage identifiers are `desc`, `json`, and `xmp`. The accepted option names are `--config` for an explicit config path, `--stages` for stage selection, and `--set` for generic configuration overrides. The stage-selection behavior in §3.2 is fixed: no selection means all registered stages, while an explicit selection runs only those stages without prerequisite expansion.
 
 **Illustrative syntax:** Examples such as `--stages=desc,json` and `--set path=value` show intended option/value shapes, not a frozen argument grammar. The implementation plan for the relevant slice will settle exact argument placement (`=` versus a separate value), repeatability, positional arguments, `--set` value parsing, option conflicts, and output/result schemas.
 
-**Discovery.** Accept file paths, directories, and glob patterns/filters. Stream one eligible image at a time, with recursive traversal enabled by default. Process eligible files within a directory before descending depth-first. A configurable extension allowlist initially considers `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff`. Model decoding failures are distinct from extension selection. Exclusion filters may be added later.
+**Slice 4 controls (planned):** `--max-depth`, `--max-work-files`, `--dry-run`, and `--verbose`, plus a configuration/CLI concurrency control and independently configurable rebuild depth. Exact remaining option/configuration names and output grammar are design work; these controls are not a claim of current implementation.
 
-**Execution and resumption.** A single process may run all selected stages sequentially, or external tools may invoke stages independently, including concurrently. Existing valid output sidecars provide natural resume/skip signals; no stored job queue is needed. systemd, cron, and other external schedulers own timing and scheduling, using Image Clarus execution controls. digiKam scripting can offer interactive selection and invocation, without making digiKam a core dependency or replacing native unattended batching. Native search remains independent. The CLI may later expose configurable run bounds for externally orchestrated jobs.
+**Discovery.** Accept file paths, directories, and glob patterns/filters. Slice 4 plans unlimited recursion by default, `--max-depth 0` for the starting directory, and N for N levels below it. Discover eligible files in each directory before descending into subdirectories, using deterministic ordering; execution order may differ under concurrent processing. Do not follow discovered symlinks; an explicitly supplied image or directory symlink may resolve as specified in the Slice 4 REQ. A configurable extension allowlist initially considers `jpg`, `jpeg`, `png`, `webp`, `tif`, and `tiff`. Model decoding failures are distinct from extension selection. Advanced exclusion filters remain later work.
 
-**Failures and reporting.** Model/provider, timeout, authentication, invalid configuration, schema validation, corrupt/unsupported image, missing prerequisite, and filesystem errors have distinguishable categories. Built-in retry count is **zero**; opt-in retry/backoff and category-specific actions are configurable. Report stage results and a completed/skipped/failed batch summary. Support configurable console/file logging, levels, and nonzero exit statuses for failures.
+**Planning, execution and resumption.** Slice 4 plans a completed metadata-only initial plan before batch execution: directory entries and sidecar existence only, without image/sidecar-content reads, ExifTool or model calls, or mutations. A positive `--max-work-files` counts each image initially needing any selected LLM stage once; non-LLM work consumes no budget and runtime changes do not replenish it. Plan-driven in-memory queues forward predicted bypasses, with stage-level runtime rechecks and results authoritative. `--dry-run` applies the same plan without execution and must report a clearly labeled memory estimate, not a measurement or guaranteed bound; the estimation scope and method are design work. Aggregate output need not retain all file records. Existing valid sidecars support later rescan/resume without a persistent job queue. External schedulers own timing; digiKam scripting complements, but does not replace, native batching. Native search remains independent.
 
-**Interruption.** Safely cancel an in-flight model request when stopping; once an artifact write begins, finish its safe-write operation where possible before exit. Recovery covers interrupted writes when graceful shutdown is impossible.
+**Failures and reporting.** Model/provider, timeout, authentication, invalid configuration, schema validation, corrupt/unsupported image, missing prerequisite, and filesystem errors have distinguishable categories. Built-in retry count is **zero**; opt-in retry/backoff and category-specific actions are configurable. Slice 4 plans `--verbose` stage/image progress, reasons and elapsed times for single-image and batch runs, plus batch metrics for eligible files, initially admitted LLM-work images, planned bypasses, actual stage outcomes and deviations. Distinguish file counts from stage-operation counts and planned bypasses from actual skips, failures or interrupted/not-attempted work. Progress completion does not imply success. Preserve concise non-verbose output and configurable logging/exit behavior.
+
+**Interruption.** Safely cancel an in-flight model request when stopping; once an artifact write begins, finish its safe-write operation where possible before exit. Slice 4 workers stop accepting new work, coordinate shutdown and report partial actual outcomes. Recovery covers interrupted writes when graceful shutdown is impossible; resumption rescans sidecars.
 
 ## 6. XMP and digiKam integration
 
@@ -303,6 +317,8 @@ Possible rare consequence: one writer's description, JSON, or XMP merge may supe
 
 Users who may run Image Clarus concurrently with digiKam can coordinate runs externally. The sidecar service has no lock files, stale-lock recovery protocols, or lock timeouts; this does not prohibit SQLite's own concurrency mechanisms.
 
+Slice 4's planned stage workers use the same per-operation safe-write and interruption/recovery contract. Worker coordination does not add cross-process sidecar locks, conflict detection, serialized XMP merges, or atomic coupling to state.
+
 ## 8. Implementation strategy and slice roadmap
 
 Build independently usable, numbered slices. Each slice has its own implementation plan; the HLD establishes boundaries, while that plan defines its phases, steps, acceptance criteria, testing, and sequencing. `Phase A`, `Phase B`, `Phase C`, and step identifiers are plan-internal labels, not slice names.
@@ -312,7 +328,7 @@ Build independently usable, numbered slices. Each slice has its own implementati
 | **Slice 1** | **Single-image `desc` + `json` pipeline** | CLI `process` and help; YAML config; named models/providers; OpenAI-compatible adapter; stage registry/coordinator; independent stage selection; configurable prompts and schema; JSON validation/provenance; shared safe-write and recovery; basic failure reporting |
 | **Slice 2 (complete and accepted)** | JSON enhancement and XMP integration | Single-image ranked recommendations, ExifTool backend, digiKam mappings, tag hierarchy/policies, title/caption/optional author and sanitized fixtures; accepted prompt-control gap carried forward |
 | **Slice 3 (complete)** | User-owned prompts and application state | Namespaced macros, hierarchical category guidance, reusable SQLite/memory state, nonblocking accumulation and opt-in prompt hash; see [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md) and its closeout |
-| Later | Multi-image selection and operational batching | Streaming discovery, directory/pattern processing, recursive traversal, batch controls, summaries and configurable continuation behavior |
+| **Slice 4 (planned; REQ draft)** | Native batch, diagnostics and category-state management | Metadata-only planning, traversal and work controls, optional inter-stage concurrency, progress and category list/clear/rebuild; see [Slice 4 REQ](slice-4/REQ-slice-4.md) |
 | Later | Deterministic search | `search` command, sidecar text/field matching, human-readable and JSON results, shared discovery |
 | Future | Extensibility | Other XMP backends, other metadata consumers/providers, richer filters, semantic search |
 
@@ -329,6 +345,7 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - **Filesystem safety:** Exercise create, replace, backup restoration, existing-original-plus-backup, interrupted writes, stale temporary cleanup, permissions, and deliberate overlapping writes. Explicitly test last-write-wins limitations rather than presenting them as conflict detection.
 - **XMP:** Use sanitized representative digiKam fixtures, ExifTool round trips, field-specific policies, shared flat-keyword preservation, and digiKam read/edit checks. No private EXIF/GPS/device data in public fixtures.
 - **Batch and search:** Test streaming traversal order, independent failure/skip counts, deterministic case-insensitive matching, selected JSON fields, and machine-readable output when those slices are implemented.
+- **Slice 4 planned verification:** Exercise metadata-only planning and dry-run boundaries, deterministic admission, actual concurrent stage overlap and sequential mode, runtime rechecks, category rebuild, progress accounting, failure and interruption/resume. Use synthetic inputs and keep execution results distinct from predictions.
 - **Platforms:** Required Linux testing and representative available filesystems. macOS and Windows remain desirable portability targets; no exhaustive OS/filesystem CI matrix.
 
 ## 10. Decision register and open questions
@@ -337,7 +354,8 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 
 - Single CLI `image-clarus` with `process`, `search` and explicit state `init`, including top-level and subcommand help plus `image-clarus --version`.
 - Application releases use Semantic Versioning; Slice 1 starts at `0.1.0` and stays on the `0.1.x` line. The JSON metadata schema version is independent of the application version.
-- Independent `desc`, `json`, `xmp` stages using persisted file handoffs; ordered registry; image-first execution; selectable subsets with no automatic prerequisite expansion.
+- Independent `desc`, `json`, `xmp` stages using persisted file handoffs; ordered registry and selectable subsets with no automatic prerequisite expansion. Slice 4's planned batch default is inter-stage concurrency, with image-first retained when disabled.
+- Slice 4 plans metadata-only Option A, `usesLLM`/`skipIfValidOutputExists` capabilities and initial distinct-LLM-image work budgeting. Content-aware planning Option B is deferred; Option A remains available if B is later implemented. One worker per stage is the Slice 4 limit; multiple workers per stage and model-aware scheduling are outside its scope.
 - Coordinator delegates configuration interpretation and completion policy to each stage and applies configurable continuation policy to structured results.
 - One YAML `config.yaml`, prompts/schemas external and separately overridable; configuration precedence CLI > selected YAML > defaults; global then selected-stage validation.
 - Named provider and model configuration, with model selection per model-driven stage; initial OpenAI-compatible Chat Completions transport; configurable generic-to-native reasoning mapping.
@@ -362,11 +380,12 @@ The ordering among later slices is indicative, not a locked schedule. Future sea
 - A5 freezes artifact-service transaction/state/fault semantics and the backup-retention config leaf in [IMPL-A5-COMPLETED.md](slice-1/IMPL-A5-COMPLETED.md). B5 implemented the original service; the approved mode correction has automated evidence and an operator-reported NTFS/FUSE probe. The Product Owner accepted the documented test-order evidence exception. See the [correction record](slice-1/IMPL-SAFE-WRITE-FILESYSTEM-CORRECTION.md) and [C5 closeout](slice-1/IMPL-C5-COMPLETED.md). Do not add filesystem-specific branches or claim crash-proof writes without observed evidence.
 - Slice 2 A3 records the preliminary JSON-to-XMP mapping and preservation contract; accepted C3 records Product Owner-reported digiKam interoperability and its limits.
 - Slice 3 A1/A2 settled the state and prompt facilities, including storage and migration mechanics, discovery, macro grammar and secret-safe interpolation; implementation and evidence are recorded in the [Slice 3 plan](slice-3/IMPL-PLAN-slice-3.md). Its final closeout status is tracked there.
+- Slice 4 planning must resolve how provisional bypasses are rechecked and routed if invalid or missing, including ordering with downstream execution; early overlap must coexist with explicit image-first sequential mode. Mixed-stage non-LLM processing for images excluded by the initial LLM budget requires an explicit Product Owner decision before that behavior is implemented; XMP-only execution remains uncapped. Resolve state selection across collections and category-command discovery context; rebuild handling of invalid/unreadable or empty inputs; failure/abort and exit aggregation; and progress accounting for excluded, failed and interrupted work. Resolve pattern overlap, deterministic admission across roots and invalid control values without silently adding product policy. Escalate any choice that changes approved scope or behavior.
 
 ### 10.4 Deferred without narrowing the end-state requirements
 
 - Non-digiKam metadata representations and additional XMP backends.
-- Multi-image traversal, search, richer batch controls, exclusion filters, and semantic search beyond their assigned slices.
+- Native search, advanced exclusion filters, multiple workers per stage, scheduling, content-aware planning Option B and semantic search remain outside Slice 4; later scope and ordering are not assigned here.
 - Additional provider protocols, optional separate provider configuration files, and broad cross-platform automation.
 
 ### 10.5 Requirements reconciliation
@@ -375,7 +394,7 @@ The Product Owner has superseded the earlier B2 HTTP destination restriction: th
 
 The Product Owner explicitly decided the empty-root policy in Slice 2: omission selects `ai`; an explicit empty string makes enabled tag policies additive and non-destructive. The parent REQ and §6.3 now reflect that decision. The Product Owner accepted the Slice 2 REQ on 2026-11-17; XMP mappings, schema details and implementation are not established by that acceptance.
 
-The November 2026 parent REQ refinements specify general-purpose state, explicit initialization and discovery, independent full prompt control and secret-safe macros. Sections 4.4–4.5 record the selected embedded SQLite architecture and these decisions without claiming implementation. The Slice 2 prompt-control gap was accepted at closeout and remains future work; the separate early-identification process lesson is recorded in the REQ. Slice 2 implementation and verification were subsequently completed as recorded in its plan and closeout, not merely by acceptance of its REQ.
+The November 2026 parent REQ refinements specify general-purpose state, explicit initialization and discovery, independent full prompt control and secret-safe macros. Sections 4.4–4.5 record the selected embedded SQLite architecture and these decisions. The Slice 2 prompt-control gap was accepted at closeout and subsequently remedied in Slice 3; the separate early-identification process lesson remains recorded in the REQ. Slice 2 implementation and verification were completed as recorded in its plan and closeout, not merely by acceptance of its REQ.
 
 The Product Owner subsequently clarified that state failures, including invalid explicit selections, produce visible error output but do not by themselves block core processing; nonpersistent state may be used without silently selecting another persistent repository. The former no-memory-fallback rule is superseded for ordinary processing. The existing prompt inputs remain user-owned and contain the default instructions; no additional prompt inputs or hidden unchangeable instructions are introduced.
 
