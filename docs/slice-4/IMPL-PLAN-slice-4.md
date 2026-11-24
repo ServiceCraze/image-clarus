@@ -113,9 +113,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Step M2 - Implement additive category rebuild [CODE]
 - [ ] Step M3 - Verify category command boundaries and concurrency [TEST]
 
-### Step B7 - Document Slice 4 usage and compatibility [DOCS]
-
-- [ ] Step B7 - Document Slice 4 usage and compatibility [DOCS]
+- [ ] Step M4 - Document Slice 4 usage and compatibility [DOCS]
 
 ### Phase C Verification and closeout
 
@@ -130,9 +128,9 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 | Batch foundations | A5 → B1 → B2 → B3 |
 | Batch execution/reporting | B3 → B4 → B5 → B6 |
 | Category delivery | A5 + B1 → M1; M1 + B2 → M2 → M3 |
-| User documentation | B6 + M2 + M3 → B7 |
+| User documentation | B6 + M2 + M3 → M4 |
 | Integrated acceptance | B6 + M3 → C1 → C2 |
-| Quality/closeout | B7 + M3 + C1 + C2 → C3 → C4 |
+| Quality/closeout | M4 + M3 + C1 + C2 → C3 → C4 |
 
 ## 4. Detailed steps
 
@@ -540,7 +538,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Dependencies:** M2; B1/B2 interfaces used by the commands.
 
-### Step B7 - Document Slice 4 usage and compatibility [DOCS]
+### Step M4 - Document Slice 4 usage and compatibility [DOCS]
 
 **Goal:** Document the delivered commands, planning limits, and operational expectations using verified behavior.
 
@@ -556,7 +554,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 5. Document interruption/resume, continuation/abort, exits/channels, source safety, and existing sidecar race limitations. Reconcile current parent design/roadmap descriptions without rewriting prior completion records or claiming closeout prematurely.
 6. Check all examples against implemented help/parser/config behavior with synthetic or dry-run fixtures where appropriate. Record privacy review of changed public artifacts.
 
-**Outputs:** Updated current usage/configuration/design documentation and example checks; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md).
+**Outputs:** Updated current usage/configuration/design documentation and example checks; [IMPL-M4-COMPLETED.md](IMPL-M4-COMPLETED.md).
 
 **Acceptance**
 
@@ -565,9 +563,9 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Current parent docs distinguish implementation progress from acceptance; historical Slice 1–3 records remain intact.
 - [ ] Public examples contain fictitious data and no sensitive infrastructure identifiers or credentials.
 
-**Correction:** B7 is sequenced after M3 to eliminate the B7-before-M2 forward dependency identified in A5. The M3 category-verification step completes before B7 documents the verified behavior; B6 and M2 remain structural inputs. Final acceptance evidence is reconciled in C4.
+**Correction:** This documentation step was formerly B7 and was moved after M3 to eliminate its forward dependency on M2. It is now M4, keeping its scope and position while aligning its identifier with Phase M. M3 completes before documentation of the verified behavior; B6 and M2 remain structural inputs. Final acceptance evidence is reconciled in C4.
 
-**Dependencies:** B6 + M2 + M3. B7 documentation follows verified category behavior; it is sequenced after M3 to respect the linear orchestration contract.
+**Dependencies:** B6 + M2 + M3. M4 documentation follows verified category behavior in the linear sequence.
 
 ### Phase C Verification and closeout
 
@@ -630,7 +628,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Goal:** Establish fresh regression and packaging evidence at the actual delivered version and audit changed production boundaries.
 
-**Inputs:** B7, M3, C1, C2; §9 commands; prior Slice 3 C2/C3 records as command/evidence examples, not current passes.
+**Inputs:** M4, M3, C1, C2; §9 commands; prior Slice 3 C2/C3 records as command/evidence examples, not current passes.
 
 **Actions**
 
@@ -650,7 +648,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Reachability/import/privacy audits have explicit scope, findings and disposition; no unrecorded orphan exception remains.
 - [ ] Documentation/status/version references match actual evidence, including limitations and unperformed checks.
 
-**Dependencies:** B7, M3, C1, C2 (B7 completed after M3).
+**Dependencies:** M4, M3, C1, C2.
 
 ### Step C4 - Reconcile evidence and close Slice 4 [DOCS]
 
@@ -696,7 +694,7 @@ Each S4 requirement has a design owner, delivery owner and observable evidence. 
 | S4-10 Category timing and per-image state | A2, A3 | B4, B5 | E08/E09; post-image finalization, prompt snapshots, independent collections and fallback |
 | S4-11 Stop resume and failure handling | A1, A2, A4 | B1, B4–B6 | E10/E13/E20; prerequisite defaults, continuation, signals, worker errors and resumed CLI |
 | S4-12 Dry-run | A1, A2, A4 | B3, B6 | E03/E11/E19; parity, estimate and startup/failure access boundaries |
-| S4-13 Verbose single and batch execution | A4 | B6, B7 | E02/E12/E20; identity/timing/reasons/channels and concise compatibility |
+| S4-13 Verbose single and batch execution | A4 | B6, M4 | E02/E12/E20; identity/timing/reasons/channels and concise compatibility |
 | S4-14 Batch summary and metrics | A2, A4 | B3–B6 | E05/E06/E12/E20; planned/actual distinct-image and per-stage counts |
 | S4-15 List categories | A1, A3, A4 | M1 | E14, M3; genuinely read-only open/list and strict failure/migration outcomes |
 | S4-16 Clear categories | A3, A4 | M1 | E14, M3; category-only transaction, failure/stop/concurrent preservation |
@@ -898,7 +896,7 @@ The parent REQ uses named areas rather than numbered requirements. This matrix a
 | Broadening extraction or skip validation | Previously supported artifacts stop skipping or contributing categories. | A2/A3 → B3/M2 → current envelope/extractor regressions. |
 | Misleading progress or memory claims | Planned work looks completed, request counts become image counts, estimate appears a hard bound. | A4 → B6 → E12/E19/E20. |
 | Large collections and long paths | Full execution plan/identity/sorting structures consume memory despite small LLM allowance. | A2/A4 representation and estimator; B3/B6 synthetic scaling checks; no invented fixed queue limit. |
-| Concurrent clear/add/rebuild | Final category set depends on transaction order; whole-run replacement expectations would be wrong. | A3 → M3 independent-process evidence and B7 documentation (after M3). |
+| Concurrent clear/add/rebuild | Final category set depends on transaction order; whole-run replacement expectations would be wrong. | A3 → M3 independent-process evidence and M4 documentation (after M3). |
 
 ### 11.2 Design register and closure rule
 

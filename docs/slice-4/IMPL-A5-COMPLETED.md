@@ -56,7 +56,7 @@ The current plan's §5 and §6 own the detailed mapping and future evidence. A s
 | S4-10 per-image state and timing | B4, B5 | E08, E09; C1, M3 |
 | S4-11 stop/failure/resume | B1, B4–B6 | E10, E13, E20; C1, C2 |
 | S4-12 dry run | B3, B6 | E03, E11, E19; C1 |
-| S4-13 verbose reporting | B6, B7 | E02, E12, E20; C1, C2 |
+| S4-13 verbose reporting | B6, M4 | E02, E12, E20; C1, C2 |
 | S4-14 batch metrics | B3–B6 | E05, E06, E12, E20; C1, C2 |
 | S4-15 category list | M1 | E14; M3 |
 | S4-16 category clear | M1 | E14; M3 |
@@ -118,7 +118,7 @@ These probes used synthetic data on Linux only, not product code or live provide
 
 ## 5. Remaining acceptance and gate
 
-The earlier interactive forms timed out; the Product Owner later explicitly supplied both sets of decisions, including the modified empty-run preflight and added `-i` option. The approved outcomes are recorded in §3. The SQLite, portable identity, provider/actor/graph and selected-path contracts are reconciled, subject to future implementation tests. The B7/M2 forward dependency was corrected by moving B7 after M3; focused earlier steps now test their available interfaces rather than requiring later CLI wiring. Routine architecture work is not an additional REQ acceptance gate; approved product choices are not reopened.
+The earlier interactive forms timed out; the Product Owner later explicitly supplied both sets of decisions, including the modified empty-run preflight and added `-i` option. The approved outcomes are recorded in §3. The SQLite, portable identity, provider/actor/graph and selected-path contracts are reconciled, subject to future implementation tests. The former B7/M2 forward dependency was corrected by moving the documentation step after M3; it is now named M4. Focused earlier steps test their available interfaces rather than requiring later CLI wiring. Routine architecture work is not an additional REQ acceptance gate; approved product choices are not reopened.
 
 The substantive crosswalk reviewed all 18 slice requirements and all 16 acceptance areas against their planned implementation and evidence owners (§2 and plan §§5–6). It exposed missing explicit cases for empty preflight, both commands' case handling, explicit/orphan sidecars, provider-child compatibility and shutdown races; these are now assigned to their available steps. The sequence audit walked inputs, actions, outputs and acceptance in displayed order, including cross-phase dependencies. Evidence rows remain **Not run**: design review does not demonstrate application behavior. Normal SQLite/OS read effects during empty-rebuild recognition do not imply an application data/schema mutation or migration. Windows runtime and actual child transport behavior remain unverified.
 
