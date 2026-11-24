@@ -151,6 +151,7 @@ This document states required behavior and observable acceptance outcomes, not a
 - Dry-run performs **no model calls, XMP processing, image/sidecar-content reads, artifact writes, category accumulation, or persistent-state mutations**. Directory entry and file-existence metadata may be inspected.
 - Apply the same selection, depth, symlink, selected-stage, regeneration and work-budget rules as an execution plan. Show planned work admission, stage routing and counts, which files are counted toward the LLM work budget and when the budget is reached.
 - Permit aggregate summaries without retaining all per-file plan records. Per-file output, when requested, may be streamed rather than accumulated in memory. Dry-run must report a memory estimate, clearly labeled as an estimate rather than a measurement or guaranteed bound; its scope and estimation method are design work.
+- Every completed dry-run plan reports the numeric labeled estimate. If parsing, configuration or selection fails before the plan completes, report that the estimate is unavailable instead of inventing a number.
 - Dry-run results and memory estimates cannot predict all execution-time corrections; malformed existing outputs, XMP no-change decisions and external modifications may produce different actual outcomes and corrective LLM overruns.
 
 ### S4-13 - `--verbose` for single and batch execution

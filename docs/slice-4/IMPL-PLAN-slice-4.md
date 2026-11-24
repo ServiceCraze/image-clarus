@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1–A2 design is complete; A3 is in progress, A4–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A3.
+**Status:** In progress. A1, A2 and A4 design are complete; A3 is in progress, and A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A4.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -93,7 +93,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step A1 - Freeze selection and configuration contracts [DESIGN]
 - [x] Step A2 - Freeze stage routing and execution contracts [DESIGN]
 - [ ] Step A3 - Freeze state and category management contracts [DESIGN]
-- [ ] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
+- [x] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
 - [ ] Step A5 - Complete design and verify implementation readiness [DESIGN]
 
 ### Phase B Batch implementation
@@ -246,10 +246,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Initial admission, corrective images, actual distinct LLM-work images, stage evaluations/executions, retries, and writes cannot be confused in the documented output.
-- [ ] Progress and final summaries account for partial, failed, aborted, interrupted, and empty runs with defined channels and exits.
-- [ ] Dry-run always has a labeled estimate with a reproducible method, stated scope/assumptions, and no unsupported bound claim.
-- [ ] All output/access decisions needed by B6 and Phase M are resolved and cross-referenced before A5.
+- [x] Initial admission, corrective images, actual distinct LLM-work images, stage evaluations/executions, retries, and writes cannot be confused in the documented output.
+- [x] Progress and final summaries account for partial, failed, aborted, interrupted, and empty runs with defined channels and exits.
+- [x] Every completed dry-run plan has a labeled estimate with a reproducible method, stated scope/assumptions, and no unsupported bound claim; an incomplete plan reports that the estimate is unavailable.
+- [x] All output/access decisions needed by B6 and Phase M are resolved and cross-referenced before A5.
 
 **Dependencies:** Reconciled inputs from A1–A3; may be drafted alongside them.
 
@@ -439,7 +439,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Acceptance**
 
 - [ ] Single-image compatibility and default concurrent batch behavior are reachable through the actual CLI.
-- [ ] Dry-run obeys content/execution/mutation boundaries even during startup/failure and always reports the required labeled estimate.
+- [ ] Dry-run obeys content/execution/mutation boundaries even during startup/failure; each completed plan reports the required labeled estimate, and an incomplete plan reports that the estimate is unavailable.
 - [ ] Actual CLI dry-run identifies admitted, initially no-work, and known budget-excluded file paths in deterministic order and marks precisely where N is reached; aggregate totals alone cannot satisfy this check.
 - [ ] Initial and actual image/stage metrics reconcile for successes, skips, failures, corrections, interruption and no-work cases.
 - [ ] Progress and exits follow A4 without claiming success from 100% accounted progress.
