@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1, A2 and A4 design are complete; A3 and A5 are in progress, and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
+**Status:** In progress. A1–A4 design are complete; A5 is in progress, and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -92,7 +92,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 - [x] Step A1 - Freeze selection and configuration contracts [DESIGN]
 - [x] Step A2 - Freeze stage routing and execution contracts [DESIGN]
-- [ ] Step A3 - Freeze state and category management contracts [DESIGN]
+- [x] Step A3 - Freeze state and category management contracts [DESIGN]
 - [x] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
 - [ ] Step A5 - Complete design and verify implementation readiness [DESIGN]
 
@@ -219,8 +219,8 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Acceptance**
 
 - [x] Multi-collection state, memory/fallback ownership, diagnostics, and close boundaries are fully specified without changing precedence.
-- [ ] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
-- [ ] Clear preserves other domains; rebuild is additive, best effort, empty-safe, and uses existing extraction semantics.
+- [x] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
+- [x] Clear preserves other domains; rebuild is additive, best effort, empty-safe, and uses existing extraction semantics.
 - [x] Accumulation timing/eligibility, budget-excluded valid JSON, interruption, and concurrent management have explicit outcomes and test boundaries.
 - [x] All significant product decisions have the required disposition before A5; routine storage mechanics do not create unnecessary approval gates.
 
@@ -275,7 +275,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Acceptance**
 
 - [ ] A1–A4 agree, every significant design decision is resolved, and no significant TBD remains.
-- [ ] Required product decisions are approved; already decided behavior has not been reopened unnecessarily.
+- [x] Required product decisions are approved; already decided behavior has not been reopened unnecessarily.
 - [ ] Every implementation/evidence step has concrete inputs, observable outcomes, dependencies, and future completion-record links.
 - [ ] Requirements, accepted examples, failure boundaries, and end-state allocation are covered without silent scope deferral.
 - [ ] The orchestrator can advance to B1 or the eligible Phase M work using the completed design evidence.
@@ -294,7 +294,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Actions**
 
-1. Extend defaults, known-key/type validation, path-origin handling, dedicated options and `--set` overrides for approved selection/depth/format/work/concurrency/dry-run/verbose controls. Preserve current singleton and conflicting-option behavior unless A1 explicitly changes it.
+1. Extend defaults, known-key/type validation, path-origin handling, dedicated options and `--set` overrides for approved selection/depth/format/work/concurrency/dry-run/verbose controls, including invocation-only process/rebuild `-i` / `--ignore-case`. Preserve current singleton and conflicting-option behavior unless A1 explicitly changes it.
 2. Implement explicit-single versus batch contextual defaults without overriding YAML or CLI intent. Preserve model/prompt/schema and state-directory precedence, selected-stage ordering, and missing-prerequisite overrides.
 3. Separate metadata-only configuration/startup from execution dependency probes. Ensure dry-run does not construct/open state, run recovery, invoke ExifTool, or call models; real execution still validates all selected stages before any stage writes.
 4. Provide the shared management configuration boundary defined by A3 without routing management through image-processing preflight. Keep unselected provider/XMP configuration from blocking unrelated category operations under the frozen contract.
@@ -319,11 +319,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Actions**
 
-1. Implement native file/directory/pattern selection, deterministic roots/files/subdirectories, files-before-descent, configured extension eligibility and overrides, and unlimited/0/1/N depth. Explicitly test the six initial default extension candidates `jpg`, `jpeg`, `png`, `webp`, `tif`, `tiff` (including relevant case variants), distinguishing **discovery eligibility** from actual model/adapter decoding support and recording any selected-adapter failure as such.
+1. Implement native file/directory/pattern selection, deterministic roots/files/subdirectories, files-before-descent, configured extension eligibility and overrides, and unlimited/0/1/N depth. Implement case-sensitive native patterns by default and `-i` / `--ignore-case` for process and rebuild using A1's defined Unicode/bracket behavior without changing literal-first or identity. Test dotfiles, shell-expanded arguments, quoted patterns, pattern anchors, Unicode, brackets, distinct case-variant files and both commands. Explicitly test the six initial default extension candidates `jpg`, `jpeg`, `png`, `webp`, `tif`, `tiff` (including relevant case variants), distinguishing **discovery eligibility** from actual model/adapter decoding support and recording any selected-adapter failure as such.
 2. Implement explicit/discovered symlink distinctions throughout enumeration and pattern handling. On symlink-capable systems exercise cycles, outside-root links, broken links, image links, and explicit directory roots; record unsupported-platform skips honestly.
 3. Deduplicate with the frozen image identity rules before admission and execution. Preserve deterministic first occurrence and selection provenance across overlaps and multiple roots; do not repeatedly traverse aliases contrary to the contract.
 4. Expose reusable traversal/selection primitives with separate image and JSON-sidecar eligibility. Apply rebuild's independently resolved depth without importing stage/LLM/XMP/state-storage logic.
-5. Implement designed no-match, empty, missing/unreadable, and enumeration-error outcomes. Use synthetic directory trees and metadata-access spies to prove no image/sidecar content reads or mutations.
+5. Implement designed no-match, empty, missing/unreadable, and enumeration-error outcomes; a mixed invalid selection aborts before writes. Use synthetic directory trees and metadata-access spies to prove no image/sidecar content reads or mutations. B6/C1 verify empty-run startup and preflight at the integrated CLI boundary.
 6. Implement the A1 cross-platform path contract using portable Python APIs and no Bash dependency; parse Windows drive/UNC and both native separator forms before wildcard components. Exercise pure Windows path interpretation on Linux and real Linux traversal separately, including platform-specific identity, ordering, case, encoding and symlink boundaries; do not label pure-path checks as Windows runtime validation. Review affected subprocess and filesystem operations for portability without expanding into unrelated platform remediation.
 
 **Outputs:** Reusable discovery/identity implementation, synthetic traversal tests, and [IMPL-B2-COMPLETED.md](IMPL-B2-COMPLETED.md).
@@ -490,6 +490,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 3. Extend category/storage interfaces for category-only clear with the existing short transaction, contention and stop behavior. Preserve unrelated domains, schema metadata, source images and sidecars. Failure/rollback must not be reported as successful clear.
 4. Wire actual list/clear CLI grammar, useful output and exact exit/channel behavior from A4. Clear must support explicit noninteractive usage under the accepted command contract.
 5. Test persistent bytes/schema/directory contents around successful and failed list, including migration-needed fixtures. Test clear preservation, empty categories, failed update/commit, stop boundaries and unchanged ordinary-processing fallback.
+6. Implement and package the selected A3 native SQLite VFS extension, bundled SQLite and detached-snapshot adapter. Configure the Linux/Windows wheel and source-distribution builds and verify available builds under its stated contract; exercise native wrapper read-only denial, real rollback locks, cold/hot journal and mode-change races, unavailable extension, memory/close failures and clean installation. Do not claim a Windows build or runtime result without running it.
 
 **Outputs:** Strict access/list/clear interfaces and commands, focused tests, and [IMPL-M1-COMPLETED.md](IMPL-M1-COMPLETED.md).
 
@@ -705,12 +706,12 @@ E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E1
 | E11 | Dry-run | Actual CLI produces matching initial plan/counts, a labeled memory estimate, and deterministic **per-file admitted/no-work/excluded identities and allowance-exhaustion boundary** (not merely correct totals); no stages, inference, ExifTool, image/sidecar-content reads, accumulation or mutations. Aggregate-only presentation remains optional. | B1, B3, B6, C1 | Not run |
 | E12 | Verbose and metrics | Per-image/stage starts/outcomes/timings and final counts reconcile planned bypasses, actual results, initial admission, corrective identities, actual LLM identities, retries if reported, deviations and elapsed time. 100% accounted is not reported as universal success. | B6, C1, C2 | Not run |
 | E13 | Interruption/resume | Actual SIGINT/SIGTERM processes cancel held inference, preserve started safe writes, report unattempted/interrupted work and resume from valid sidecars in a fresh invocation. | B5, C2 | Not run |
-| E14 | Categories list/clear | Actual commands cover read-only bytes/schema/directory preservation, no-store/access/corruption/migration-needed failures, category-only clear, rollback/stop behavior and concurrent transactions. | M1, M3 | Not run |
+| E14 | Categories list/clear | Actual commands cover read-only bytes/schema/directory preservation with ordinary OS-managed access-time updates allowed, no-store/access/corruption/migration-needed failures, a clear error for WAL when no safe no-write read is available, category-only clear, rollback/stop behavior and concurrent transactions. | M1, M3 | Not run |
 | E15 | Categories rebuild | Existing categories retained; recognized JSON paths deduplicate; independent traversal; no XMP/inference; valid empty inputs, invalid/unreadable/partial/interrupted/storage-failure/concurrent outcomes; 997/3 example and explicit clear-then-rebuild. | M2, M3 | Not run |
 | E16 | Regression | Fresh relevant/full suites and installed package preserve stage/config/prompt/schema/state/XMP/source/artifact contracts; imports/reachability/privacy/version evidence is recorded at its real version. | All CODE steps, C3 | Not run |
 | E17 | Selection identity and errors | Overlapping roots/patterns/explicit paths deduplicate by approved exact resolved-path spelling. Case-variant/other aliases retaining distinct spellings may process and consume allowance separately; hard-link names remain distinct. Test deterministic ordering, no-match/unreadable selections and invalid controls without claiming physical-file deduplication. | B1, B2, C1 | Not run |
 | E18 | Runtime admission boundaries | Table-driven cases distinguish all three initial classes across recovered/invalid/new/missing outputs, selected subsets, regeneration and continuation; no accidental refill or unbudgeted promotion of known exclusions. | B3–B5, C1, C2 | Not run |
-| E19 | Startup and empty-run boundaries | Dry-run with selected XMP, unavailable execution dependencies, bad/old state, no-work/empty selections and startup errors preserves its access limits; estimate and zero-denominator behavior match A4. | B1, B6, C1 | Not run |
+| E19 | Startup and empty-run boundaries | Dry-run with selected XMP, unavailable execution dependencies, bad/old state, no-work/empty selections and startup errors preserves its access limits; estimate and zero-denominator behavior match A4. A valid empty real batch skips runtime-only preflight after static validation; nonempty execution retains it before writes. | B1, B6, C1 | Not run |
 | E20 | Partial abort and worker failures | A two-image case with early-stage failure and valid downstream persisted data distinguishes continue-next-stage, default stop-current-image, and abort-batch; other work follows the selected policy. Abort, worker exception and signal cannot deadlock or hide outcomes. Exit and summary reconcile all terminal/not-attempted records. | B5, B6, C2 | Not run |
 
 ## 7. Phase A decision-table obligations
