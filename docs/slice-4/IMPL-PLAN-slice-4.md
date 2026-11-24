@@ -400,12 +400,12 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Actions**
 
-1. Implement the selected in-memory worker topology and queue lifecycle with at most one active worker per selected stage. Seed initial routes only after planning completes; progressively forward actual outcomes and apply the designed same-image confirmation protocol.
+1. Implement the selected in-memory worker topology and queue lifecycle with one authoritative stage actor per selected stage and at most one transport-only provider child per actor. Seed initial routes only after planning completes; derive confirmations from masks, progressively forward actual outcomes and apply the same-image confirmation protocol.
 2. Preserve early downstream progress for existing-output candidates while unrelated upstream inference is held. Handle corrective rerouting, known budget exclusions, worker exceptions, empty queues, termination, and exactly-once accounting without global upstream barriers or unbounded wait cycles.
 3. Share the B4 image/state finalization logic without cross-image repository leakage or unsafe service closure. Concurrent prompt snapshots may reflect completion timing; do not add a taxonomy synchronization barrier.
-4. Implement stop/abort signaling and cleanup from A2. Stop admitting/dispatching new execution, cancel in-flight inference safely, allow already-started safe writes to finish, clean up owned schema/ExifTool subprocesses, and produce real partial outcomes. Do not rely on the existing single shared `state.interruptible` flag across workers.
+4. Implement stop/abort signaling and cleanup from A2. Serialize result acceptance with stop; discard unaccepted late results and separately gate publication, draining already-admitted safe writes. Cancel/reap owned inference and unprotected schema/ExifTool subprocesses, preserve child privacy and produce real partial outcomes. Do not rely on the existing single shared `state.interruptible` flag across workers.
 5. Wire the default-enabled control and disabled sequential executor. Exercise actual simultaneous stages using deterministic barriers, assert per-stage activity never exceeds one, and verify absence of prohibited same-image overlap.
-6. Cover correction and failure while another stage is active, stage subsets, all-bypass/no-work plans, concurrent state use, shutdown during request/read/write/finalization, and resumed invocation. Treat cross-process sidecar races according to existing limits.
+6. Cover correction and failure while another stage is active, stage subsets, all-bypass/no-work plans, concurrent state use, shutdown during request construction, held response, provider parsing, result/stop races, read/write/finalization, and resumed invocation. Test local provider barriers without a live service; do not assume arbitrary in-process transport objects serialize to the child. Treat cross-process sidecar races according to existing limits.
 
 **Outputs:** Concurrent executor and cancellation/resource ownership, deterministic worker tests, and [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md).
 
