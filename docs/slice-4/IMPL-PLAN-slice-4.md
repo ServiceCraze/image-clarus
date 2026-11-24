@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1 design is complete; A2–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1.
+**Status:** In progress. A1–A2 design is complete; A3–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A2.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -91,7 +91,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 ### Phase A Discovery and design completion
 
 - [x] Step A1 - Freeze selection and configuration contracts [DESIGN]
-- [ ] Step A2 - Freeze stage routing and execution contracts [DESIGN]
+- [x] Step A2 - Freeze stage routing and execution contracts [DESIGN]
 - [ ] Step A3 - Freeze state and category management contracts [DESIGN]
 - [ ] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
 - [ ] Step A5 - Complete design and verify implementation readiness [DESIGN]
@@ -188,12 +188,12 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Every significant routing/validation/shutdown branch has an outcome, rationale, and acceptance scenario; no prediction is itself an authoritative stage result.
-- [ ] The protocol supports unrelated-image overlap, same-image coordination, one worker per selected stage, and actual sequential mode.
-- [ ] Admission is immutable; corrections and known exclusions are distinct; no slot replenishment or assumed twice-N bound appears.
-- [ ] All three required HLD continuation choices and the stop-current-image default have a concrete transition/exit contract and a two-image, valid-downstream-data acceptance scenario; no policy was dropped during design.
-- [ ] Recovery, invalid-artifact, prerequisite, failure, safe-write, and cancellation contracts match existing behavior or have an explicit approved change.
-- [ ] B3–B5 have concrete interfaces and deterministic test coordination, not an unresolved choice of queue or cancellation architecture.
+- [x] Every significant routing/validation/shutdown branch has an outcome, rationale, and acceptance scenario; no prediction is itself an authoritative stage result.
+- [x] The protocol supports unrelated-image overlap, same-image coordination, one worker per selected stage, and actual sequential mode.
+- [x] Admission is immutable; corrections and known exclusions are distinct; no slot replenishment or assumed twice-N bound appears.
+- [x] All three required HLD continuation choices and the stop-current-image default have a concrete transition/exit contract and a two-image, valid-downstream-data acceptance scenario; no policy was dropped during design.
+- [x] Recovery, invalid-artifact, prerequisite, failure, safe-write, and cancellation contracts match existing behavior or have an explicit approved change.
+- [x] B3–B5 have concrete interfaces and deterministic test coordination, not an unresolved choice of queue or cancellation architecture.
 
 **Dependencies:** A1 inputs as available; reconcile lifecycle/state/reporting with A3/A4 before A5.
 
