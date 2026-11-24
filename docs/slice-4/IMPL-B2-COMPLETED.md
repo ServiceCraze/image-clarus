@@ -1,6 +1,6 @@
 # Step B2 - Implement reusable deterministic discovery [CODE] (COMPLETED)
 
-**Status:** Complete at the reusable discovery interface. Integrated process/rebuild command wiring and empty-run preflight remain B6/M2 and B6/C1 obligations; B3 has not been started.
+**Status:** Complete. The review-identified Windows wildcard-classification defect was corrected and verified as described below. Integrated process/rebuild command wiring and empty-run preflight remain B6/M2 and B6/C1 obligations; B3 has not been started. Earlier versioned test evidence remains historical.
 
 **Scope deviations:** None.
 
@@ -24,6 +24,8 @@ At version `0.3.26`, from the project root:
 - `uv run --locked --extra dev --python 3.13 pytest -q`: **1,223 passed, 66 skipped**; skips are not passes.
 - `uv run --locked --extra dev --python 3.13 ruff check .`: passed; `ruff format --check .`: 170 files already formatted.
 - The focused discovery suite passed 33 tests after audit corrections. Real Linux traversal and pure Windows drive/UNC/separator parsing were exercised; Windows runtime, junction behavior and decoder support were not verified.
+
+**Subsequent review correction, version `0.3.27`:** Windows `lstat` can report `ERROR_INVALID_NAME` (WinError 123) for paths containing `*` or `?`. Literal-first classification now proceeds to native pattern handling for that specific combination; other access errors and invalid names without those wildcard characters remain failures. Simulated error tests cover image and sidecar interfaces, both wildcard characters, existing bracket literals, non-wildcard invalid names and permission/other errors. Before the correction, the focused regression run reported four failures and ten passes; afterward the discovery unit file passed 47 tests. On the delivered version, `uv lock --locked` passed, CLI `--version` reported `0.3.27`, the full suite passed **1,237 tests with 66 skipped**, Ruff passed, and format check reported 171 files already formatted. These Windows errors were simulated on Linux; no Windows runtime execution is claimed.
 
 ## B2 acceptance
 

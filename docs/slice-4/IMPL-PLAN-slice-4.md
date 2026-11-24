@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A design, B1 configuration/command boundaries and B2 reusable discovery are complete; B3 and later steps remain open. No integrated Slice 4 batch or category-management execution is claimed by B1/B2.
+**Status:** In progress. Phase A, B1 and B2 are complete; B2's Windows wildcard-classification defect has been corrected. B3 and later steps remain open. No integrated Slice 4 batch or category-management execution is claimed by B1/B2.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 

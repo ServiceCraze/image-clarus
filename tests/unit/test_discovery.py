@@ -29,6 +29,74 @@ def make(root, name):
     return path
 
 
+@pytest.mark.parametrize(
+    "discover,suffix", [(discover_images, ".jpg"), (discover_sidecars, ".desc.json")]
+)
+@pytest.mark.parametrize("wildcard", ["*", "?"])
+def test_windows_invalid_name_wildcard_is_pattern(
+    tmp_path, monkeypatch, discover, suffix, wildcard
+):
+    expected = make(tmp_path, "a" + suffix)
+    selection = tmp_path / (wildcard + suffix)
+    original = Path.lstat
+
+    def lstat(path, *args, **kwargs):
+        if path == selection:
+            error = OSError("simulated invalid name")
+            error.winerror = 123
+            raise error
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    result = discover([str(selection)])
+    assert names(result) == [expected.name]
+    assert result.kinds == ("pattern",) and result.batch
+
+
+@pytest.mark.parametrize(
+    "discover,suffix", [(discover_images, ".jpg"), (discover_sidecars, ".desc.json")]
+)
+@pytest.mark.parametrize(
+    "token,error_kind",
+    [("plain", "invalid"), ("[a]", "invalid"), ("*", "denied"), ("*", "other")],
+)
+def test_lstat_other_errors_are_not_patterns(
+    tmp_path, monkeypatch, discover, suffix, token, error_kind
+):
+    selection = tmp_path / (token + suffix)
+    make(tmp_path, "a" + suffix)
+    original = Path.lstat
+
+    def lstat(path, *args, **kwargs):
+        if path == selection:
+            error = (
+                PermissionError("private detail")
+                if error_kind == "denied"
+                else OSError("private detail")
+            )
+            error.winerror = 123 if error_kind == "invalid" else 5
+            raise error
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    with pytest.raises(
+        DiscoveryError, match="could not be accessed or enumerated"
+    ) as error:
+        discover([str(selection)])
+    assert "private detail" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "discover,suffix", [(discover_images, ".jpg"), (discover_sidecars, ".desc.json")]
+)
+def test_bracket_literal_first_at_both_interfaces(tmp_path, discover, suffix):
+    literal = make(tmp_path, "[a]" + suffix)
+    make(tmp_path, "a" + suffix)
+    result = discover([str(literal)])
+    assert names(result) == [literal.name]
+    assert result.kinds == ("file",) and not result.batch
+
+
 def test_depth_order_extensions_overrides_and_provenance(tmp_path):
     for name in [
         "z.JPG",

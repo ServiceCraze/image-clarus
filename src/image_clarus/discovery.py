@@ -244,6 +244,14 @@ def discover(
                 exists = True
             except FileNotFoundError:
                 exists = False
+            except OSError as exc:
+                # Windows rejects * and ? in literal paths with ERROR_INVALID_NAME.
+                # Other errors, and invalid names without these characters, remain fatal.
+                if getattr(exc, "winerror", None) != 123 or not any(
+                    c in str(path) for c in "*?"
+                ):
+                    raise
+                exists = False
             if exists:
                 resolved = path.resolve(strict=True)
                 info = resolved.stat()
