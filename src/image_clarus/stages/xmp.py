@@ -3,6 +3,8 @@
 import json
 import os
 import re
+import sys
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +14,7 @@ from image_clarus import resources
 from image_clarus.artifacts import ArtifactError
 from image_clarus.config import ConfigurationError, _valid_tag_segment
 from image_clarus.results import StageResult
+from image_clarus.stage_protocol import Terminal, WorkRequired, drive
 from image_clarus.stages.structure import _read_envelope, _valid_envelope
 from image_clarus.xmp_backend import FIELDS, ExifToolBackend, XmpBackendError
 
@@ -191,7 +194,36 @@ def _interrupted(services):
     return stop is not None and stop.signum is not None
 
 
+@dataclass
+class _Context:
+    image: Path
+    config: dict
+    services: object
+    phase: str = "start"
+
+
+def inspect(image_path, config, services, *, inference_allowed=True):
+    """Schedule non-LLM work without performing authoritative filesystem I/O."""
+    image = Path(image_path)
+    # Non-LLM XMP remains eligible even when LLM admission is exhausted.
+    return WorkRequired("xmp", image, _Context(image, deepcopy(config), services))
+
+
+def start_or_resume(context, provider_result):
+    """Run the existing authoritative XMP path as one synchronous operation."""
+    if context.phase != "start" or provider_result is not None:
+        raise ValueError("continuation already consumed or unexpected result")
+    context.phase = "done"
+    return Terminal(_run_xmp(context.image, context.config, context.services))
+
+
 def run_xmp(image_path, config, services):
+    """Preserve the public synchronous entry point through the stage seam."""
+    step = inspect(image_path, config, services)
+    return drive(sys.modules[__name__], step, services)
+
+
+def _run_xmp(image_path, config, services):
     """Read persisted JSON, recover XMP, plan and safely publish a sidecar."""
     image = Path(image_path)
     source = Path(str(image) + ".desc.json")

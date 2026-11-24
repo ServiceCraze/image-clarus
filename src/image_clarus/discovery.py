@@ -21,6 +21,22 @@ class Candidate:
     selection_index: int
     selection: str
     kind: str
+    anchor: str | None = None
+
+    def __post_init__(self) -> None:
+        # Keep the original five-argument constructor usable while capturing
+        # its provenance at construction, never later during planning.
+        if self.anchor is None and self.kind in {"file", "directory", "pattern"}:
+            if self.kind == "file":
+                anchor = self.path.parent
+            elif self.kind == "directory":
+                anchor = Path(self.selection).expanduser().resolve()
+            else:
+                prefix, _ = split_pattern(
+                    str(Path(self.selection).expanduser()), windows=os.name == "nt"
+                )
+                anchor = Path(prefix).resolve()
+            object.__setattr__(self, "anchor", str(anchor))
 
 
 @dataclass(frozen=True)
@@ -160,13 +176,15 @@ def discover(
     kinds: list[str] = []
     traversed: set[tuple[str, tuple[str, ...] | None]] = set()
 
-    def add(path: Path, index: int, kind: str) -> None:
+    def add(path: Path, index: int, kind: str, anchor: Path) -> None:
         resolved = path.resolve(strict=True)
         identity = str(resolved)
         if identity not in seen:
             seen.add(identity)
             candidates.append(
-                Candidate(resolved, identity, index, selections[index], kind)
+                Candidate(
+                    resolved, identity, index, selections[index], kind, str(anchor)
+                )
             )
 
     def walk(
@@ -228,7 +246,7 @@ def discover(
                 ):
                     dirs.append((Path(entry.path), next_states))
             for path in files:
-                add(path, index, kind)
+                add(path, index, kind, root)
             if max_depth is None or depth < max_depth:
                 for path, next_states in dirs:
                     visit(path, depth + 1, next_states)
@@ -261,7 +279,7 @@ def discover(
                     if explicit_requires_eligibility and not eligibility(resolved):
                         raise DiscoveryError("selection file is not eligible")
                     kinds.append("file")
-                    add(resolved, index, "file")
+                    add(resolved, index, "file", resolved.parent)
                 elif stat.S_ISDIR(info.st_mode):
                     kinds.append("directory")
                     walk(resolved, index, "directory", None)

@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1 and B2 are complete; B2's Windows wildcard-classification defect has been corrected. B3 and later steps remain open. No integrated Slice 4 batch or category-management execution is claimed by B1/B2.
+**Status:** In progress. Phase A and B1–B3 are complete; B4 and later steps remain open. B2's Windows wildcard-classification defect has been corrected. No integrated Slice 4 batch or category-management execution is claimed by B1–B3.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -102,7 +102,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 - [x] Step B1 - Extend configuration and command boundaries [CODE]
 - [x] Step B2 - Implement reusable deterministic discovery [CODE]
-- [ ] Step B3 - Implement stage capabilities and metadata planning [CODE]
+- [x] Step B3 - Implement stage capabilities and metadata planning [CODE]
 - [ ] Step B4 - Implement per-image execution and state lifecycle [CODE]
 - [ ] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
 - [ ] Step B6 - Integrate dry-run progress and actual metrics [CODE]
@@ -363,11 +363,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Planning is complete before execution and respects the metadata-only boundary on success and failure paths.
-- [ ] Initial admission counts distinct images, honors deterministic order/regeneration, and does not suppress selected non-LLM eligibility after N.
-- [ ] Stage subsets never expand implicitly; XMP-only planning consumes no LLM slots.
-- [ ] Existing authoritative stage skip/recovery behavior remains correct after shared-logic extraction.
-- [ ] Required queue-count examples and generic-capability tests pass without using predictions as stage-success evidence.
+- [x] Planning is complete before execution and respects the metadata-only boundary on success and failure paths.
+- [x] Initial admission counts distinct images, honors deterministic order/regeneration, and does not suppress selected non-LLM eligibility after N.
+- [x] Stage subsets never expand implicitly; XMP-only planning consumes no LLM slots.
+- [x] Existing authoritative stage skip/recovery behavior remains correct after shared-logic extraction.
+- [x] Required queue-count examples and generic-capability tests pass without using predictions as stage-success evidence.
 
 **Dependencies:** B2; A2/A4 contracts.
 

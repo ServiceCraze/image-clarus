@@ -859,3 +859,211 @@ def test_parent_config_expansion_redacts_credentials(context, stage, monkeypatch
         and "FICTIONAL_KEY" not in text
         and "api_key_env" not in text
     )
+
+
+def test_resumable_retry_snapshots_stale_and_publication(context):
+    from image_clarus.stage_protocol import (
+        ProviderResult,
+        PublicationResult,
+        Publish,
+        Request,
+    )
+    from image_clarus.stages import structure
+
+    c = context
+    c.config["stages"]["json"].update(validation_retries=1, include_prompt_sha256=True)
+    original_desc, original_prompt, original_schema = (
+        c.desc.read_bytes(),
+        c.prompt.read_bytes(),
+        c.schema.read_bytes(),
+    )
+    work = structure.inspect(c.image, c.config, c.services)
+    first = structure.start_or_resume(work.context, None)
+    assert isinstance(first, Request) and first.request_id[:3] == (
+        str(c.image),
+        "json",
+        0,
+    )
+    c.desc.write_text("changed")
+    c.prompt.write_text("changed")
+    c.schema.write_text("{}")
+    c.config["models"]["text"]["model_id"] = "changed"
+    first.private_payload["arguments"]["schema"].clear()
+    second = structure.start_or_resume(
+        first.continuation, ProviderResult(first.request_id, content="not json")
+    )
+    assert isinstance(second, Request) and second.request_id[:3] == (
+        str(c.image),
+        "json",
+        1,
+    )
+    assert second.private_payload["arguments"]["description"] == original_desc.decode()
+    assert second.private_payload["arguments"]["schema"] == json.loads(original_schema)
+    assert second.private_payload["arguments"]["history"] == [
+        ("not json", {"kind": "json_parse", "code": "invalid_json"})
+    ]
+    with pytest.raises(ValueError, match="stale"):
+        structure.start_or_resume(
+            second.continuation,
+            ProviderResult(first.request_id, content='{"caption":"old"}'),
+        )
+    publication = structure.start_or_resume(
+        second.continuation,
+        ProviderResult(second.request_id, content='{"caption":"ok"}'),
+    )
+    assert isinstance(publication, Publish) and publication.validator(
+        publication.validated_bytes
+    )
+    envelope = json.loads(publication.validated_bytes)
+    assert (
+        envelope["provenance"]["description_sha256"]
+        == hashlib.sha256(original_desc).hexdigest()
+    )
+    assert (
+        envelope["provenance"]["prompt_sha256"]
+        == hashlib.sha256(original_prompt).hexdigest()
+    )
+    assert envelope["provenance"]["model_id"] == "synthetic"
+    with pytest.raises(ValueError):
+        structure.start_or_resume(
+            publication.continuation, ProviderResult(second.request_id, content="{}")
+        )
+    c.services.artifacts.write(
+        c.output,
+        publication.validated_bytes,
+        publication.validator,
+        validation_category="configuration",
+    )
+    assert (
+        structure.start_or_resume(
+            publication.continuation, PublicationResult(publication.publication_id)
+        ).result.status
+        == "completed"
+    )
+    with pytest.raises(ValueError):
+        structure.start_or_resume(
+            publication.continuation, PublicationResult(publication.publication_id)
+        )
+
+
+def test_resumable_exclusion_and_recheck(context):
+    from image_clarus.stage_protocol import Terminal
+    from image_clarus.stages import structure
+
+    c = context
+    excluded = structure.inspect(c.image, c.config, c.services, inference_allowed=False)
+    assert excluded.result.reason_code == "budget_excluded" and not c.requests
+    work = structure.inspect(c.image, c.config, c.services)
+    assert run(c).status == "completed"
+    c.desc.unlink()
+    checked = structure.start_or_resume(work.context, None)
+    assert (
+        isinstance(checked, Terminal) and checked.result.reason_code == "output_exists"
+    )
+    excluded = structure.inspect(c.image, c.config, c.services, inference_allowed=False)
+    assert excluded.result.reason_code == "output_exists"
+
+
+def test_resumable_provider_and_publication_failures(context):
+    from image_clarus.artifacts import ArtifactError
+    from image_clarus.stage_protocol import ProviderResult, PublicationResult
+    from image_clarus.stages import structure
+
+    c = context
+    work = structure.inspect(c.image, c.config, c.services)
+    request = structure.start_or_resume(work.context, None)
+    result = structure.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, error_category="provider_unavailable"),
+    )
+    assert (
+        result.result.error_category == "provider_unavailable" and not c.output.exists()
+    )
+    work = structure.inspect(c.image, c.config, c.services)
+    request = structure.start_or_resume(work.context, None)
+    publication = structure.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, content='{"caption":"ok"}'),
+    )
+    result = structure.start_or_resume(
+        publication.continuation,
+        PublicationResult(
+            publication.publication_id, ArtifactError("file_io", "fictional failure")
+        ),
+    )
+    assert result.result.error_category == "file_io" and not c.output.exists()
+
+
+def test_cross_context_publication_acknowledgement_rejected(context):
+    from image_clarus.stage_protocol import ProviderResult, PublicationResult
+    from image_clarus.stages import structure
+
+    image, config, services = context.image, context.config, context.services
+    publications = []
+    for _ in range(2):
+        work = structure.inspect(image, config, services)
+        request = structure.start_or_resume(work.context, None)
+        publications.append(
+            structure.start_or_resume(
+                request.continuation,
+                ProviderResult(request.request_id, content='{"caption":"ok"}'),
+            )
+        )
+    first, second = publications
+    assert first.publication_id != second.publication_id
+    with pytest.raises(ValueError, match="stale"):
+        structure.start_or_resume(
+            second.continuation, PublicationResult(first.publication_id)
+        )
+    assert not second.continuation.output.exists()
+    services.artifacts.write(
+        second.continuation.output,
+        second.validated_bytes,
+        second.validator,
+        validation_category=second.continuation.validation_category,
+    )
+    ack = PublicationResult(second.publication_id)
+    assert (
+        structure.start_or_resume(second.continuation, ack).result.status == "completed"
+    )
+    assert second.continuation.output.read_bytes() == second.validated_bytes
+    with pytest.raises(ValueError):
+        structure.start_or_resume(second.continuation, ack)
+    with pytest.raises(ValueError, match="stale"):
+        structure.start_or_resume(first.continuation, ack)
+
+
+def test_interrupted_provider_and_publication_are_not_stage_failures(context):
+    from image_clarus.artifacts import ArtifactError
+    from image_clarus.providers.openai_compatible import ProviderError
+    from image_clarus.stage_protocol import ProviderResult, PublicationResult
+    from image_clarus.stages import structure
+
+    c = context
+
+    def interrupted(**_kwargs):
+        raise ProviderError("interrupted")
+
+    c.services.provider_factory = lambda *_args: SimpleNamespace(structured=interrupted)
+    result = run(c)
+    assert (result.status, result.reason_code, result.error_category) == (
+        "skipped",
+        "interrupted",
+        None,
+    )
+    assert not c.output.exists()
+
+    work = structure.inspect(c.image, c.config, c.services)
+    request = structure.start_or_resume(work.context, None)
+    publication = structure.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, content='{"caption":"synthetic"}'),
+    )
+    result = structure.start_or_resume(
+        publication.continuation,
+        PublicationResult(publication.publication_id, ArtifactError("interrupted")),
+    )
+    assert (result.result.status, result.result.reason_code) == (
+        "skipped",
+        "interrupted",
+    )

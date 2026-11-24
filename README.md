@@ -1,6 +1,6 @@
 # image-clarus
 
-[Image Clarus](https://github.com/ServiceCraze/image-clarus) is an open-source CLI for using AI to describe your images, generate structured metadata and publish selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible LLM models; XMP publication consumes persisted JSON without a model. 
+[Image Clarus](https://github.com/ServiceCraze/image-clarus) is an open-source CLI for using AI to describe your images, generate structured metadata and publish selected metadata to an XMP sidecar. Description and JSON generation use configurable OpenAI-compatible LLM models; XMP publication consumes persisted JSON without a model.
 
 You can use local, remote, or a combination of AI models.  Description requires vision.  JSON generation can use any model that can read the text and generate JSON.  Brought to you by [Service Craze](https://www.servicecraze.com/).
 
@@ -201,3 +201,4 @@ ExifTool synthetic round trips are not digiKam interoperability tests. In manual
 - [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — complete; see the [C5 closeout](docs/slice-1/IMPL-C5-COMPLETED.md)
 - [Slice 2 requirements](docs/slice-2/REQ-slice-2.md), [discovery](docs/slice-2/DISCOVERY-slice-2.md), and [implementation plan](docs/slice-2/IMPL-PLAN-slice-2.md) — complete; see the [C5 closeout](docs/slice-2/IMPL-C5-COMPLETED.md) for the accepted prompt-control gap and evidence boundaries
 - [Slice 3 requirements](docs/slice-3/REQ-slice-3.md) and [implementation plan](docs/slice-3/IMPL-PLAN-slice-3.md)
+- [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — in progress; B1–B3 complete.

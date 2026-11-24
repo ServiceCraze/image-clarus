@@ -1,6 +1,6 @@
 # Step B2 - Implement reusable deterministic discovery [CODE] (COMPLETED)
 
-**Status:** Complete. The review-identified Windows wildcard-classification defect was corrected and verified as described below. Integrated process/rebuild command wiring and empty-run preflight remain B6/M2 and B6/C1 obligations; B3 has not been started. Earlier versioned test evidence remains historical.
+**Status:** Complete. The review-identified Windows wildcard-classification defect was corrected and verified as described below. At B2 closeout, integrated process/rebuild command wiring and empty-run preflight remained B6/M2 and B6/C1 obligations, and B3 had not started. B3's later completion is recorded below; earlier versioned test evidence remains historical.
 
 **Scope deviations:** None.
 
@@ -34,3 +34,7 @@ At version `0.3.26`, from the project root:
 - [x] The default candidate set visibly covers `jpg`, `jpeg`, `png`, `webp`, `tif` and `tiff`, subject to documented adapter support; configuration/CLI overrides work without claiming eligible extensions are decodable.
 - [x] Discovery handles empty/errors as designed and performs no stage, state, or content operations.
 - [x] Portable design and host-independent Windows drive/UNC/separator parsing tests, plus real Linux traversal, cover the A1 platform contract without claiming unperformed Windows runtime verification.
+
+## Subsequent progress
+
+B3 was later completed at version `0.3.29`; see [IMPL-B3-COMPLETED.md](IMPL-B3-COMPLETED.md). This subsequent work does not change B2's scope or the historical verification recorded above.

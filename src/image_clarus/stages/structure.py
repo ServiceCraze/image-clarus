@@ -3,14 +3,16 @@
 import hashlib
 import json
 import math
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
+from uuid import uuid4
 
 from jsonschema import Draft202012Validator
 
 from image_clarus import resources, schema_worker
 from image_clarus.artifacts import ArtifactError
 from image_clarus.config import ConfigurationError, _strict_json, _valid_tag_path
-from image_clarus.providers.openai_compatible import ProviderError
 from image_clarus.results import StageResult
 from image_clarus.schema_feedback import (
     _anchor_pointer as _anchor_pointer,  # noqa: PLC0414
@@ -29,6 +31,15 @@ from image_clarus.schema_feedback import (
 )
 from image_clarus.schema_feedback import (
     _schema_pointer as _schema_pointer,  # noqa: PLC0414
+)
+from image_clarus.stage_protocol import (
+    ProviderResult,
+    PublicationResult,
+    Publish,
+    Request,
+    Terminal,
+    WorkRequired,
+    drive,
 )
 
 
@@ -157,7 +168,22 @@ def _valid_envelope(data):
         return False
 
 
-def run_structure(image_path, config, services):
+@dataclass
+class _Context:
+    image: Path
+    config: dict
+    services: object
+    output: Path
+    phase: str = "start"
+    request_id: tuple | None = None
+    publication_id: str | None = None
+    validation_category: str = "configuration"
+    history: list = field(default_factory=list)
+    attempt: int = 0
+    snapshot: dict = field(default_factory=dict)
+
+
+def inspect(image_path, config, services, *, inference_allowed=True):
     image = Path(image_path)
     output = Path(str(image) + ".desc.json")
     settings = config["stages"]["json"]
@@ -168,14 +194,28 @@ def run_structure(image_path, config, services):
         )
     except ArtifactError as error:
         if not (regenerate and error.category == "invalid_artifact"):
-            return StageResult(
-                "json", "failed", error_category=error.category, message=str(error)
+            return Terminal(
+                StageResult(
+                    "json", "failed", error_category=error.category, message=str(error)
+                )
             )
         exists = True
     if exists and not regenerate:
-        return StageResult(
-            "json", "skipped", output_path=output, reason_code="output_exists"
+        return Terminal(
+            StageResult(
+                "json", "skipped", output_path=output, reason_code="output_exists"
+            )
         )
+    if not inference_allowed:
+        return Terminal(StageResult("json", "skipped", reason_code="budget_excluded"))
+    return WorkRequired(
+        "json", image, _Context(image, deepcopy(config), services, output)
+    )
+
+
+def _prepare(context):
+    image, config, services = context.image, context.config, context.services
+    settings = config["stages"]["json"]
     description_path = Path(str(image) + ".desc.txt")
     try:
         if not description_path.exists():
@@ -238,37 +278,133 @@ def run_structure(image_path, config, services):
         )
     except ConfigurationError:
         return StageResult("json", "failed", error_category="configuration")
-    history = []
-    metadata = None
-    for attempt in range(retries + 1):
-        try:
-            content = services.provider_factory(
-                config["providers"][provider_alias], model
-            ).structured(
-                prompt=prompt,
-                description=description,
-                schema=schema,
-                effort=settings["reasoning_effort"],
-                history=history,
+    context.snapshot = {
+        "prompt": prompt,
+        "prompt_bytes": prompt_bytes,
+        "description": description,
+        "description_bytes": description_bytes,
+        "schema": schema,
+        "schema_text": schema_text,
+        "schema_bytes": schema_bytes,
+        "model_alias": model_alias,
+        "provider_alias": provider_alias,
+        "model": model,
+        "provider": config["providers"][provider_alias],
+        "retries": retries,
+        "settings": settings,
+    }
+    return None
+
+
+def _request(context):
+    snap = context.snapshot
+    context.request_id = (str(context.image), "json", context.attempt, uuid4().hex)
+    context.phase = "request"
+    return Request(
+        context.request_id,
+        "structured",
+        {
+            "provider": deepcopy(snap["provider"]),
+            "model": deepcopy(snap["model"]),
+            "arguments": {
+                "prompt": snap["prompt"],
+                "description": snap["description"],
+                "schema": deepcopy(snap["schema"]),
+                "effort": snap["settings"]["reasoning_effort"],
+                "history": deepcopy(context.history),
+            },
+        },
+        context,
+    )
+
+
+def start_or_resume(context, provider_result):
+    if context.phase == "start":
+        if provider_result is not None:
+            raise ValueError("unexpected stage result")
+        checked = inspect(context.image, context.config, context.services)
+        if isinstance(checked, Terminal):
+            context.phase = "done"
+            return checked
+        result = _prepare(context)
+        if result is not None:
+            context.phase = "done"
+            return Terminal(result)
+        return _request(context)
+    if context.phase == "publish":
+        if (
+            not isinstance(provider_result, PublicationResult)
+            or provider_result.publication_id != context.publication_id
+        ):
+            raise ValueError("stale or invalid publication result")
+        context.phase = "done"
+        if provider_result.error:
+            error = provider_result.error
+            if error.category == "interrupted":
+                return Terminal(
+                    StageResult("json", "skipped", reason_code="interrupted")
+                )
+            return Terminal(
+                StageResult(
+                    "json", "failed", error_category=error.category, message=str(error)
+                )
             )
-        except ProviderError as error:
-            return StageResult("json", "failed", error_category=error.category)
-        try:
-            metadata = _parse(content)
-        except _ParseError as error:
-            feedback = {"kind": "json_parse", "code": str(error)}
-        else:
-            validation = schema_worker.validate(
-                schema_text, metadata, timeout=schema_worker.SCHEMA_TIMEOUT_SECONDS
+        return Terminal(StageResult("json", "completed", output_path=context.output))
+    if context.phase != "request":
+        raise ValueError("continuation already consumed")
+    if (
+        not isinstance(provider_result, ProviderResult)
+        or provider_result.request_id != context.request_id
+    ):
+        raise ValueError("stale or invalid provider result")
+    if provider_result.error_category:
+        context.phase = "done"
+        if provider_result.error_category == "interrupted":
+            return Terminal(StageResult("json", "skipped", reason_code="interrupted"))
+        return Terminal(
+            StageResult("json", "failed", error_category=provider_result.error_category)
+        )
+    content = provider_result.content
+    try:
+        metadata = _parse(content)
+    except (TypeError, _ParseError) as error:
+        feedback = {
+            "kind": "json_parse",
+            "code": str(error) if isinstance(error, _ParseError) else "invalid_json",
+        }
+    else:
+        validation = schema_worker.validate(
+            context.snapshot["schema_text"],
+            metadata,
+            timeout=schema_worker.SCHEMA_TIMEOUT_SECONDS,
+        )
+        if validation.get("status") == "ok":
+            return _publish(context, metadata)
+        if validation.get("status") != "invalid_instance":
+            context.phase = "done"
+            return Terminal(
+                StageResult("json", "failed", error_category="configuration")
             )
-            if validation.get("status") == "ok":
-                break
-            if validation.get("status") != "invalid_instance":
-                return StageResult("json", "failed", error_category="configuration")
-            feedback = validation["feedback"]
-        if attempt == retries:
-            return StageResult("json", "failed", error_category="schema_validation")
-        history.append((content, feedback))
+        feedback = validation["feedback"]
+    if context.attempt == context.snapshot["retries"]:
+        context.phase = "done"
+        return Terminal(
+            StageResult("json", "failed", error_category="schema_validation")
+        )
+    context.history.append((content, feedback))
+    context.attempt += 1
+    return _request(context)
+
+
+def _publish(context, metadata):
+    snap = context.snapshot
+    settings, model = snap["settings"], snap["model"]
+    provider_alias, model_alias = snap["provider_alias"], snap["model_alias"]
+    schema_bytes, description_bytes, prompt_bytes = (
+        snap["schema_bytes"],
+        snap["description_bytes"],
+        snap["prompt_bytes"],
+    )
     envelope = {
         "format_version": 1,
         "schema_id": "urn:image-clarus:custom-metadata-schema"
@@ -291,19 +427,25 @@ def run_structure(image_path, config, services):
     if settings.get("include_prompt_sha256", False):
         envelope["provenance"]["prompt_sha256"] = _hash(prompt_bytes)
     if not Draft202012Validator(_ENVELOPE).is_valid(envelope):
-        return StageResult("json", "failed", error_category="configuration")
+        context.phase = "done"
+        return Terminal(StageResult("json", "failed", error_category="configuration"))
     data = (
         json.dumps(
             envelope, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False
         )
         + "\n"
     ).encode("utf-8")
-    try:
-        services.artifacts.write(
-            output, data, _valid_envelope, validation_category="configuration"
-        )
-    except ArtifactError as error:
-        return StageResult(
-            "json", "failed", error_category=error.category, message=str(error)
-        )
-    return StageResult("json", "completed", output_path=output)
+    context.publication_id = uuid4().hex
+    context.phase = "publish"
+    return Publish(context.publication_id, data, _valid_envelope, context)
+
+
+def run_structure(image_path, config, services):
+    import sys
+
+    step = inspect(image_path, config, services)
+    return (
+        step.result
+        if isinstance(step, Terminal)
+        else drive(sys.modules[__name__], step, services)
+    )

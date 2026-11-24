@@ -272,3 +272,153 @@ def test_invalid_utf8_existing_is_not_replaced(context):
     assert (result.status, result.error_category) == ("failed", "invalid_artifact")
     assert output.read_bytes() == b"\xff"
     assert requests == []
+
+
+def test_resumable_request_identity_snapshot_and_publication(context):
+    from image_clarus.stage_protocol import (
+        ProviderResult,
+        PublicationResult,
+        Publish,
+        Request,
+    )
+    from image_clarus.stages import description
+
+    image, config, services, requests, _ = context
+    work = description.inspect(image, config, services)
+    config["models"]["vision"]["model_id"] = "changed"
+    request = description.start_or_resume(work.context, None)
+    assert isinstance(request, Request)
+    assert request.private_payload["model"]["model_id"] == "vision-one"
+    assert request.private_payload["arguments"]["image_bytes"] == PNG
+    assert requests == []
+    with pytest.raises(ValueError):
+        description.start_or_resume(
+            request.continuation, ProviderResult(("stale",), content="bad")
+        )
+    publication = description.start_or_resume(
+        request.continuation, ProviderResult(request.request_id, content="real result")
+    )
+    assert isinstance(publication, Publish)
+    with pytest.raises(ValueError):
+        description.start_or_resume(
+            request.continuation,
+            ProviderResult(request.request_id, content="duplicate"),
+        )
+    services.artifacts.write(
+        publication.continuation.output,
+        publication.validated_bytes,
+        publication.validator,
+        validation_category="provider_unavailable",
+    )
+    result = description.start_or_resume(
+        publication.continuation, PublicationResult(publication.publication_id)
+    )
+    assert result.result.status == "completed"
+    assert publication.continuation.output.read_bytes() == b"real result"
+    with pytest.raises(ValueError):
+        description.start_or_resume(
+            publication.continuation, PublicationResult(publication.publication_id)
+        )
+
+
+def test_inspection_exclusion_and_recheck(context):
+    from image_clarus.stage_protocol import Terminal
+    from image_clarus.stages import description
+
+    image, config, services, requests, _ = context
+    excluded = description.inspect(image, config, services, inference_allowed=False)
+    assert excluded.result.reason_code == "budget_excluded"
+    work = description.inspect(image, config, services)
+    output = image.with_name(image.name + ".desc.txt")
+    output.write_bytes(b"concurrent output")
+    result = description.start_or_resume(work.context, None)
+    assert isinstance(result, Terminal)
+    assert result.result.reason_code == "output_exists"
+    assert requests == []
+
+
+def test_cross_context_publication_acknowledgement_rejected(context):
+    from image_clarus.stage_protocol import ProviderResult, PublicationResult
+    from image_clarus.stages import description
+
+    image, config, services, _, _ = context
+    publications = []
+    for _ in range(2):
+        work = description.inspect(image, config, services)
+        request = description.start_or_resume(work.context, None)
+        publications.append(
+            description.start_or_resume(
+                request.continuation,
+                ProviderResult(request.request_id, content="fictional"),
+            )
+        )
+    first, second = publications
+    assert first.publication_id != second.publication_id
+    with pytest.raises(ValueError, match="stale"):
+        description.start_or_resume(
+            second.continuation, PublicationResult(first.publication_id)
+        )
+    assert not second.continuation.output.exists()
+    services.artifacts.write(
+        second.continuation.output,
+        second.validated_bytes,
+        second.validator,
+        validation_category=second.continuation.validation_category,
+    )
+    ack = PublicationResult(second.publication_id)
+    assert (
+        description.start_or_resume(second.continuation, ack).result.status
+        == "completed"
+    )
+    assert second.continuation.output.read_bytes() == second.validated_bytes
+    with pytest.raises(ValueError):
+        description.start_or_resume(second.continuation, ack)
+    with pytest.raises(ValueError, match="stale"):
+        description.start_or_resume(first.continuation, ack)
+
+
+def test_interrupted_provider_and_publication_are_not_stage_failures(context):
+    from image_clarus.artifacts import ArtifactError
+    from image_clarus.providers.openai_compatible import ProviderError
+    from image_clarus.stage_protocol import (
+        ProviderResult,
+        PublicationResult,
+        Publish,
+        Request,
+        Terminal,
+        WorkRequired,
+    )
+    from image_clarus.stages import description
+
+    image, config, services, _, _ = context
+
+    def interrupted(**_kwargs):
+        raise ProviderError("interrupted")
+
+    services.provider_factory = lambda *_args: SimpleNamespace(image=interrupted)
+    result = run_description(image, config, services)
+    assert (result.status, result.reason_code, result.error_category) == (
+        "skipped",
+        "interrupted",
+        None,
+    )
+    assert not image.with_name(image.name + ".desc.txt").exists()
+
+    work = description.inspect(image, config, services)
+    assert isinstance(work, WorkRequired)
+    request = description.start_or_resume(work.context, None)
+    assert isinstance(request, Request)
+    publication = description.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, content="fictional output"),
+    )
+    assert isinstance(publication, Publish)
+    result = description.start_or_resume(
+        publication.continuation,
+        PublicationResult(publication.publication_id, ArtifactError("interrupted")),
+    )
+    assert isinstance(result, Terminal)
+    assert (result.result.status, result.result.reason_code) == (
+        "skipped",
+        "interrupted",
+    )

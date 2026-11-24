@@ -68,6 +68,18 @@ def test_missing_json_reports_configured_prerequisite_policy(tmp_path):
     assert image.read_bytes() == b"fictional image bytes"
 
 
+def test_xmp_continuation_uses_captured_configuration(tmp_path):
+    image, config, services = setup_stage(tmp_path)
+    work = xmp.inspect(image, config, services, inference_allowed=False)
+    config["pipeline"]["missing_prerequisite"] = "skip"
+
+    outcome = xmp.start_or_resume(work.context, None)
+
+    assert outcome.result.status == "failed"
+    assert outcome.result.error_category == "missing_prerequisite"
+    assert xmp.run_xmp(image, config, services).reason_code == "missing_prerequisite"
+
+
 def test_real_exiftool_publication_replacement_and_idempotence(tmp_path):
     if not shutil.which("exiftool"):
         pytest.skip("real ExifTool not on PATH")
