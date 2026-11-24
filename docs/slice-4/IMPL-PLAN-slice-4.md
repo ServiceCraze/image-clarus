@@ -267,6 +267,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 4. Replace provisional module/interface/test paths in the dependent steps with chosen names. Confirm contracts for every CODE step, test coordination, dependency direction, actual command support, and evidence ownership. No feature implementation is performed by this readiness step.
 5. Audit the decision ledger for unresolved significant TBDs, contradictory defaults, hidden migrations/content reads, implicit prerequisite expansion, duplicated completion logic, or acceptance that fabricates recovery success. If any remain, Phase A is incomplete and implementation cannot advance.
 6. Synchronize plan/phase status and document genuine exceptions with approval. Readiness follows normal orchestration; it does not create a second REQ acceptance gate or apply retroactively to previous slices.
+7. Resolve the A2 transport review: compare the concrete per-request subprocess baseline with cancellable `httpx.AsyncClient`, including cooperative versus forcible cancellation, actor/event-loop ownership, provider behavior and privacy, deterministic testability, and Windows-by-design implications. Select and justify one, record acceptance scenarios and reconcile all affected A2/A5/B3–B5/C2 contracts before closing Phase A; no significant transport decision may be deferred to implementation.
 
 **Outputs:** [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md), with the complete decision index, approvals where required, crosswalk/readiness findings, and updated plan references.
 
