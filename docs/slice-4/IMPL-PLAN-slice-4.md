@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1, A2 and A4 design are complete; A3 is in progress, and A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A4.
+**Status:** In progress. A1, A2 and A4 design are complete; A3 and A5 are in progress, and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -570,7 +570,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 3. Verify distinct-image budgets, regeneration, no slot replenishment, known exclusions, XMP-only uncapped evaluation, the 10,000-image progressive example, and permitted runtime corrections beyond N and 2N. Use real stage decisions for missing/invalid/recovered cases rather than fabricated success results.
 4. Verify state identity across multiple collections in both execution modes, explicit/CWD sharing, memory/fallback behavior, generated/skipped JSON accumulation, prior-image prompt visibility in sequential mode, and accepted concurrent timing.
 5. Compare dry-run predictions to the real run's initial plan on unchanged fixtures. With a small deterministic multi-root selection and allowance N, assert **specific file identities and order** in dry-run's admitted, initially no-work, and known budget-excluded groups, including the boundary file where N is reached; ensure aggregate-only reporting, when provided, does not remove that observable detail. Verify estimates and no-content/no-execution/no-mutation boundaries through startup and failure. Check default/verbose outputs, channels, redaction, exact file/stage accounting and XMP writes versus evaluations.
-6. Use scalable synthetic discovery/queue fixtures for the 10,000 case and separately exercise representative real CLI/stage/XMP integration. Record each evidence boundary; a scheduler fixture alone does not prove all XMP mappings.
+6. Use scalable synthetic discovery/queue fixtures for the 10,000 case and assert 10,000 actual entries into the selected XMP evaluation boundary, not only predicted routes; use provider-free controlled collaborators and preserve real result/prerequisite decisions. Separately exercise representative real CLI/stage/XMP integration. Record each evidence boundary; a scheduler fixture alone does not prove all XMP mappings or 10,000 writes.
 
 **Outputs:** Integrated acceptance tests and actual E01–E12/E17–E19 evidence from §6; [IMPL-C1-COMPLETED.md](IMPL-C1-COMPLETED.md).
 
@@ -708,7 +708,7 @@ E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E1
 | E14 | Categories list/clear | Actual commands cover read-only bytes/schema/directory preservation, no-store/access/corruption/migration-needed failures, category-only clear, rollback/stop behavior and concurrent transactions. | M1, M3 | Not run |
 | E15 | Categories rebuild | Existing categories retained; recognized JSON paths deduplicate; independent traversal; no XMP/inference; valid empty inputs, invalid/unreadable/partial/interrupted/storage-failure/concurrent outcomes; 997/3 example and explicit clear-then-rebuild. | M2, M3 | Not run |
 | E16 | Regression | Fresh relevant/full suites and installed package preserve stage/config/prompt/schema/state/XMP/source/artifact contracts; imports/reachability/privacy/version evidence is recorded at its real version. | All CODE steps, C3 | Not run |
-| E17 | Selection identity and errors | Overlapping roots/patterns/explicit paths, approved alias/hard-link handling, deterministic deduplication, no-match/unreadable selections and invalid controls cannot double-budget or silently duplicate execution. | B1, B2, C1 | Not run |
+| E17 | Selection identity and errors | Overlapping roots/patterns/explicit paths deduplicate by approved exact resolved-path spelling. Case-variant/other aliases retaining distinct spellings may process and consume allowance separately; hard-link names remain distinct. Test deterministic ordering, no-match/unreadable selections and invalid controls without claiming physical-file deduplication. | B1, B2, C1 | Not run |
 | E18 | Runtime admission boundaries | Table-driven cases distinguish all three initial classes across recovered/invalid/new/missing outputs, selected subsets, regeneration and continuation; no accidental refill or unbudgeted promotion of known exclusions. | B3–B5, C1, C2 | Not run |
 | E19 | Startup and empty-run boundaries | Dry-run with selected XMP, unavailable execution dependencies, bad/old state, no-work/empty selections and startup errors preserves its access limits; estimate and zero-denominator behavior match A4. | B1, B6, C1 | Not run |
 | E20 | Partial abort and worker failures | A two-image case with early-stage failure and valid downstream persisted data distinguishes continue-next-stage, default stop-current-image, and abort-batch; other work follows the selected policy. Abort, worker exception and signal cannot deadlock or hide outcomes. Exit and summary reconcile all terminal/not-attempted records. | B5, B6, C2 | Not run |
@@ -769,7 +769,7 @@ Use `desc,json,xmp`, with 6,000 images having both description and JSON, 1,000 h
 
 The limited initial XMP route is 6,000 already-complete predictions plus the 1,000 description-only and 2,000 neither-output images excluded from LLM work. These are initial routing predictions, subject to the authoritative confirmation protocol. They do not mean XMP executes before necessary same-image checks.
 
-If admitted stages succeed and the run is neither aborted nor interrupted, all 10,000 reach XMP **evaluation**: 9,000 through their initial routes and 1,000 progressively. The 3,000 excluded images without JSON have their ordinary prerequisite outcomes; the other evaluations can write or return `no_change`. The admitted 1,000 can cause 1,000 description and 1,000 JSON LLM executions while consuming only 1,000 image slots. Do not assert 10,000 successful XMP writes.
+If predicted existing outputs validate, admitted stages succeed, no earlier stage stops an image, and the run is neither aborted nor interrupted, all 10,000 reach XMP **evaluation**: 9,000 through their initial routes and 1,000 progressively. Earlier validation failures instead follow configured continuation and may stop an image. The 3,000 excluded images without JSON have their ordinary prerequisite outcomes; the other evaluations can write or return `no_change`. The admitted 1,000 can cause 1,000 description and 1,000 JSON LLM executions while consuming only 1,000 image slots. Do not assert 10,000 successful XMP writes.
 
 ### 8.2 Corrective work and the absence of a twice-N cap
 

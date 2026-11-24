@@ -2,6 +2,10 @@
 
 **Status:** Design in progress; the Product Owner approved the three category-management decisions below. A5 must resolve the read-only backend and portability of target-identity safeguards before the Phase A gate closes. No Slice 4 management command, batch state engine, or acceptance test is implemented here. Requirements readiness follows assignment; no separate REQ acceptance gate is introduced.
 
+**Subsequent A5 progress:** [A5](IMPL-A5-COMPLETED.md) made the non-migrating-open and atomic first-mutation sequence explicit, but safe nonmutating recognition remains unresolved. A3's two affected acceptance rows remain open; earlier versioned test evidence is unchanged.
+
+**Subsequent scratch feasibility:** A5 records Linux-only synthetic VFS tests showing rollback-mode reads, lock contention, and fail-closed hot-journal/WAL behavior under the tested conditions. The probe is not a production or cross-platform proof, native packaging remains unresolved, and the A3 read-only acceptance row remains open.
+
 **Scope deviations:** None. The Product Owner approved CWD-selected management state, registered migrations for clear and nonempty rebuild, and explicit/orphan sidecar inputs; list and empty/no-category rebuild never migrate.
 
 ## 1. Scope and dependency boundaries
@@ -86,6 +90,8 @@ Both ordinary accumulation and rebuild use the same result-bearing extraction: r
 `clear` validates the selected store and performs one short `BEGIN IMMEDIATE` transaction deleting only `known_categories`; obtain the deleted count from that transaction, check stop before commit, and commit or roll back. Preserve all other tables/domains and all images/sidecars. A zero-row clear is successful. Existing triggers on protected tables are rejected by current schema validation; do not disable them or alter schema to clear. A failed begin/delete/commit reports failure without claiming removal.
 
 `rebuild` processes each discovered sidecar independently. For each valid nonempty extracted set, open the same selected persistent store, validate and `BEGIN IMMEDIATE`; insert distinct paths with `INSERT OR IGNORE`, count actual inserts inside that transaction, check stop, commit and close. Every successful sidecar commits independently; a later bad file does not roll back prior work. Input read/extraction errors are diagnosed and scanning continues. A storage open/write/commit failure stops further updates, reports failure with confirmed and unknown outcomes distinguished below, and never redirects to memory. Under competing writers, inserted counts come from successful inserts in this command's transactions, not before/after snapshots; a concurrent clear can remove them later. Empty/no-category inputs cause no mutation. Existing 250 ms lock-contention policy remains; it bounds lock wait, not arbitrary filesystem latency.
+
+For an older recognized store, this sequence means specifically: nonmutating recognition before discovery; scan until the first valid nonempty category contribution; only then open the same selected path without a migration-capable constructor, check optional reliable replacement identity, acquire `BEGIN IMMEDIATE`, revalidate the version while holding the transaction, apply the registered migration and first union within that same transaction, check stop, then commit or roll back together. The clear path performs the same transactional migration-and-delete sequence. A constructor that silently commits migration before the union/delete is prohibited. A missing registration, migration error or known rollback fails visibly; an uncertain commit is reported as such. No-category scans never enter this sequence. These are future implementation/test obligations, not an assertion the existing constructor already supports them.
 
 ## 7. Results, errors and concurrent operations
 
