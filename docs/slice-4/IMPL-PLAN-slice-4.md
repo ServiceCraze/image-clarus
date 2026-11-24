@@ -86,7 +86,7 @@ Recheck the baseline before executing a step. The paths and symbols below exist 
 
 ## 3. Phase summary checklist
 
-Phase M is the separate category-management phase required by S4-15–17. It is placed between batch implementation and closeout while retaining the project's Phase A design, Phase B implementation, and Phase C verification convention. Dependencies, not display order alone, govern assignments: M1 can proceed once A5 and shared configuration B1 are complete; M2 also needs reusable discovery B2. Category management does not depend on a completed concurrent batch engine.
+Phase M is the separate category-management phase required by S4-15–17. It is placed between batch implementation and closeout while retaining the project's Phase A design, Phase B implementation, and Phase C verification convention. Steps are assigned in displayed linear order across phases; dependencies describe inputs, not permission to skip preceding steps. M1 uses A5 and B1; M2 also uses B2. Category management has no functional dependency on the concurrent batch engine, although B3–B6 precede it in the displayed sequence.
 
 ### Phase A Discovery and design completion
 
@@ -136,7 +136,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 ### Phase A Discovery and design completion
 
-**Entry:** Design work is assigned. Reconcile any checkout changes since the inspected baseline. A1–A4 may be developed alongside one another, but their shared contracts must agree before A5. Design records distinguish fixed requirements, observed behavior, proposed decisions, and approved decisions.
+**Entry:** Design work is assigned. Reconcile any checkout changes since the inspected baseline. A1–A4 are completed historical steps; their shared contracts must agree before A5. Design records distinguish fixed requirements, observed behavior, proposed decisions, and approved decisions.
 
 ### Step A1 - Freeze selection and configuration contracts [DESIGN]
 
@@ -217,6 +217,8 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 7. Define rebuild enumeration, source identity, explicit sidecar inputs if supported, orphan sidecars/image association policy, transaction granularity, successes/no-category skips/failures, interruption, and storage errors. Invalid/unreadable inputs continue best effort; already committed additions remain. Define truthful counts for inspected inputs, category-bearing inputs, eligible paths, and inserted paths without attributing concurrent writers' additions to this command.
 8. Complete management decision tables for no-store/access/migration errors, empty input, partial success, failed clear/update/commit, interruption, concurrent list/add/clear/rebuild, and ordinary processing during management. Preserve short SQLite transactions and order-dependent results; neither a whole-scan lock nor replacement rebuild is authorized. Specify independent-process tests.
 
+**Later Product Owner clarification (A5):** The read-only contract is logical application data/schema read-only with stdlib `sqlite3`; ordinary journal/WAL/shared-memory and access-time effects are permitted. List does not initialize or migrate. Registered migrations are allowed transactionally with clear or the first eligible update of a nonempty rebuild; empty/no-category rebuild does not migrate. This supersedes stricter physical no-write interpretations without changing the historical A3 record.
+
 **Outputs:** Per-image state/finalization contract, management selection/access/result tables, extraction boundary, and concurrency scenarios in [IMPL-A3-COMPLETED.md](IMPL-A3-COMPLETED.md); confirmed implementation paths for B4 and Phase M.
 
 **Acceptance**
@@ -271,7 +273,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 5. Audit the decision ledger for unresolved significant TBDs, contradictory defaults, hidden migrations/content reads, implicit prerequisite expansion, duplicated completion logic, or acceptance that fabricates recovery success. If any remain, Phase A is incomplete and implementation cannot advance.
 6. Synchronize plan/phase status and document genuine exceptions with approval. Readiness follows normal orchestration; it does not create a second REQ acceptance gate or apply retroactively to previous slices.
 7. Resolve the A2 transport review: compare the concrete per-request subprocess baseline with cancellable `httpx.AsyncClient`, including cooperative versus forcible cancellation, actor/event-loop ownership, provider behavior and privacy, deterministic testability, and Windows-by-design implications. Select and justify one, record acceptance scenarios and reconcile all affected A2/A5/B3–B5/C2 contracts before closing Phase A; no significant transport decision may be deferred to implementation.
-8. Resolve A3's strict read-only SQLite backend without presuming a native VFS; compare candidate safety and Linux/Windows packaging feasibility, including WAL/hot-journal races. Reconcile portable best-effort repository replacement detection without requiring optional filesystem identity, and preserve the Product Owner-approved target, migration and sidecar decisions. A3's remaining acceptance must be closed before Phase A closes.
+8. Apply the Product Owner decision: use Python stdlib `sqlite3` on normal Linux/Windows installations for logical data/schema read-only list, with ordinary SQLite journal/WAL/shared-memory and OS access-time effects allowed. List never initializes, migrates, repairs or changes application data/schema; report inaccessible, corrupt or migration-required state. Do not add a custom VFS, bundled SQLite, C extension, detached snapshot or custom packaging. Reconcile portable best-effort repository replacement detection without requiring optional filesystem identity, and reconcile the target, transaction/migration and sidecar decisions before Phase A closes.
 
 **Outputs:** [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md), with the complete decision index, approvals where required, crosswalk/readiness findings, and updated plan references.
 
@@ -281,9 +283,9 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Required product decisions are approved; already decided behavior has not been reopened unnecessarily.
 - [ ] Every implementation/evidence step has concrete inputs, observable outcomes, dependencies, and future completion-record links.
 - [ ] Requirements, accepted examples, failure boundaries, and end-state allocation are covered without silent scope deferral.
-- [ ] The orchestrator can advance to B1 or the eligible Phase M work using the completed design evidence.
+- [ ] The orchestrator can advance to B1 using the completed design evidence, then follow the displayed step sequence.
 
-**Dependencies:** A1, A2 and A4; A3 may remain in progress specifically for the A5 read-only-backend and portable-identity reconciliation, but its acceptance must be complete before A5 itself closes. A5 completion is mandatory before any B or M implementation.
+**Dependencies:** A1–A4 are complete; A5 owns reconciliation of the later Product Owner SQLite decision and portable identity, without rewriting historical A3 work. A5 completion is mandatory before any B or M implementation.
 
 ### Phase B Batch implementation
 
@@ -463,19 +465,19 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Actions**
 
 1. Implement management repository selection and strict errors, including no-store, invalid/inaccessible store and unsupported/migration-required cases. Preserve explicit selection; do not use ordinary `StateService` fallback to make a failed operation appear successful.
-2. Implement read-only open/validation and category listing without initialization, migration, repair, category mutation, provider/XMP activity or repository-file creation. Use the A3 access policy, not merely a read method on the existing writable constructor.
-3. Extend category/storage interfaces for category-only clear with the existing short transaction, contention and stop behavior. Preserve unrelated domains, schema metadata, source images and sidecars. Failure/rollback must not be reported as successful clear.
+2. Implement logical data/schema read-only open/validation and category listing with stdlib `sqlite3`, without initialization, migration, repair, application data/schema mutation or provider/XMP activity. Normal SQLite journal/WAL/shared-memory and OS access-time effects are allowed; do not restore timestamps. Do not rely on a read method on the existing migration-capable writable constructor.
+3. Extend category/storage interfaces for category-only clear with short transaction, contention and stop behavior. A registered required migration and clear occur atomically in the same transaction; preserve unrelated domains, source images and sidecars, and schema except for the registered migration. Failure/rollback must not be reported as successful clear.
 4. Wire actual list/clear CLI grammar, useful output and exact exit/channel behavior from A4. Clear must support explicit noninteractive usage under the accepted command contract.
-5. Test persistent bytes/schema/directory contents around successful and failed list, including migration-needed fixtures. Test clear preservation, empty categories, failed update/commit, stop boundaries and unchanged ordinary-processing fallback.
-6. Implement and package the selected A3 native SQLite VFS extension, bundled SQLite and detached-snapshot adapter. Configure the Linux/Windows wheel and source-distribution builds and verify available builds under its stated contract; exercise native wrapper read-only denial, real rollback locks, cold/hot journal and mode-change races, unavailable extension, memory/close failures and clean installation. Do not claim a Windows build or runtime result without running it.
+5. Test unchanged application data and schema around successful and failed list, including migration-needed fixtures; permit normal journal/WAL/shared-memory and access-time effects rather than asserting unchanged database bytes or directory contents. Test clear preservation, transactional migration and rollback, empty categories, failed update/commit, stop boundaries and unchanged ordinary-processing fallback.
+6. Exercise stdlib SQLite read-only listing with rollback-journal and WAL fixtures, including concurrent access and clear errors when SQLite cannot read safely; test ordinary installation without custom SQLite packaging. Do not claim unperformed Windows runtime results.
 
 **Outputs:** Strict access/list/clear interfaces and commands, focused tests, and [IMPL-M1-COMPLETED.md](IMPL-M1-COMPLETED.md).
 
 **Acceptance**
 
-- [ ] List is read-only throughout opening/validation/reporting, including migration-needed and inaccessible-store cases.
+- [ ] List is logically data/schema read-only throughout opening/validation/reporting, including migration-needed and inaccessible-store cases; normal SQLite and OS read effects are allowed.
 - [ ] Missing or invalid persistent state cannot appear as an empty successful persistent listing.
-- [ ] Clear removes categories only and reports transaction/access failures accurately without another persistent destination or memory substitution.
+- [ ] Clear removes categories only, with any registered migration in the same transaction, and reports transaction/access failures accurately without another persistent destination or memory substitution.
 - [ ] Dedicated command behavior and ordinary optional-processing state behavior remain distinct and tested.
 
 **Dependencies:** A5, B1. M1 does not depend on B3–B6.
@@ -490,10 +492,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 1. Extract or extend the shared result-bearing JSON/category reader chosen in A3. Keep ordinary accumulation's accepted envelope/schema/candidate behavior, full path identity, deduplication, and state-to-stage dependency boundary intact.
 2. Implement rebuild source selection with recursive default, independent depth and the approved symlink/duplicate/sidecar eligibility rules. Select and retain the single management target independently from source enumeration.
-3. Add eligible categories to existing state in the frozen short transaction units. Do not clear, replace, normalize, infer, invoke XMP, regenerate JSON, or hold a write lock across the scan. Empty results leave persistent state unchanged, including startup effects covered by A3.
+3. Add eligible categories to existing state in short transaction units. For a nonempty rebuild requiring a registered migration, perform migration and the first eligible update in the same transaction; on failure roll both back. Do not clear, replace, normalize, infer, invoke XMP, regenerate JSON, or hold a write lock across the scan. Empty/no-category results perform no migration or application data/schema mutation.
 4. Continue past invalid/unreadable input; retain already committed valid contributions after partial failure or interruption. Handle storage failures according to A3 and expose them instead of silently falling back.
 5. Report inspected/successful/no-category/skipped/failed inputs and category contributions using the defined counts, without attributing other writers' changes to this invocation. Preserve exact exit and interruption outcomes.
-6. Test existing categories, duplicates, historical/custom schemas, missing candidates, invalid envelope/candidates, unreadable input, zero inputs, no-category-only scans, independent depth, explicit/discovered symlinks, partial success and interrupted accumulation. Include the 997-of-1,000 case.
+6. Test existing categories, duplicates, historical/custom schemas, missing candidates, invalid envelope/candidates, unreadable input, zero inputs, no-category-only scans, independent depth, explicit/discovered symlinks, partial success and interrupted accumulation. Verify migration plus first update commit/rollback atomically and no migration for empty/no-category rebuild. Include the 997-of-1,000 case.
 
 **Outputs:** Additive rebuild command and shared extraction/reporting code with tests; [IMPL-M2-COMPLETED.md](IMPL-M2-COMPLETED.md).
 
@@ -514,7 +516,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Actions**
 
-1. Exercise real CLI list/clear/rebuild with CLI/YAML/CWD/source contexts and the frozen no-store outcomes. Verify read-only list and visible command failures without provider/ExifTool dependencies or silent repository changes.
+1. Exercise real CLI list/clear/rebuild with CLI/YAML/CWD/source contexts and the frozen no-store outcomes. Verify logical data/schema read-only list and visible command failures without provider/ExifTool dependencies or application data/schema changes; allow normal SQLite journal/WAL/shared-memory and OS access-time effects.
 2. Exercise clear preservation, explicit clear-then-rebuild, prior-category retention, supported/unsupported JSON, empty scans, partial results and the 997-success/3-failure example. Compare source/sidecar bytes and unrelated state domains.
 3. Use independent OS processes and deterministic transaction barriers for list during mutation, concurrent additions, rebuild/rebuild, clear/rebuild, contention, and interruption around commit. Assert valid outcomes consistent with transaction order, not a deterministic final union in the presence of clear.
 4. Verify ordinary image processing can read/update state during management within the existing storage contract, with no transaction held across inference or a whole rebuild. Preserve visible nonblocking processing failures and separate strict command exits.
@@ -711,8 +713,8 @@ E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E1
 | E11 | Dry-run | Actual CLI produces matching initial plan/counts, a labeled memory estimate, and deterministic **per-file admitted/no-work/excluded identities and allowance-exhaustion boundary** (not merely correct totals); no stages, inference, ExifTool, image/sidecar-content reads, accumulation or mutations. Aggregate-only presentation remains optional. | B1, B3, B6, C1 | Not run |
 | E12 | Verbose and metrics | Per-image/stage starts/outcomes/timings and final counts reconcile planned bypasses, actual results, initial admission, corrective identities, actual LLM identities, retries if reported, deviations and elapsed time. 100% accounted is not reported as universal success. | B6, C1, C2 | Not run |
 | E13 | Interruption/resume | Actual SIGINT/SIGTERM processes cancel held inference, preserve started safe writes, report unattempted/interrupted work and resume from valid sidecars in a fresh invocation. | B5, C2 | Not run |
-| E14 | Categories list/clear | Actual commands cover read-only bytes/schema/directory preservation with ordinary OS-managed access-time updates allowed, no-store/access/corruption/migration-needed failures, a clear error for WAL when no safe no-write read is available, category-only clear, rollback/stop behavior and concurrent transactions. | M1, M3 | Not run |
-| E15 | Categories rebuild | Existing categories retained; recognized JSON paths deduplicate; independent traversal; no XMP/inference; valid empty inputs, invalid/unreadable/partial/interrupted/storage-failure/concurrent outcomes; 997/3 example and explicit clear-then-rebuild. | M2, M3 | Not run |
+| E14 | Categories list/clear | Actual commands cover logical data/schema preservation on list, with normal SQLite journal/WAL/shared-memory and OS access-time effects allowed, no-store/access/corruption/migration-needed failures, WAL/rollback-journal reads or clear errors if unsafe/unavailable, category-only clear with transactional registered migration, rollback/stop behavior and concurrent transactions. | M1, M3 | Not run |
+| E15 | Categories rebuild | Existing categories retained; recognized JSON paths deduplicate; independent traversal; no XMP/inference; empty/no-category rebuild never migrates; registered migration and first eligible nonempty update commit or roll back together; invalid/unreadable/partial/interrupted/storage-failure/concurrent outcomes; 997/3 example and explicit clear-then-rebuild. | M2, M3 | Not run |
 | E16 | Regression | Fresh relevant/full suites and installed package preserve stage/config/prompt/schema/state/XMP/source/artifact contracts; imports/reachability/privacy/version evidence is recorded at its real version. | All CODE steps, C3 | Not run |
 | E17 | Selection identity and errors | Overlapping roots/patterns/explicit paths deduplicate by approved exact resolved-path spelling. Case-variant/other aliases retaining distinct spellings may process and consume allowance separately; hard-link names remain distinct. Test deterministic ordering, no-match/unreadable selections and invalid controls without claiming physical-file deduplication. | B1, B2, C1 | Not run |
 | E18 | Runtime admission boundaries | Table-driven cases distinguish all three initial classes across recovered/invalid/new/missing outputs, selected subsets, regeneration and continuation; no accidental refill or unbudgeted promotion of known exclusions. | B3–B5, C1, C2 | Not run |
@@ -751,12 +753,12 @@ These tables identify required coverage and fixed constraints. They are **not co
 | Ordinary selected-state failure | Visible sanitized diagnostics, no silent persistent substitution, preserved valid primary outcome, and exact fallback/update behavior. |
 | List/clear with no image | Exact selection anchor, allowed overrides, absent-store behavior and actionable diagnostics. |
 | Rebuild sources and destination | Supported source grammar/sidecar identity and a single consistently selected destination, independent from traversal of source collections. |
-| List opening/validation | Read-only access, existing schema/version checks, no migration/init/repair or repository-file mutation; report migration-required. |
+| List opening/validation | Logical data/schema read-only access using stdlib SQLite, existing schema/version checks, no migration/init/repair; normal SQLite journal/WAL/shared-memory and OS access-time effects allowed; report migration-required. |
 | Management target error | No successful empty result or transient-memory mutation presented as persistent success; precise exit/reporting. |
-| Clear success/failure/interruption | Category-only atomic transaction outcome, preserved other domains, rollback/stop boundary, contention and visible failed mutation. |
+| Clear success/failure/interruption | Category-only atomic transaction, including any registered required migration; preserved other domains, rollback/stop boundary, contention and visible failed mutation. |
 | Rebuild valid categories or valid no-category input | Preserve current extractor acceptance, full-path identity and deduplication; classify successful inspection versus contribution distinctly. |
 | Rebuild invalid/unreadable input | Report failure and continue eligible later inputs; retain prior categories and committed valid contributions. |
-| Rebuild empty input/result | No persistent changes, including implicit startup migrations. Define how validation/opening and any supported mutating-command migration policy respect this. |
+| Rebuild empty input/result | No application data/schema changes or implicit startup migrations; defer registered migration until the first eligible update of a nonempty rebuild, in the same transaction. |
 | Rebuild update/commit failure or interruption | Retain committed contributions; report failed/unattempted inputs; do not claim rollback of the whole scan or replay failed writes silently. |
 | Concurrent list/add/clear/rebuild | Use short existing storage transactions; outcomes depend on commit order. No whole-run lock, deterministic winner or guaranteed union across clear. |
 | Counting concurrent additions | Distinguish successful inputs, eligible paths and actual inserts only if observed reliably; before/after totals alone cannot attribute another writer's work. |
