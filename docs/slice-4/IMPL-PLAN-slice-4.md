@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1–A4 design are complete; A5 is in progress, and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
+**Status:** In progress. Phase A design is complete through A5; all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -67,7 +67,7 @@ Native search, content-aware planning Option B, multiple workers within one stag
 
 ## 2. Inspected implementation and extension boundaries
 
-Recheck the baseline before executing a step. The paths and symbols below exist at the inspected revision. New module and test names elsewhere in this plan are proposed until Phase A confirms them.
+Recheck the baseline before executing a step. The paths and symbols in the existing-boundaries table below exist at the inspected revision. The selected additions below are design paths, not claims that the files already exist.
 
 | Concern | Existing paths and symbols | Implementation implication |
 | --- | --- | --- |
@@ -84,6 +84,8 @@ Recheck the baseline before executing a step. The paths and symbols below exist 
 
 **Dependency direction:** CLI assembles resolved configuration and services. Discovery produces eligible identities/paths without stage policy. Planning uses generic descriptors and metadata-only predicates. Execution invokes stage-owned authoritative decisions and transformations. Reporting consumes facts/events; it does not change eligibility. State resolution, storage, category extraction, and management remain separate from queue scheduling. Providers remain transport boundaries. Confirm proposed imports and avoid new cycles.
 
+**A5 path handoff:** B1 extends existing `src/image_clarus/cli.py`, `config.py` and `config_errors.py`, with `tests/unit/test_slice4_config.py` and existing CLI/configuration tests. B2 adds `src/image_clarus/discovery.py` and `tests/unit/test_discovery.py`; `tests/integration/test_slice4_selection_cli.py` exercises integrated selection when the CLI is wired in B6 and M2. B3 adds `src/image_clarus/stage_registry.py`, `batch_plan.py` and `tests/unit/test_batch_plan.py`; B4/B5 add `src/image_clarus/batch_execution.py`, `provider_worker.py` and `tests/unit/test_batch_execution.py`, with the child owned by B5. B6 adds `src/image_clarus/batch_reporting.py` and `tests/unit/test_batch_reporting.py`, extending existing CLI tests. M1 adds `src/image_clarus/state/management.py`, `state/readonly.py`, `tests/unit/test_state_management.py` and `tests/unit/test_state_readonly.py`; M2 extends those boundaries and existing `state/accumulation.py`, and M1/M2 use `tests/integration/test_state_management_cli.py` for command evidence. M3 uses `tests/integration/test_state_management_concurrency.py` for independent-process evidence. Existing tests remain extension points; C1–C3 own their respective integrated evidence. These selected additions do not imply an implemented import graph: each implementation step must keep the dependency direction above and verify that its actual imports introduce no cycle.
+
 ## 3. Phase summary checklist
 
 Phase M is the separate category-management phase required by S4-15–17. It is placed between batch implementation and closeout while retaining the project's Phase A design, Phase B implementation, and Phase C verification convention. Steps are assigned in displayed linear order across phases; dependencies describe inputs, not permission to skip preceding steps. M1 uses A5 and B1; M2 also uses B2. Category management has no functional dependency on the concurrent batch engine, although B3–B6 precede it in the displayed sequence.
@@ -94,7 +96,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step A2 - Freeze stage routing and execution contracts [DESIGN]
 - [x] Step A3 - Freeze state and category management contracts [DESIGN]
 - [x] Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
-- [ ] Step A5 - Complete design and verify implementation readiness [DESIGN]
+- [x] Step A5 - Complete design and verify implementation readiness [DESIGN]
 
 ### Phase B Batch implementation
 
@@ -279,17 +281,17 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] A1–A4 agree, every significant design decision is resolved, and no significant TBD remains.
+- [x] A1–A4 agree, every significant design decision is resolved, and no significant TBD remains.
 - [x] Required product decisions are approved; already decided behavior has not been reopened unnecessarily.
-- [ ] Every implementation/evidence step has concrete inputs, observable outcomes, dependencies, and future completion-record links.
-- [ ] Requirements, accepted examples, failure boundaries, and end-state allocation are covered without silent scope deferral.
-- [ ] The orchestrator can advance to B1 using the completed design evidence, then follow the displayed step sequence.
+- [x] Every implementation/evidence step has concrete inputs, observable outcomes, dependencies, and future completion-record links.
+- [x] Requirements, accepted examples, failure boundaries, and end-state allocation are covered without silent scope deferral.
+- [x] The orchestrator can advance to B1 using the completed design evidence, then follow the displayed step sequence.
 
 **Dependencies:** A1–A4 are complete; A5 owns reconciliation of the later Product Owner SQLite decision and portable identity, without rewriting historical A3 work. A5 completion is mandatory before any B or M implementation.
 
 ### Phase B Batch implementation
 
-**Entry:** A5 is complete and the next step is assigned. Use focused behavioral tests throughout implementation. Proposed file names must be confirmed in A5; existing files remain extension points rather than permission to replace unrelated logic.
+**Entry:** A5 is complete and the next step is assigned. Use focused behavioral tests throughout implementation. The selected paths are in §2; existing files remain extension points rather than permission to replace unrelated logic.
 
 ### Step B1 - Extend configuration and command boundaries [CODE]
 
@@ -301,7 +303,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 1. Extend defaults, known-key/type validation, path-origin handling, dedicated options and `--set` overrides for approved selection/depth/format/work/concurrency/dry-run/verbose controls, including invocation-only process/rebuild `-i` / `--ignore-case`. Preserve current singleton and conflicting-option behavior unless A1 explicitly changes it.
 2. Implement explicit-single versus batch contextual defaults without overriding YAML or CLI intent. Preserve model/prompt/schema and state-directory precedence, selected-stage ordering, and missing-prerequisite overrides.
-3. Separate metadata-only configuration/startup from execution dependency probes. Ensure dry-run does not construct/open state, run recovery, invoke ExifTool, or call models; real execution still validates all selected stages before any stage writes.
+3. Separate metadata-only configuration/startup from execution dependency probes. Ensure dry-run does not construct/open state, run recovery, invoke ExifTool, or call models; a valid empty real batch skips runtime-only preflight after static validation, while nonempty real execution validates selected stages before any stage writes.
 4. Provide the shared management configuration boundary defined by A3 without routing management through image-processing preflight. Keep unselected provider/XMP configuration from blocking unrelated category operations under the frozen contract.
 5. Exercise valid/invalid values, null/unlimited forms, aliases if approved, repeated flags, unrelated stage isolation, sanitized errors, and old single-image syntax. Do not advertise unfinished execution as successful.
 
@@ -309,7 +311,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Every approved setting is usable through its designed YAML/CLI forms with tested precedence and diagnostics.
+- [ ] Every approved setting is resolved through its designed YAML/CLI parser and configuration boundaries with tested precedence and diagnostics; unfinished command execution does not report success. B6 and M1/M2 own integrated process and management behavior.
 - [ ] Process/rebuild/macro depth settings are independent; nonpositive work limits and other invalid controls fail as designed.
 - [ ] Batch-default skip does not override explicit missing-prerequisite policy.
 - [ ] Dry-run and management startup avoid execution-only side effects; real selected-stage preflight and existing CLI behavior remain covered.
@@ -320,11 +322,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Goal:** Supply deterministic reusable selection for image processing and category rebuild without stage or state effects.
 
-**Inputs:** A1/A3 selection contracts; B1 resolved controls; existing explicit-image path/symlink tests; proposed discovery module and test paths fixed by A5.
+**Inputs:** A1/A3 selection contracts; B1 resolved controls; existing explicit-image path/symlink tests; the discovery module and test paths selected in §2.
 
 **Actions**
 
-1. Implement native file/directory/pattern selection, deterministic roots/files/subdirectories, files-before-descent, configured extension eligibility and overrides, and unlimited/0/1/N depth. Implement case-sensitive native patterns by default and `-i` / `--ignore-case` for process and rebuild using A1's defined Unicode/bracket behavior without changing literal-first or identity. Test dotfiles, shell-expanded arguments, quoted patterns, pattern anchors, Unicode, brackets, distinct case-variant files and both commands. Explicitly test the six initial default extension candidates `jpg`, `jpeg`, `png`, `webp`, `tif`, `tiff` (including relevant case variants), distinguishing **discovery eligibility** from actual model/adapter decoding support and recording any selected-adapter failure as such.
+1. Implement native file/directory/pattern selection, deterministic roots/files/subdirectories, files-before-descent, configured extension eligibility and overrides, and unlimited/0/1/N depth. Implement case-sensitive native patterns by default and `-i` / `--ignore-case` for process and rebuild using A1's defined Unicode/bracket behavior without changing literal-first or identity. Test dotfiles, shell-expanded arguments, quoted patterns, pattern anchors, Unicode, brackets and distinct case-variant files through both selection interfaces using resolved controls; actual command wiring is tested by B6 and M2/M3. Explicitly test the six initial default extension candidates `jpg`, `jpeg`, `png`, `webp`, `tif`, `tiff` (including relevant case variants), distinguishing **discovery eligibility** from actual model/adapter decoding support and recording any selected-adapter failure as such.
 2. Implement explicit/discovered symlink distinctions throughout enumeration and pattern handling. On symlink-capable systems exercise cycles, outside-root links, broken links, image links, and explicit directory roots; record unsupported-platform skips honestly.
 3. Deduplicate with the frozen image identity rules before admission and execution. Preserve deterministic first occurrence and selection provenance across overlaps and multiple roots; do not repeatedly traverse aliases contrary to the contract.
 4. Expose reusable traversal/selection primitives with separate image and JSON-sidecar eligibility. Apply rebuild's independently resolved depth without importing stage/LLM/XMP/state-storage logic.
@@ -353,6 +355,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 1. Extend the fixed ordered registry with the approved generic capabilities and stage-owned metadata predictors. Preserve existing stable stage identifiers and ordering. No XMP-name special case belongs in budgeting or routing.
 2. Extract or adapt shared output/configuration decision logic as designed. Keep metadata prediction free of `ArtifactService.recover`, content validation, and execution effects. Reuse the authoritative branch in existing single-image stages; preserve JSON skip-before-prerequisite and current validity semantics.
+   Implement the stage-owned resumable `Terminal` / `WorkRequired` and `Request` / `Publish` seam from A2 §2; stage continuations own their snapshots and validation, not the transport.
 3. Build the initial plan before any execution, retaining distinct identity, immutable admission class, selected stages, predicted bypasses/routes, and accounting inputs. Respect regeneration and omitted stages. Deduplicate before spending slots.
 4. Admit the first N initially LLM-needy images once each; keep initial-no-work and known-excluded classes distinct. Do not refill after runtime skip or stop scanning at the budget boundary. Route excluded images toward selected non-LLM work generically.
 5. Support aggregate/streamed planning for dry-run using the same predicates, with memory-estimation inputs from A4. Do not fabricate actual results or state changes while constructing predictions.
@@ -379,6 +382,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Actions**
 
 1. Implement the shared image lifecycle and sequential executor using actual stage functions and the frozen admission/validation protocol. Confirm predicted bypasses, apply permitted correction, and enforce known-excluded inference boundaries without adding omitted stages.
+   Drive B3's same stage continuation synchronously through the existing provider adapter; do not require B5's actor or child to complete B4.
 2. Retain real recovery, missing-prerequisite, invalid-artifact, regeneration, stop/continue/abort, and safe-write behavior. Forward or terminate from authoritative outcomes; do not manufacture a completed stage for reporting convenience.
 3. Resolve and retain state per image with CLI/YAML/CWD/image precedence. Implement the frozen memory/service lifetime, diagnostics and cleanup. Ordinary state failures remain visible/nonblocking and cannot cause writes to another persistent repository.
 4. Perform eligible category accumulation exactly at the per-image finalization boundary from A3. Preserve enabled/disabled behavior, generated/valid-skipped JSON, later-stage failure, and interruption rules. The next sequential image begins only after this finalization.
@@ -406,11 +410,13 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Actions**
 
 1. Implement the selected in-memory worker topology and queue lifecycle with one authoritative stage actor per selected stage and at most one transport-only provider child per actor. Seed initial routes only after planning completes; derive confirmations from masks, progressively forward actual outcomes and apply the same-image confirmation protocol.
+   Drive the same B3/B4 continuation through A2 §6's privately framed child adapter; match request identity before accepting responses, serialize acceptance against stop, and keep credentials out of arguments, logs and persistent files. The child does transport only; stage decisions and publication remain in the parent. Use child-side seams or a loopback server for tests rather than serializing arbitrary injected in-process transports.
 2. Preserve early downstream progress for existing-output candidates while unrelated upstream inference is held. Handle corrective rerouting, known budget exclusions, worker exceptions, empty queues, termination, and exactly-once accounting without global upstream barriers or unbounded wait cycles.
 3. Share the B4 image/state finalization logic without cross-image repository leakage or unsafe service closure. Concurrent prompt snapshots may reflect completion timing; do not add a taxonomy synchronization barrier.
 4. Implement stop/abort signaling and cleanup from A2. Serialize result acceptance with stop; discard unaccepted late results and separately gate publication, draining already-admitted safe writes. Cancel/reap owned inference and unprotected schema/ExifTool subprocesses, preserve child privacy and produce real partial outcomes. Do not rely on the existing single shared `state.interruptible` flag across workers.
 5. Wire the default-enabled control and disabled sequential executor. Exercise actual simultaneous stages using deterministic barriers, assert per-stage activity never exceeds one, and verify absence of prohibited same-image overlap.
-6. Cover correction and failure while another stage is active, stage subsets, all-bypass/no-work plans, concurrent state use, shutdown during request construction, held response, provider parsing, result/stop races, read/write/finalization, and resumed invocation. Test local provider barriers without a live service; do not assume arbitrary in-process transport objects serialize to the child. Treat cross-process sidecar races according to existing limits.
+6. Cover correction and failure while another stage is active, stage subsets, all-bypass/no-work plans, concurrent state use, shutdown during request construction, held response, provider parsing, result/stop races, read/write/finalization, and a fresh executor run against persisted synthetic artifacts. C2 owns fresh CLI invocation evidence. Test local provider barriers without a live service; do not assume arbitrary in-process transport objects serialize to the child. Treat cross-process sidecar races according to existing limits.
+7. At the actual child boundary test preservation of timeout, TLS, proxy environment, redirects, response validation and sanitized error categories; distinguish existing bounded JSON validation-feedback retries from adding network retries. Exercise malformed or missing frames, child-start and registration/stop races under each applicable failure policy. Test repeated handled signals and a real POSIX process-group signal during protected child validation; distinguish these from unperformed Windows runtime evidence.
 
 **Outputs:** Concurrent executor and cancellation/resource ownership, deterministic worker tests, and [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md).
 
@@ -428,7 +434,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Goal:** Deliver working CLI planning/execution and truthful summaries across single-image and batch invocations.
 
-**Inputs:** B1–B5; A4 reporting/exit/memory contracts; existing concise CLI/logging/redaction behavior; proposed reporter and CLI tests fixed in A5.
+**Inputs:** B1–B5; A4 reporting/exit/memory contracts; existing concise CLI/logging/redaction behavior; the reporter and CLI test paths selected in §2.
 
 **Actions**
 
@@ -437,6 +443,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 3. Consume execution facts for actual distinct LLM-work identities, distinct corrective-overrun identities, per-stage evaluation/execution/outcome counts, deviations and elapsed time. Do not count planned work as performed, infer inference solely from success, or confuse XMP evaluation with an XMP write.
 4. Implement partial/failed/aborted/interrupted/not-attempted accounting, zero-denominator behavior, summary exit codes, channel separation and redaction. Keep optional state errors visible and independent of otherwise valid processing exits.
 5. Exercise true CLI startup, invalid configuration, unavailable execution prerequisites, empty/no-work selections, dry-run versus real-plan parity, correction growth, failures, signal summaries, logging settings, secret sentinels and escaped unusual filenames.
+   Exercise actual process CLI quoted patterns with default case-sensitive matching and `-i` / `--ignore-case`, preserving distinct case-variant identities; separately show shell-expanded arguments cannot be rematched by the application.
 6. Validate estimator arithmetic and representation assumptions from A4 with synthetic plan shapes; record scope and approximation limits. Verify the aggregate route does not retain unnecessary per-file output records. This is not a promise of bounded peak process memory.
 
 **Outputs:** Native `process` integration, dry-run/verbose/reporter/estimator implementation and CLI tests; [IMPL-B6-COMPLETED.md](IMPL-B6-COMPLETED.md).
@@ -495,7 +502,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 3. Add eligible categories to existing state in short transaction units. For a nonempty rebuild requiring a registered migration, perform migration and the first eligible update in the same transaction; on failure roll both back. Do not clear, replace, normalize, infer, invoke XMP, regenerate JSON, or hold a write lock across the scan. Empty/no-category results perform no migration or application data/schema mutation.
 4. Continue past invalid/unreadable input; retain already committed valid contributions after partial failure or interruption. Handle storage failures according to A3 and expose them instead of silently falling back.
 5. Report inspected/successful/no-category/skipped/failed inputs and category contributions using the defined counts, without attributing other writers' changes to this invocation. Preserve exact exit and interruption outcomes.
-6. Test existing categories, duplicates, historical/custom schemas, missing candidates, invalid envelope/candidates, unreadable input, zero inputs, no-category-only scans, independent depth, explicit/discovered symlinks, partial success and interrupted accumulation. Verify migration plus first update commit/rollback atomically and no migration for empty/no-category rebuild. Include the 997-of-1,000 case.
+6. Test existing categories, duplicates, historical/custom schemas, missing candidates, invalid envelope/candidates, unreadable input, zero inputs, no-category-only scans, independent depth, the actual rebuild command's `-i` / `--ignore-case` handling, explicit `.desc.json` and orphan sidecars, explicit/discovered symlinks, destination selection independent of source, partial success and interrupted accumulation. Verify migration plus first update commit/rollback atomically and no migration for empty/no-category rebuild. Include the 997-of-1,000 case.
 
 **Outputs:** Additive rebuild command and shared extraction/reporting code with tests; [IMPL-M2-COMPLETED.md](IMPL-M2-COMPLETED.md).
 
@@ -542,6 +549,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Actions**
 
 1. Update usage/help/configuration examples for files/directories/patterns, recursion/depth/symlinks, extensions, selected stages, work limits, concurrency opt-out, dry-run and verbose output using actual frozen grammar.
+   Include process and rebuild `-i` / `--ignore-case` examples with quoted native patterns; explain that shell-expanded arguments are already expanded and cannot be rematched by the application.
 2. Explain distinct-image initial admission, no replenishment, permitted corrective overruns with no twice-N cap, known exclusions, uncapped non-LLM evaluation, and XMP evaluation versus publication. Include the progressive 10,000-image example and a correction example.
 3. Document metadata-only prediction limits and required memory estimate scope; distinguish an LLM work allowance from file-count, request, runtime or memory caps.
 4. Document per-image state precedence, concurrent versus sequential category timing, category list/clear/additive rebuild, independent rebuild depth, error/partial/empty behavior, and explicit clear-then-rebuild usage. Preserve ordinary nonblocking state versus strict management failures.
@@ -601,6 +609,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 1. Exercise missing prerequisites, invalid primary outputs, valid/invalid backups, changed/deleted/recreated sidecars between plan and execution, known budget exclusions, and optional state faults. Explicitly test **all three required failure policies** (continue next stage, stop current image, abort batch), including the **default stop-current-image** path: fail an early stage for image A, give its downstream selected stage valid persisted input, and include another eligible image B. Assert which later stage runs on A, whether B starts, and the final stage/file/exit accounting under each choice.
 2. Send SIGINT and SIGTERM to actual CLI subprocesses during discovery/planning, held inference in different stages, sidecar preparation/publication, XMP work, queued work, and state finalization. Verify cleanup, safe-write boundaries, stop propagation and no new dispatch after stop under A2.
+   Include repeated handled signals and a real POSIX process-group signal during protected validator execution, plus spawn/registration stop races; do not claim Windows runtime behavior from POSIX evidence.
 3. Exercise worker exceptions and cancellation with downstream work queued or blocked. Verify terminal accounting for completed, failed, skipped, budget-excluded, interrupted and not-attempted work; no deadlock, silent omission or fabricated completion.
 4. Invoke a fresh run on the resulting synthetic collection. Confirm valid prior outputs are reused, unfinished work remains eligible under the new plan, and no durable queue/database is needed. Preserve ordinary invalid-artifact policy; retry is not permission to regenerate invalid output automatically.
 5. Recheck independent-process sidecar race tests and SQLite tests within their separate guarantees. Record complete-valid-output/recovery behavior without asserting a winning sidecar writer or atomic state-plus-sidecar commits.
@@ -647,7 +656,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Goal:** Reconcile every requirement and acceptance outcome and record Slice 4's actual completion boundary.
 
-**Inputs:** All step completion records; current parent/slice documents; §§5–11 of this plan; actual implementation and verification results.
+**Inputs:** All preceding step completion records; current parent/slice documents; §§5–11 of this plan; actual implementation and verification results. C4 creates its own completion record as an output.
 
 **Actions**
 
@@ -723,7 +732,7 @@ E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E1
 
 ## 7. Phase A decision-table obligations
 
-These tables identify required coverage and fixed constraints. They are **not completed Phase A design evidence**. A2/A3 must expand them into concrete transitions, result/reason/exit forms and acceptance scenarios, recording outcomes/rationale and required approvals before A5. A1 owns selection/identity tables; A4 owns counting/output/estimate tables.
+These tables capture the original required coverage and fixed constraints. The completed A1–A4 records contain their respective detailed decisions and scenarios; A5 reconciled them and reviewed coverage. These tables alone are not evidence of implementation or executed tests.
 
 ### 7.1 Runtime prediction and execution
 
@@ -807,7 +816,7 @@ Explicit clear followed by rebuild permits reconstruction as two separate comman
 
 ### 9.1 Existing tests and proposed additions
 
-Extend existing contracts where the behavior already exists; add focused files for new boundaries only after A5 fixes their names. Candidate additions include discovery, planning/admission, executor, reporting/dry-run, and category-management unit/integration tests. These are proposed areas, not claims that such modules/tests currently exist.
+Extend existing contracts where the behavior already exists; use the selected production and test paths in §2 for the new boundaries. These design paths are not claims that the files currently exist.
 
 | Boundary | Existing tests to extend or preserve |
 | --- | --- |
@@ -901,13 +910,13 @@ The parent REQ uses named areas rather than numbered requirements. This matrix a
 | Work observation, metrics/progress, output/channels/exits and memory estimate | A4 | Exact counting/output examples and estimation method/scope before A5. |
 | Cross-contract reconciliation, product approvals, proposed paths and evidence ownership | A5 | No significant TBD, contradiction or unowned acceptance at Phase A close. |
 
-This proposed plan assigns design work; it does not claim these decisions have already been made. A significant decision cannot be relabeled a routine coding choice to bypass Phase A. Conversely, choosing ordinary implementation details within a completed contract does not require another approval.
+A1–A5 are completed design records. A significant decision cannot be relabeled a routine coding choice to bypass Phase A. Conversely, choosing ordinary implementation details within a completed contract does not require another approval.
 
 ### 11.3 Missing inputs conflicts and assumptions
 
 - **Missing repository inputs:** None required to draft this plan. Revalidate the checkout and any changes since the inspected commit when executing A1–A5.
 - **Current governing-document conflicts:** None identified that prevents drafting. The REQ's allowance for corrective work remains qualified by existing stage policies; malformed existing output does not thereby acquire automatic-regeneration behavior.
-- **Pending design choices:** Those explicitly assigned to A1–A4 above. New product-behavior outcomes need the required approval by A5; approved image-based admission, corrective overruns, per-image state, read-only list and additive rebuild are not reopened.
+- **Pending design review:** None for Phase A. New product-behavior outcomes require Product Owner approval; approved image-based admission, corrective overruns, per-image state, read-only list and additive rebuild are not reopened.
 - **Assumptions:** No live provider or private-image access is needed. The established Linux/uv/Python test environment and optional ExifTool will be used during execution; availability and actual verification results remain to be recorded, not presumed.
 - **Historical limitations:** Prior full-suite and package results retain their actual versions. Existing dependency-range/private-library-API concerns recorded in Slice 3 closeout are not silently converted into a new Slice 4 dependency-upgrade project; any observed blocker receives an explicit disposition.
 

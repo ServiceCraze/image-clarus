@@ -1,6 +1,6 @@
 # Step A4 - Freeze reporting and memory estimation contracts [DESIGN]
 
-**Status:** A4 design complete. A5 subsequently reconciled A2's provider transport and the initial graph representation in §4; A3's backend/identity decisions and the remaining A5 gate are open. No Slice 4 reporting or planner feature is implemented by this record.
+**Status:** A4 design complete. A5 subsequently reconciled A2's provider transport and the initial graph representation in §4; the Product Owner later superseded A3's native backend with logical read-only SQLite and A5 recorded the capability-aware identity contract. A5 is complete; no Slice 4 reporting or planner feature is implemented by this record.
 
 **Scope deviations:** None.
 
