@@ -104,13 +104,16 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Step B4 - Implement per-image execution and state lifecycle [CODE]
 - [ ] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
 - [ ] Step B6 - Integrate dry-run progress and actual metrics [CODE]
-- [ ] Step B7 - Document Slice 4 usage and compatibility [DOCS]
 
 ### Phase M Category management
 
 - [ ] Step M1 - Implement strict category list and clear [CODE]
 - [ ] Step M2 - Implement additive category rebuild [CODE]
 - [ ] Step M3 - Verify category command boundaries and concurrency [TEST]
+
+### Step B7 - Document Slice 4 usage and compatibility [DOCS]
+
+- [ ] Step B7 - Document Slice 4 usage and compatibility [DOCS]
 
 ### Phase C Verification and closeout
 
@@ -125,7 +128,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 | Batch foundations | A5 → B1 → B2 → B3 |
 | Batch execution/reporting | B3 → B4 → B5 → B6 |
 | Category delivery | A5 + B1 → M1; M1 + B2 → M2 → M3 |
-| User documentation | B6 + M2 → B7 |
+| User documentation | B6 + M2 + M3 → B7 |
 | Integrated acceptance | B6 + M3 → C1 → C2 |
 | Quality/closeout | B7 + M3 + C1 + C2 → C3 → C4 |
 
@@ -447,32 +450,6 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Dependencies:** B5; B1–B4 delivered contracts.
 
-### Step B7 - Document Slice 4 usage and compatibility [DOCS]
-
-**Goal:** Document the delivered commands, planning limits, and operational expectations using verified behavior.
-
-**Inputs:** B6 and M2 delivery records; A1–A4 examples; `README.md`, `examples/config.yaml`, parent REQ/HLD, and the acceptance examples in §8.
-
-**Actions**
-
-1. Update usage/help/configuration examples for files/directories/patterns, recursion/depth/symlinks, extensions, selected stages, work limits, concurrency opt-out, dry-run and verbose output using actual frozen grammar.
-2. Explain distinct-image initial admission, no replenishment, permitted corrective overruns with no twice-N cap, known exclusions, uncapped non-LLM evaluation, and XMP evaluation versus publication. Include the progressive 10,000-image example and a correction example.
-3. Document metadata-only prediction limits and required memory estimate scope; distinguish an LLM work allowance from file-count, request, runtime or memory caps.
-4. Document per-image state precedence, concurrent versus sequential category timing, category list/clear/additive rebuild, independent rebuild depth, error/partial/empty behavior, and explicit clear-then-rebuild usage. Preserve ordinary nonblocking state versus strict management failures.
-5. Document interruption/resume, continuation/abort, exits/channels, source safety, and existing sidecar race limitations. Reconcile current parent design/roadmap descriptions without rewriting prior completion records or claiming closeout prematurely.
-6. Check all examples against implemented help/parser/config behavior with synthetic or dry-run fixtures where appropriate. Record privacy review of changed public artifacts.
-
-**Outputs:** Updated current usage/configuration/design documentation and example checks; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md).
-
-**Acceptance**
-
-- [ ] Documented options and examples match implemented behavior and current defaults.
-- [ ] Admission, correction, non-LLM routing, memory-estimate and category-rebuild semantics are explicit and accurate.
-- [ ] Current parent docs distinguish implementation progress from acceptance; historical Slice 1–3 records remain intact.
-- [ ] Public examples contain fictitious data and no sensitive infrastructure identifiers or credentials.
-
-**Dependencies:** B6, M2. Final acceptance evidence is reconciled in C4.
-
 ### Phase M Category management
 
 **Entry:** A5 is complete. This phase owns S4-15–17 as a separate capability; it is required for Slice 4 and must not be deferred because batch work is larger. M1 depends on B1's shared controls; M2 also reuses B2 discovery. These commands do not invoke the batch executor.
@@ -554,6 +531,34 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Dependencies:** M2; B1/B2 interfaces used by the commands.
 
+### Step B7 - Document Slice 4 usage and compatibility [DOCS]
+
+**Goal:** Document the delivered commands, planning limits, and operational expectations using verified behavior.
+
+**Inputs:** B6 and M2 delivery records; A1–A4 examples; `README.md`, `examples/config.yaml`, parent REQ/HLD, and the acceptance examples in §8.
+
+**Actions**
+
+1. Update usage/help/configuration examples for files/directories/patterns, recursion/depth/symlinks, extensions, selected stages, work limits, concurrency opt-out, dry-run and verbose output using actual frozen grammar.
+2. Explain distinct-image initial admission, no replenishment, permitted corrective overruns with no twice-N cap, known exclusions, uncapped non-LLM evaluation, and XMP evaluation versus publication. Include the progressive 10,000-image example and a correction example.
+3. Document metadata-only prediction limits and required memory estimate scope; distinguish an LLM work allowance from file-count, request, runtime or memory caps.
+4. Document per-image state precedence, concurrent versus sequential category timing, category list/clear/additive rebuild, independent rebuild depth, error/partial/empty behavior, and explicit clear-then-rebuild usage. Preserve ordinary nonblocking state versus strict management failures.
+5. Document interruption/resume, continuation/abort, exits/channels, source safety, and existing sidecar race limitations. Reconcile current parent design/roadmap descriptions without rewriting prior completion records or claiming closeout prematurely.
+6. Check all examples against implemented help/parser/config behavior with synthetic or dry-run fixtures where appropriate. Record privacy review of changed public artifacts.
+
+**Outputs:** Updated current usage/configuration/design documentation and example checks; [IMPL-B7-COMPLETED.md](IMPL-B7-COMPLETED.md).
+
+**Acceptance**
+
+- [ ] Documented options and examples match implemented behavior and current defaults.
+- [ ] Admission, correction, non-LLM routing, memory-estimate and category-rebuild semantics are explicit and accurate.
+- [ ] Current parent docs distinguish implementation progress from acceptance; historical Slice 1–3 records remain intact.
+- [ ] Public examples contain fictitious data and no sensitive infrastructure identifiers or credentials.
+
+**Correction:** B7 is sequenced after M3 to eliminate the B7-before-M2 forward dependency identified in A5. The M3 category-verification step completes before B7 documents the verified behavior; B6 and M2 remain structural inputs. Final acceptance evidence is reconciled in C4.
+
+**Dependencies:** B6 + M2 + M3. B7 documentation follows verified category behavior; it is sequenced after M3 to respect the linear orchestration contract.
+
 ### Phase C Verification and closeout
 
 **Entry:** Batch implementation and category verification have reached their declared acceptance. These steps integrate and reconcile evidence; they do not defer basic behavior testing until the end. Correct any discovered defect within the authorized step boundary or obtain a disposition for an actual scope change.
@@ -582,7 +587,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] State identity, accumulation timing, dry-run boundaries, verbose output and estimates have observable evidence.
 - [ ] Every covered acceptance row identifies commands, assertions, versions and limitations rather than inferring success from unit mocks.
 
-**Dependencies:** B6, M3. B7 documentation can be completed alongside acceptance work once its dependencies are satisfied.
+**Dependencies:** B6, M3.
 
 ### Step C2 - Verify failure interruption and resume boundaries [TEST]
 
@@ -634,7 +639,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Reachability/import/privacy audits have explicit scope, findings and disposition; no unrecorded orphan exception remains.
 - [ ] Documentation/status/version references match actual evidence, including limitations and unperformed checks.
 
-**Dependencies:** B7, M3, C1, C2.
+**Dependencies:** B7, M3, C1, C2 (B7 completed after M3).
 
 ### Step C4 - Reconcile evidence and close Slice 4 [DOCS]
 
@@ -844,7 +849,7 @@ Record a bounded review of changed public code, tests, docs and fixtures for sec
 
 ## 10. End-state requirements allocation
 
-The parent REQ uses named areas rather than numbered requirements. This matrix allocates them without inventing IDs or treating every parent capability as a Slice 4 delivery. “Candidate later Release 1 delivery” means remaining work for later planning, not a committed slice, order, or release promise.
+The parent REQ uses named areas rather than numbered requirements. This matrix allocates them without inventing IDs or treating every parent capability as a Slice 4 delivery. "Candidate later Release 1 delivery" means remaining work for later planning, not a committed slice, order, or release promise.
 
 | Parent area | Slice 4 allocation | Remaining allocation and prerequisites | Evidence or limit |
 | --- | --- | --- | --- |
@@ -882,7 +887,7 @@ The parent REQ uses named areas rather than numbered requirements. This matrix a
 | Broadening extraction or skip validation | Previously supported artifacts stop skipping or contributing categories. | A2/A3 → B3/M2 → current envelope/extractor regressions. |
 | Misleading progress or memory claims | Planned work looks completed, request counts become image counts, estimate appears a hard bound. | A4 → B6 → E12/E19/E20. |
 | Large collections and long paths | Full execution plan/identity/sorting structures consume memory despite small LLM allowance. | A2/A4 representation and estimator; B3/B6 synthetic scaling checks; no invented fixed queue limit. |
-| Concurrent clear/add/rebuild | Final category set depends on transaction order; whole-run replacement expectations would be wrong. | A3 → M3 independent-process evidence and B7 documentation. |
+| Concurrent clear/add/rebuild | Final category set depends on transaction order; whole-run replacement expectations would be wrong. | A3 → M3 independent-process evidence and B7 documentation (after M3). |
 
 ### 11.2 Design register and closure rule
 
@@ -921,8 +926,3 @@ Slice 4 is ready for orchestration closeout when native selection/planning/execu
 Phase A must already have closed every significant design decision. Required execution and failure-boundary evidence must be present at the actual tested versions. Native search, content-aware Option B, multiple workers per stage, scheduling, new provider protocols and new manual digiKam interoperability are not Slice 4 completion conditions.
 
 Plan drafting does not implement the slice, execute its tests, create completion records, change package versions, or establish final acceptance.
-
-
-
-
-

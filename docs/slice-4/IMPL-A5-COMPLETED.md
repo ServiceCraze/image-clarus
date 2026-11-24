@@ -1,6 +1,6 @@
 # Step A5 - Complete design and verify implementation readiness [DESIGN]
 
-**Status:** In progress; Phase A remains open and neither Phase B nor Phase M is authorized to start. A3 now selects a native fail-closed SQLite reader and capability-aware identity contract. Provider/actor/graph design is reconciled but not implemented. The A5 readiness audit remains incomplete, including the plan's B7 dependency on later M2: the Product Owner requested Phase B ordering be corrected after Phase A, and the current plan cannot honestly be called fully linear. This is an execution record, not proof of completion.
+**Status:** In progress; Phase A remains open and neither Phase B nor Phase M is authorized to start. A3 now selects a native fail-closed SQLite reader and capability-aware identity contract. Provider/actor/graph design is reconciled but not implemented. The The A5 readiness audit remains incomplete; the B7/M2 forward dependency in the plan has been corrected by moving B7 after M3. A5 still needs the substantive readiness review and step path confirmation. This is an execution record, not proof of completion.
 
 **Scope deviations:** None authorized. No Slice 4 feature was implemented.
 
@@ -108,7 +108,7 @@ These probes used synthetic data on Linux only, not product code or live provide
 
 ## 5. Remaining acceptance and gate
 
-The earlier interactive forms timed out; the Product Owner later explicitly supplied both sets of decisions, including the modified empty-run preflight and added `-i` option. The approved outcomes are recorded in §3. A3 selects the SQLite mechanism and portable identity contract; provider/actor/graph design is reconciled, subject to future implementation tests. The A5 substantive readiness review and future step path confirmation still need completion. The plan also places B7 before M2 despite B7 requiring M2, incompatible with linear orchestration; the Product Owner requested that Phase B be corrected after Phase A. Do not mark the plan fully executable or start implementation on the strength of the current ordering. Routine architecture work is not an additional REQ acceptance gate; approved product choices are not reopened.
+The earlier interactive forms timed out; the Product Owner later explicitly supplied both sets of decisions, including the modified empty-run preflight and added `-i` option. The approved outcomes are recorded in §3. A3 selects the SQLite mechanism and portable identity contract; provider/actor/graph design is reconciled, subject to future implementation tests. The A5 substantive readiness review and future step path confirmation still need completion. The B7/M2 forward dependency was corrected by moving B7 after M3 in the plan's displayed sequence. A5 still needs the substantive readiness review and step path confirmation; the plan ordering defect is resolved. Routine architecture work is not an additional REQ acceptance gate; approved product choices are not reopened.
 
 - [ ] A1–A4 agree, every significant design decision is resolved, and no significant TBD remains.
 - [x] Required product decisions are approved; already decided behavior has not been reopened unnecessarily.
