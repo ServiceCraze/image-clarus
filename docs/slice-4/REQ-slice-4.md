@@ -174,12 +174,13 @@ This document states required behavior and observable acceptance outcomes, not a
 
 - Provide a CLI operation conceptually equivalent to `image-clarus state categories list` to show the category paths currently held in the selected state repository.
 - Use existing category state and state-directory selection semantics. Report inaccessible or invalid state visibly instead of silently presenting an empty persistent collection.
-- Listing must be **read-only**, including repository opening and validation: do not initialize, migrate, clear, update or otherwise mutate persistent state, regenerate images, or call a model. If the repository cannot be listed without migration, report the condition rather than migrating it as part of list. The management-command selection context and precise diagnostic/exit form remain design work.
+- Listing must be **read-only**, including repository opening and validation: do not initialize, migrate, clear, update or otherwise mutate persistent state, regenerate images, or call a model. If the repository cannot be listed without migration, report the condition rather than migrating it as part of list. Precise diagnostic/exit form remains design work.
 
 ### S4-16 - Clear categories
 
 - Provide a CLI operation conceptually equivalent to `image-clarus state categories clear` to remove **all known categories** from the selected repository while leaving other state domains and all image/sidecar files untouched.
 - Do not silently substitute another repository or claim success when a requested persistent-state mutation fails. Keep this suitable for explicit noninteractive CLI usage.
+- A registered migration may run for clear; failures must be visible and preserve the existing atomic migration contract.
 
 ### S4-17 - Rebuild categories from existing JSON
 
@@ -189,6 +190,8 @@ This document states required behavior and observable acceptance outcomes, not a
 - Continue past invalid or unreadable inputs and report inspected files, successes, skips and failures, including how many supplied eligible categories. Valid accumulation may remain after partial failure without rollback; report partial outcomes accurately. An empty result makes no changes. Concurrent updates follow the existing state-storage concurrency contract.
 - For example, if 997 of 1,000 JSON inputs are processed successfully and three fail, retain prior categories, accumulate eligible categories from successful inputs, and report the three failures.
 - Use the chosen state repository explicitly and consistently without silently substituting another persistent repository. To reconstruct categories from a selected collection, users can explicitly clear and then rebuild; rebuild alone retains prior categories. Concurrent activity follows the existing state-storage concurrency contract.
+- Use configured state or the CWD-selected repository as the single destination; rebuild source roots do not select it. An explicit `--state-dir` overrides that selection. Accept explicit `.desc.json` inputs and include orphan sidecars, subject to the existing symlink boundary.
+- A registered migration may run for rebuild with eligible categories; an empty or no-category rebuild never migrates or otherwise changes state.
 
 ## 8. Compatibility and acceptance
 
@@ -228,7 +231,7 @@ The implementation plan must resolve exact option/configuration keys beyond thos
 
 The Product Owner decided that initially known LLM-work images excluded by the admission budget bypass selected LLM stages but remain eligible for selected non-LLM stages, subject to normal prerequisites and continuation policy. Unexpected corrective inference for images initially predicted to need no LLM work may exceed the initial budget; XMP-only runs remain uncapped. Category rebuild is additive and best-effort, rather than replacement.
 
-The Product Owner also selected existing per-image state resolution for batches and a read-only category-list operation. Preserve existing user-facing behavior where applicable; state-management command discovery context and other unselected policy questions remain design work rather than being inferred from these decisions.
+The Product Owner also selected existing per-image state resolution for batches, read-only category listing, CWD-selected management state with an explicit override, explicit/orphan JSON sidecars, and registered migrations for clear and nonempty rebuild only. Preserve existing user-facing behavior where applicable; unresolved storage mechanics and other unselected policy questions remain design work rather than being inferred from these decisions.
 
 **Slice 4 Phase A design-completion requirement:** The implementation plan must make completion of Phase A a prerequisite for Phase B. No significant design decision may remain TBD at Phase A close. Produce decision tables and documented contracts covering (1) sidecar bypass predictions, validation, recovery, post-planning changes and corrective overruns; (2) queue routing and downstream coordination in concurrent and sequential modes; (3) category operations, errors, interruption and concurrent access; (4) management-command state selection and multi-collection processing; and (5) duplicate selections, failure continuation, work accounting and progress. Each significant decision needs an outcome, rationale and associated acceptance scenario. Product behavior decisions require Product Owner approval before Phase A closes; minor coding choices may remain for implementation. Resolve early forwarding without treating a prediction as validated or sacrificing overlap of unrelated images.
 

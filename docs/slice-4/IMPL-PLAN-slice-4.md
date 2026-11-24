@@ -219,10 +219,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Acceptance**
 
 - [x] Multi-collection state, memory/fallback ownership, diagnostics, and close boundaries are fully specified without changing precedence.
-- [x] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
+- [ ] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
 - [ ] Clear preserves other domains; rebuild is additive, best effort, empty-safe, and uses existing extraction semantics.
 - [x] Accumulation timing/eligibility, budget-excluded valid JSON, interruption, and concurrent management have explicit outcomes and test boundaries.
-- [ ] All significant product decisions have the required disposition before A5; routine storage mechanics do not create unnecessary approval gates.
+- [x] All significant product decisions have the required disposition before A5; routine storage mechanics do not create unnecessary approval gates.
 
 **Dependencies:** A1 selection/configuration and A2 execution contracts as available; reconcile metrics with A4 before A5.
 
@@ -268,6 +268,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 5. Audit the decision ledger for unresolved significant TBDs, contradictory defaults, hidden migrations/content reads, implicit prerequisite expansion, duplicated completion logic, or acceptance that fabricates recovery success. If any remain, Phase A is incomplete and implementation cannot advance.
 6. Synchronize plan/phase status and document genuine exceptions with approval. Readiness follows normal orchestration; it does not create a second REQ acceptance gate or apply retroactively to previous slices.
 7. Resolve the A2 transport review: compare the concrete per-request subprocess baseline with cancellable `httpx.AsyncClient`, including cooperative versus forcible cancellation, actor/event-loop ownership, provider behavior and privacy, deterministic testability, and Windows-by-design implications. Select and justify one, record acceptance scenarios and reconcile all affected A2/A5/B3–B5/C2 contracts before closing Phase A; no significant transport decision may be deferred to implementation.
+8. Resolve A3's strict read-only SQLite backend without presuming a native VFS; compare candidate safety and Linux/Windows packaging feasibility, including WAL/hot-journal races. Reconcile portable best-effort repository replacement detection without requiring optional filesystem identity, and preserve the Product Owner-approved target, migration and sidecar decisions. A3's remaining acceptance must be closed before Phase A closes.
 
 **Outputs:** [IMPL-A5-COMPLETED.md](IMPL-A5-COMPLETED.md), with the complete decision index, approvals where required, crosswalk/readiness findings, and updated plan references.
 
@@ -279,7 +280,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [ ] Requirements, accepted examples, failure boundaries, and end-state allocation are covered without silent scope deferral.
 - [ ] The orchestrator can advance to B1 or the eligible Phase M work using the completed design evidence.
 
-**Dependencies:** A1, A2, A3, A4. A5 completion is mandatory before any B or M implementation.
+**Dependencies:** A1, A2 and A4; A3 may remain in progress specifically for the A5 read-only-backend and portable-identity reconciliation, but its acceptance must be complete before A5 itself closes. A5 completion is mandatory before any B or M implementation.
 
 ### Phase B Batch implementation
 
