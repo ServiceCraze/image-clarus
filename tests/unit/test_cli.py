@@ -134,7 +134,7 @@ def test_version_uses_installed_metadata():
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.3.24\n",
+        "image-clarus 0.3.25\n",
         "",
     )
 
@@ -550,7 +550,7 @@ def test_other_singleton_options_reject_duplicates(tmp_path, option, value):
     assert "may only be specified once" in result.stderr
 
 
-def test_glob_characters_are_rejected_even_if_file_exists(tmp_path):
+def test_glob_characters_in_existing_literal_file_are_accepted(tmp_path):
     image = tmp_path / "im*.png"
     image.write_bytes(b"synthetic")
     config = tmp_path / "config.yaml"
@@ -559,8 +559,8 @@ def test_glob_characters_are_rejected_even_if_file_exists(tmp_path):
     )
     Path(str(image) + ".desc.txt").write_text("existing")
     result = run_cli("process", str(image), "--config", str(config), "--stages", "desc")
-    assert result.returncode == 2
-    assert "image" in result.stderr.lower()
+    assert result.returncode == 0
+    assert "output_exists" in result.stdout
 
 
 def test_failure_message_is_single_line(tmp_path, monkeypatch, capsys):

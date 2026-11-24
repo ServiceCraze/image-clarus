@@ -10,6 +10,16 @@ class OnceAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class OnceFlag(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest, None) is not None:
+            raise argparse.ArgumentError(self, "may only be specified once")
+        setattr(namespace, self.dest, self.const)
+
+
 class VersionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         try:
@@ -65,7 +75,27 @@ def _main(state):
         description="Description and JSON outputs are create-only by default; XMP uses configured policies; search is a help-only stub.",
         allow_abbrev=False,
     )
-    process.add_argument("IMAGE")
+    process.add_argument("IMAGE", nargs="+")
+    depth = process.add_mutually_exclusive_group()
+    depth.add_argument("--max-depth", type=int, action=OnceAction)
+    depth.add_argument("--max-depth-unlimited", action=OnceFlag, const=True)
+    work = process.add_mutually_exclusive_group()
+    work.add_argument("--max-work-files", type=int, action=OnceAction)
+    work.add_argument("--no-max-work-files", action=OnceFlag, const=True)
+    concurrency = process.add_mutually_exclusive_group()
+    concurrency.add_argument(
+        "--inter-stage-concurrency", dest="concurrency", action=OnceFlag, const=True
+    )
+    concurrency.add_argument(
+        "--no-inter-stage-concurrency", dest="concurrency", action=OnceFlag, const=False
+    )
+    process.add_argument("--extensions", action=OnceAction)
+    process.add_argument(
+        "--on-stage-failure", choices=("stop", "continue", "abort"), action=OnceAction
+    )
+    for names in (("--dry-run",), ("--verbose",), ("-i", "--ignore-case")):
+        process.add_argument(*names, action=OnceFlag, const=True)
+
     process.add_argument("--config", metavar="FILE", action=OnceAction)
     process.add_argument(
         "--stages",
@@ -77,12 +107,12 @@ def _main(state):
     process.add_argument("--state-dir", metavar="DIR", action=OnceAction)
     for option in ("--desc-prompt", "--json-prompt", "--json-schema"):
         process.add_argument(option, metavar="FILE", action=OnceAction)
-    process.add_argument("--regenerate", action="store_true")
+    process.add_argument("--regenerate", action=OnceFlag, const=True)
     process.add_argument(
         "--missing-prerequisite",
         choices=("fail", "skip"),
         action=OnceAction,
-        help="Default: fail",
+        help="Default: fail for a single literal file; skip for batch selections",
     )
     subparsers.add_parser(
         "search", help="Search (not implemented in Slice 1)", allow_abbrev=False
@@ -90,7 +120,53 @@ def _main(state):
     subparsers.add_parser(
         "init", help="Initialize state in the current directory", allow_abbrev=False
     )
+    state_parser = subparsers.add_parser("state", allow_abbrev=False)
+    state_sub = state_parser.add_subparsers(dest="state_command", required=True)
+    categories = state_sub.add_parser("categories", allow_abbrev=False)
+    category_sub = categories.add_subparsers(dest="operation", required=True)
+    for name in ("list", "clear", "rebuild"):
+        command = category_sub.add_parser(name, allow_abbrev=False)
+        if name == "rebuild":
+            command.add_argument("SOURCE", nargs="+")
+            depth = command.add_mutually_exclusive_group()
+            depth.add_argument("--max-depth", type=int, action=OnceAction)
+            depth.add_argument("--max-depth-unlimited", action=OnceFlag, const=True)
+            command.add_argument("-i", "--ignore-case", action=OnceFlag, const=True)
+        command.add_argument("--config", action=OnceAction)
+        command.add_argument("--set", action="append")
+        command.add_argument("--state-dir", action=OnceAction)
     args = parser.parse_args()
+    selections = (
+        args.IMAGE
+        if args.command == "process"
+        else args.SOURCE
+        if args.command == "state" and args.operation == "rebuild"
+        else None
+    )
+    if selections is not None:
+        if any(not token for token in selections):
+            parser.error("selection tokens must not be empty")
+        tokens = sys.argv[1:]
+        if "--" in tokens and len(selections) != len(tokens) - tokens.index("--") - 1:
+            parser.error("-- cannot split the selection group")
+    if args.command == "state":
+        from image_clarus.config import ConfigurationError, resolve_config
+
+        try:
+            resolve_config(
+                config_file=args.config,
+                overrides=args.set or (),
+                state_dir=args.state_dir,
+                management=True,
+                rebuild=args.operation == "rebuild",
+                max_depth=getattr(args, "max_depth", None),
+                max_depth_unlimited=getattr(args, "max_depth_unlimited", False),
+            )
+        except ConfigurationError as error:
+            print(f"image-clarus: {error}", file=sys.stderr)
+            return 2
+        print("image-clarus: category management is not implemented", file=sys.stderr)
+        return 2
     if args.command == "init":
         from pathlib import Path
 
@@ -112,14 +188,12 @@ def _main(state):
         from pathlib import Path
 
         try:
-            if any(character in args.IMAGE for character in "*?["):
-                raise ValueError
-            image = Path(args.IMAGE).expanduser().resolve(strict=True)
+            raw_image = args.IMAGE[0]
+            image = Path(raw_image).expanduser().resolve(strict=True)
             if not image.is_file() or not os.access(image, os.R_OK):
                 raise ValueError
         except (OSError, ValueError, RuntimeError):
-            print("image-clarus: invalid image path", file=sys.stderr)
-            return 2
+            image = None
         from types import SimpleNamespace
 
         from image_clarus.artifacts import ArtifactService
@@ -158,12 +232,37 @@ def _main(state):
                 missing_prerequisite=args.missing_prerequisite,
                 regenerate=args.regenerate,
                 state_dir=args.state_dir,
+                max_depth=args.max_depth,
+                max_depth_unlimited=args.max_depth_unlimited,
+                extensions=args.extensions,
+                max_work_files=args.max_work_files,
+                no_max_work_files=args.no_max_work_files,
+                inter_stage_concurrency=args.concurrency,
+                on_stage_failure=args.on_stage_failure,
+                batch_context=len(args.IMAGE) != 1 or image is None,
+                runtime_preflight=not (
+                    args.dry_run or len(args.IMAGE) != 1 or image is None
+                ),
             )
         except ConfigurationError as error:
             print(f"image-clarus: {error}", file=sys.stderr)
             return 1 if error.category == "authentication" else 2
         finally:
             state.interruptible = False
+
+        if (
+            args.dry_run
+            or len(args.IMAGE) != 1
+            or image is None
+            or args.verbose
+            or args.ignore_case
+            or config["pipeline"].get("on_stage_failure") == "abort"
+        ):
+            print(
+                "image-clarus: requested Slice 4 execution is not implemented",
+                file=sys.stderr,
+            )
+            return 2
 
         import logging
 

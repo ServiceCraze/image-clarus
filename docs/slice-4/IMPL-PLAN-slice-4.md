@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A design is complete through A5; all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A5.
+**Status:** In progress. Phase A design and B1 configuration/command boundaries are complete; B2 and later steps remain open. No integrated Slice 4 batch or category-management behavior is claimed by B1.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -100,7 +100,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 ### Phase B Batch implementation
 
-- [ ] Step B1 - Extend configuration and command boundaries [CODE]
+- [x] Step B1 - Extend configuration and command boundaries [CODE]
 - [ ] Step B2 - Implement reusable deterministic discovery [CODE]
 - [ ] Step B3 - Implement stage capabilities and metadata planning [CODE]
 - [ ] Step B4 - Implement per-image execution and state lifecycle [CODE]
@@ -309,10 +309,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Every approved setting is resolved through its designed YAML/CLI parser and configuration boundaries with tested precedence and diagnostics; unfinished command execution does not report success. B6 and M1/M2 own integrated process and management behavior.
-- [ ] Process/rebuild/macro depth settings are independent; nonpositive work limits and other invalid controls fail as designed.
-- [ ] Batch-default skip does not override explicit missing-prerequisite policy.
-- [ ] Dry-run and management startup avoid execution-only side effects; real selected-stage preflight and existing CLI behavior remain covered.
+- [x] Every approved setting is resolved through its designed YAML/CLI parser and configuration boundaries with tested precedence and diagnostics; unfinished command execution does not report success. B6 and M1/M2 own integrated process and management behavior.
+- [x] Process/rebuild/macro depth settings are independent; nonpositive work limits and other invalid controls fail as designed.
+- [x] Batch-default skip does not override explicit missing-prerequisite policy.
+- [x] Dry-run and management startup avoid execution-only side effects; real selected-stage preflight and existing CLI behavior remain covered.
 
 **Dependencies:** A5.
 

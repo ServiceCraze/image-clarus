@@ -255,3 +255,50 @@ def test_exiftool_probe_rejects_oversized_output_without_disclosing_it(
         resolve_config(discovery_paths=(), stages=("xmp",))
     assert "ExifTool" in str(exc.value)
     assert "xxxxxxxxxx" not in str(exc.value)
+
+
+def test_exiftool_preflight_does_not_require_selectable_pipes(
+    fake_exiftool, monkeypatch
+):
+    import selectors
+
+    def unsupported():
+        raise OSError("pipe selection unavailable")
+
+    monkeypatch.setattr(selectors, "DefaultSelector", unsupported)
+    resolve_config(discovery_paths=(), stages=("xmp",))
+
+
+@pytest.mark.parametrize(
+    ("body", "timeout"),
+    [
+        ('printf "fictional-private-output"; exec /bin/sleep 5', 0.2),
+        ('printf "%0130d" 0; exec /bin/sleep 5', 2),
+        ('printf "12.34"; exec /bin/sleep 5', 0.2),
+    ],
+)
+def test_probe_reaps_child_on_timeout_or_oversize(
+    fake_exiftool, monkeypatch, body, timeout
+):
+    import subprocess
+    import time
+
+    import image_clarus.config as config_module
+
+    fake_exiftool.write_text(f"#!/bin/sh\n{body}\n")
+    monkeypatch.setattr(config_module, "_EXIFTOOL_TIMEOUT_SECONDS", timeout)
+    original_popen = subprocess.Popen
+    children = []
+
+    def record_child(*args, **kwargs):
+        child = original_popen(*args, **kwargs)
+        children.append(child)
+        return child
+
+    monkeypatch.setattr(config_module.subprocess, "Popen", record_child)
+    start = time.monotonic()
+    with pytest.raises(ConfigurationError) as exc:
+        resolve_config(discovery_paths=(), stages=("xmp",))
+    assert time.monotonic() - start < 3
+    assert "fictional-private-output" not in str(exc.value)
+    assert len(children) == 1 and children[0].poll() is not None

@@ -102,6 +102,8 @@ def test_defaults_are_available_without_a_selected_stage(tmp_path):
         "missing_prerequisite": "fail",
         "on_stage_failure": "stop",
         "backup_retention": "remove",
+        "max_work_files": None,
+        "inter_stage_concurrency": True,
     }
 
 

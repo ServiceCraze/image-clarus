@@ -4,10 +4,10 @@ import json
 import math
 import os
 import re
-import selectors
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -56,6 +56,11 @@ ALIAS = re.compile(r"^[A-Za-z0-9_-]+$")
 ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MACRO_NAME = re.compile(r"(?:config|state)(?:\.[A-Za-z_][A-Za-z0-9_-]*)+")
 DEFAULTS = {
+    "selection": {
+        "max_depth": None,
+        "extensions": ["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+    },
+    "category_rebuild": {"max_depth": None},
     "state": {"directory": None, "accumulate_categories": True},
     "prompt_expansion": {"macros": {}},
     "providers": {},
@@ -92,6 +97,8 @@ DEFAULTS = {
     },
     "pipeline": {
         "missing_prerequisite": "fail",
+        "max_work_files": None,
+        "inter_stage_concurrency": True,
         "on_stage_failure": "stop",
         "backup_retention": "remove",
     },
@@ -371,7 +378,14 @@ def _validate_keys(data):
                 _mapping(values, DEFAULTS["stages"][stage], f"stages.{stage}")
                 for key, value in values.items():
                     leaf(value, f"stages.{stage}.{key}")
-    for section in ("pipeline", "logging", "state", "prompt_expansion"):
+    for section in (
+        "pipeline",
+        "logging",
+        "state",
+        "prompt_expansion",
+        "selection",
+        "category_rebuild",
+    ):
         values = data.get(section)
         if isinstance(values, dict):
             _mapping(values, DEFAULTS[section], section)
@@ -533,10 +547,46 @@ def _validate_shape(data, stages):
             raise ConfigurationError(
                 "prompt_expansion.macros.<name>.max_depth: expected a nonnegative integer or null; set a valid depth"
             )
+    for section in ("selection", "category_rebuild"):
+        _mapping(data[section], DEFAULTS[section], section)
+        depth = data[section]["max_depth"]
+        if depth is not None and (type(depth) is not int or depth < 0):
+            raise ConfigurationError(
+                f"{section}.max_depth: expected a nonnegative integer or null"
+            )
+    extensions = data["selection"]["extensions"]
+    if (
+        not isinstance(extensions, list)
+        or not extensions
+        or any(
+            not isinstance(item, str) or not re.fullmatch(r"[A-Za-z0-9]+", item)
+            for item in extensions
+        )
+    ):
+        raise ConfigurationError(
+            "selection.extensions: expected a nonempty list of dotless ASCII alphanumeric suffixes"
+        )
+    data["selection"]["extensions"] = list(
+        dict.fromkeys(item.lower() for item in extensions)
+    )
+    pipeline = data["pipeline"]
+    _mapping(pipeline, DEFAULTS["pipeline"], "pipeline")
+    limit = pipeline["max_work_files"]
+    if limit is not None and (type(limit) is not int or limit <= 0):
+        raise ConfigurationError(
+            "pipeline.max_work_files: expected a positive integer or null"
+        )
+    if type(pipeline["inter_stage_concurrency"]) is not bool:
+        raise ConfigurationError("pipeline.inter_stage_concurrency: expected a boolean")
     for section in ("pipeline", "logging"):
         values = data.get(section, {})
         _mapping(values, DEFAULTS[section], section)
         for key, value in values.items():
+            if section == "pipeline" and key in {
+                "max_work_files",
+                "inter_stage_concurrency",
+            }:
+                continue
             if not isinstance(value, str):
                 raise ConfigurationError(
                     f"{section}.{key}: expected a string; set a string"
@@ -576,43 +626,66 @@ def _probe_exiftool(executable):
     """Check a bounded version response without exposing process output."""
     args = [executable, "-config", "", "-ver"]
     deadline = time.monotonic() + _EXIFTOOL_TIMEOUT_SECONDS
-    with subprocess.Popen(
+    process = subprocess.Popen(
         args,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-    ) as process:
+        bufsize=0,
+    )
+    assert process.stdout is not None
+    stdout = process.stdout
+    output = bytearray()
+    done = threading.Event()
+    read_errors = []
+
+    def read_output():
         try:
-            assert process.stdout is not None
-            output = bytearray()
-            with selectors.DefaultSelector() as selector:
-                selector.register(process.stdout, selectors.EVENT_READ)
-                while True:
-                    remaining = deadline - time.monotonic()
-                    if remaining <= 0 or not selector.select(remaining):
-                        raise subprocess.TimeoutExpired(args, _EXIFTOOL_TIMEOUT_SECONDS)
-                    chunk = os.read(process.stdout.fileno(), 129 - len(output))
-                    if not chunk:
-                        break
-                    output.extend(chunk)
-                    if len(output) > 128:
-                        raise OSError
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or process.wait(timeout=remaining):
-                raise OSError
-            if not re.fullmatch(rb"[0-9]+\.[0-9]+(?:_[0-9]+)?\s*", output):
-                raise OSError
+            while len(output) <= 128:
+                chunk = os.read(stdout.fileno(), 129 - len(output))
+                if not chunk:
+                    break
+                output.extend(chunk)
+        except OSError as error:
+            read_errors.append(error)
         finally:
-            if process.poll() is None:
-                process.kill()
-                process.wait()
+            try:
+                stdout.close()
+            finally:
+                done.set()
+
+    # A descendant may inherit stdout and keep it open after the child is killed.
+    # The daemon reader owns the pipe so that case cannot block this deadline.
+    reader = threading.Thread(target=read_output, daemon=True)
+    started = False
+    try:
+        reader.start()
+        started = True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or not done.wait(remaining):
+            raise subprocess.TimeoutExpired(args, _EXIFTOOL_TIMEOUT_SECONDS)
+        if read_errors or len(output) > 128:
+            raise OSError
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or process.wait(timeout=remaining):
+            raise OSError
+        if not re.fullmatch(rb"[0-9]+\.[0-9]+(?:_[0-9]+)?\s*", output):
+            raise OSError
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        if not started:
+            stdout.close()
 
 
-def _selected(config, stage):
+def _selected(config, stage, *, runtime=True):
     if stage not in config["stages"]:
         _fail()
     settings = config["stages"][stage]
     if stage == "xmp":
+        if not runtime:
+            return
         executable = shutil.which("exiftool")
         try:
             if not executable:
@@ -769,9 +842,21 @@ def resolve_config(
     regenerate=False,
     missing_prerequisite=None,
     state_dir=None,
+    max_depth=None,
+    max_depth_unlimited=False,
+    extensions=None,
+    max_work_files=None,
+    no_max_work_files=False,
+    inter_stage_concurrency=None,
+    on_stage_failure=None,
+    batch_context=False,
+    runtime_preflight=True,
+    management=False,
+    rebuild=False,
 ):
     """Resolve the complete config; environment credentials are never copied into it."""
     config = deepcopy(DEFAULTS)
+    explicit_missing = False
     paths = (
         (config_file,)
         if config_file is not None
@@ -806,6 +891,10 @@ def resolve_config(
                 "configuration: cannot load file; set a readable configuration file"
             ) from None
         _validate_keys(data)
+        explicit_missing = (
+            isinstance(data.get("pipeline"), dict)
+            and "missing_prerequisite" in data["pipeline"]
+        )
         _normalize_paths(data, path.parent)
         _merge(config, data)
         break
@@ -887,6 +976,13 @@ def resolve_config(
             raise ConfigurationError(
                 f"Invalid override: {safe_path}: invalid syntax or forbidden credential; correct the override"
             )
+        if parts == ["pipeline"]:
+            explicit_missing = (
+                isinstance(overlay["pipeline"], dict)
+                and "missing_prerequisite" in overlay["pipeline"]
+            )
+        elif parts == ["pipeline", "missing_prerequisite"]:
+            explicit_missing = True
         _normalize_paths(overlay, Path.cwd())
         target = config
         normalized = overlay
@@ -939,13 +1035,57 @@ def resolve_config(
         if not isinstance(config["pipeline"], dict):
             config["pipeline"] = deepcopy(DEFAULTS["pipeline"])
         config["pipeline"]["missing_prerequisite"] = missing_prerequisite
+    if (
+        batch_context
+        and not explicit_missing
+        and missing_prerequisite is None
+        and isinstance(config["pipeline"], dict)
+    ):
+        config["pipeline"]["missing_prerequisite"] = "skip"
+    depth_section = "category_rebuild" if rebuild else "selection"
+    if max_depth is not None or max_depth_unlimited:
+        if not isinstance(config[depth_section], dict):
+            config[depth_section] = deepcopy(DEFAULTS[depth_section])
+        config[depth_section]["max_depth"] = None if max_depth_unlimited else max_depth
+    if extensions is not None:
+        if not isinstance(config["selection"], dict):
+            config["selection"] = deepcopy(DEFAULTS["selection"])
+        config["selection"]["extensions"] = extensions.split(",")
+    for key, value in (
+        ("max_work_files", None if no_max_work_files else max_work_files),
+        ("inter_stage_concurrency", inter_stage_concurrency),
+        ("on_stage_failure", on_stage_failure),
+    ):
+        if value is not None or (key == "max_work_files" and no_max_work_files):
+            if not isinstance(config["pipeline"], dict):
+                config["pipeline"] = deepcopy(DEFAULTS["pipeline"])
+            config["pipeline"][key] = value
+    if management:
+        # Accumulation is a processing policy, not a management prerequisite.
+        if isinstance(config["state"], dict):
+            config["state"]["accumulate_categories"] = DEFAULTS["state"][
+                "accumulate_categories"
+            ]
+        for section in (
+            "providers",
+            "models",
+            "stages",
+            "prompt_expansion",
+            "pipeline",
+            "logging",
+        ):
+            config[section] = deepcopy(DEFAULTS[section])
+        config["selection"] = deepcopy(DEFAULTS["selection"])
+        if not rebuild:
+            config["category_rebuild"] = deepcopy(DEFAULTS["category_rebuild"])
+        stages = ()
     try:
         _validate_shape(config, stages)
     except ConfigurationError as error:
         raise _with_relevant_overrides(error, override_paths) from None
     for section, field, valid in (
         ("pipeline", "missing_prerequisite", {"fail", "skip"}),
-        ("pipeline", "on_stage_failure", {"stop", "continue"}),
+        ("pipeline", "on_stage_failure", {"stop", "continue", "abort"}),
         ("pipeline", "backup_retention", {"remove", "retain"}),
         ("logging", "level", {"DEBUG", "INFO", "WARNING", "ERROR"}),
     ):
@@ -958,7 +1098,7 @@ def resolve_config(
         model.setdefault("reasoning_effort", "default")
     for stage in stages:
         try:
-            _selected(config, stage)
+            _selected(config, stage, runtime=runtime_preflight)
         except ConfigurationError as error:
             selected_settings = config["stages"].get(stage, {})
             selected_model = (
