@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A design and B1 configuration/command boundaries are complete; B2 and later steps remain open. No integrated Slice 4 batch or category-management behavior is claimed by B1.
+**Status:** In progress. Phase A design, B1 configuration/command boundaries and B2 reusable discovery are complete; B3 and later steps remain open. No integrated Slice 4 batch or category-management execution is claimed by B1/B2.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -101,7 +101,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 ### Phase B Batch implementation
 
 - [x] Step B1 - Extend configuration and command boundaries [CODE]
-- [ ] Step B2 - Implement reusable deterministic discovery [CODE]
+- [x] Step B2 - Implement reusable deterministic discovery [CODE]
 - [ ] Step B3 - Implement stage capabilities and metadata planning [CODE]
 - [ ] Step B4 - Implement per-image execution and state lifecycle [CODE]
 - [ ] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
@@ -335,11 +335,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Repeated unchanged selections yield the documented order and deduplicated identities across files, roots, and patterns.
-- [ ] Depth and symlink behavior match A1/A3, including independent rebuild controls.
-- [ ] The default candidate set visibly covers `jpg`, `jpeg`, `png`, `webp`, `tif` and `tiff`, subject to documented adapter support; configuration/CLI overrides work without claiming eligible extensions are decodable.
-- [ ] Discovery handles empty/errors as designed and performs no stage, state, or content operations.
-- [ ] Portable design and host-independent Windows drive/UNC/separator parsing tests, plus real Linux traversal, cover the A1 platform contract without claiming unperformed Windows runtime verification.
+- [x] Repeated unchanged selections yield the documented order and deduplicated identities across files, roots, and patterns.
+- [x] Depth and symlink behavior match A1/A3, including independent rebuild controls.
+- [x] The default candidate set visibly covers `jpg`, `jpeg`, `png`, `webp`, `tif` and `tiff`, subject to documented adapter support; configuration/CLI overrides work without claiming eligible extensions are decodable.
+- [x] Discovery handles empty/errors as designed and performs no stage, state, or content operations.
+- [x] Portable design and host-independent Windows drive/UNC/separator parsing tests, plus real Linux traversal, cover the A1 platform contract without claiming unperformed Windows runtime verification.
 
 **Dependencies:** B1 and completed A1/A3 contracts.
 
