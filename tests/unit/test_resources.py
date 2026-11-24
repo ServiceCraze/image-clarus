@@ -72,4 +72,4 @@ def test_description_prompt_from_installed_wheel(tmp_path):
         capture_output=True,
         check=True,
     )
-    assert cli.stdout == b"image-clarus 0.3.8\n"
+    assert cli.stdout == b"image-clarus 0.3.9\n"

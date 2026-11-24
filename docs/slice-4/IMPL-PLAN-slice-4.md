@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. A1–A2 design is complete; A3–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A2.
+**Status:** In progress. A1–A2 design is complete; A3 is in progress, A4–A5 and all implementation and verification steps remain open. No Slice 4 feature implementation or acceptance test is claimed by A1–A3.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -218,10 +218,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Multi-collection state, memory/fallback ownership, diagnostics, and close boundaries are fully specified without changing precedence.
-- [ ] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
+- [x] Multi-collection state, memory/fallback ownership, diagnostics, and close boundaries are fully specified without changing precedence.
+- [x] List is read-only from startup through failure, with migration-required reporting; management never silently substitutes memory or another persistent store.
 - [ ] Clear preserves other domains; rebuild is additive, best effort, empty-safe, and uses existing extraction semantics.
-- [ ] Accumulation timing/eligibility, budget-excluded valid JSON, interruption, and concurrent management have explicit outcomes and test boundaries.
+- [x] Accumulation timing/eligibility, budget-excluded valid JSON, interruption, and concurrent management have explicit outcomes and test boundaries.
 - [ ] All significant product decisions have the required disposition before A5; routine storage mechanics do not create unnecessary approval gates.
 
 **Dependencies:** A1 selection/configuration and A2 execution contracts as available; reconcile metrics with A4 before A5.
