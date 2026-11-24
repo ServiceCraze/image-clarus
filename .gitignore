@@ -1,4 +1,5 @@
 *.tar.xz
+*.bak
 **/tmp/*
 .venv/
 dist/
