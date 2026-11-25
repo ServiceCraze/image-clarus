@@ -6,6 +6,7 @@ import re
 import sys
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -14,7 +15,12 @@ from image_clarus import resources
 from image_clarus.artifacts import ArtifactError
 from image_clarus.config import ConfigurationError, _valid_tag_segment
 from image_clarus.results import StageResult
-from image_clarus.stage_protocol import Terminal, WorkRequired, drive
+from image_clarus.stage_protocol import (
+    Terminal,
+    WorkRequired,
+    drive,
+    mark_transform_started,
+)
 from image_clarus.stages.structure import _read_envelope, _valid_envelope
 from image_clarus.xmp_backend import FIELDS, ExifToolBackend, XmpBackendError
 
@@ -276,7 +282,9 @@ def _run_xmp(image_path, config, services):
                     else "Effective tag policy: " + plan.effective_tag_policy
                 ),
             )
-        candidate = backend.transform(snapshot, plan.updates)
+        candidate = backend.transform(
+            snapshot, plan.updates, on_start=partial(mark_transform_started, services)
+        )
         if _interrupted(services):
             return StageResult("xmp", "skipped", reason_code="interrupted")
         _guard_aliases(paths)

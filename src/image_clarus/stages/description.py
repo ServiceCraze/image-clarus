@@ -17,6 +17,7 @@ from image_clarus.stage_protocol import (
     Terminal,
     WorkRequired,
     drive,
+    mark_transform_started,
 )
 
 
@@ -75,6 +76,7 @@ def start_or_resume(context, provider_result):
         if isinstance(checked, Terminal):
             context.phase = "done"
             return checked
+        mark_transform_started(context.services)
         config, services, image = context.config, context.services, context.image
         settings = config["stages"]["desc"]
         model = config["models"][settings["model"]]

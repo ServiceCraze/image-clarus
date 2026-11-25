@@ -36,7 +36,15 @@ def _extract(data, read_envelope):
     return sorted(paths)
 
 
-def accumulate_categories(result, service, *, enabled, read_envelope, stop=None):
+def _diagnostic(operation, on_diagnostic=None):
+    print(f"image-clarus: state error: {operation}", file=sys.stderr)
+    if on_diagnostic is not None:
+        on_diagnostic(operation)
+
+
+def accumulate_categories(
+    result, service, *, enabled, read_envelope, stop=None, on_diagnostic=None
+):
     """Perform optional work without changing the primary pipeline result."""
     if not enabled or (stop is not None and stop.signum is not None):
         return
@@ -56,8 +64,6 @@ def accumulate_categories(result, service, *, enabled, read_envelope, stop=None)
             service.add_categories(paths)
     except StateStopped:
         if stop is None or stop.signum is None:
-            print("image-clarus: state error: category update failed", file=sys.stderr)
+            _diagnostic("category update failed", on_diagnostic)
     except Exception:  # noqa: BLE001 - optional work must not affect primary results
-        print(
-            "image-clarus: state error: category accumulation failed", file=sys.stderr
-        )
+        _diagnostic("category accumulation failed", on_diagnostic)

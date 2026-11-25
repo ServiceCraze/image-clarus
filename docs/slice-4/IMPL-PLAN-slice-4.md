@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A and B1–B3 are complete; B4 and later steps remain open. B2's Windows wildcard-classification defect has been corrected. No integrated Slice 4 batch or category-management execution is claimed by B1–B3.
+**Status:** In progress. Phase A and B1–B4 are complete; B5 and later steps remain open. The B4 sequential executor is an internal execution seam, not user-facing batch CLI integration; concurrent execution, reporting/CLI integration, and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -103,7 +103,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step B1 - Extend configuration and command boundaries [CODE]
 - [x] Step B2 - Implement reusable deterministic discovery [CODE]
 - [x] Step B3 - Implement stage capabilities and metadata planning [CODE]
-- [ ] Step B4 - Implement per-image execution and state lifecycle [CODE]
+- [x] Step B4 - Implement per-image execution and state lifecycle [CODE]
 - [ ] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
 - [ ] Step B6 - Integrate dry-run progress and actual metrics [CODE]
 
@@ -384,18 +384,19 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 2. Retain real recovery, missing-prerequisite, invalid-artifact, regeneration, stop/continue/abort, and safe-write behavior. Forward or terminate from authoritative outcomes; do not manufacture a completed stage for reporting convenience.
 3. Resolve and retain state per image with CLI/YAML/CWD/image precedence. Implement the frozen memory/service lifetime, diagnostics and cleanup. Ordinary state failures remain visible/nonblocking and cannot cause writes to another persistent repository.
 4. Perform eligible category accumulation exactly at the per-image finalization boundary from A3. Preserve enabled/disabled behavior, generated/valid-skipped JSON, later-stage failure, and interruption rules. The next sequential image begins only after this finalization.
-5. Emit execution facts at the A4 boundaries, including failed inference attempts and corrected identities, without treating provider retries as extra admitted images. Keep initial plan facts unchanged.
+5. Emit execution facts at the A4 boundaries, including failed inference attempts and corrected identities, without treating provider retries as extra admitted images. Keep initial plan facts unchanged. Emit a transformation fact only once the stage itself establishes that a write will occur: description after authoritative inspection confirms work, JSON only when a provider artifact validates and is published, and XMP only when a nonempty update plan is applied. Attempts that skip or fail (missing prerequisite, `no_change`, invalid artifact) are execution facts, not transformations.
 6. Test missing/changed/recovered outputs after planning, valid JSON with missing description, invalid primary without regeneration, no replenishment, initially known exclusions, multi-collection state, and prior-image category visibility using authored prompt fixtures and local stubs.
 
 **Outputs:** Shared image lifecycle, sequential plan execution, per-image state integration and focused tests; [IMPL-B4-COMPLETED.md](IMPL-B4-COMPLETED.md).
 
 **Acceptance**
 
-- [ ] Sequential mode completes one image's selected stages and eligible accumulation before the next starts.
-- [ ] Rechecks/corrections/exclusions preserve the Phase A tables and existing stage policies; actual results override predictions only in actual reporting.
-- [ ] State identity remains correct across collections and all precedence/fallback cases; no optional state error changes otherwise valid primary success.
-- [ ] Generated and valid-skipped JSON contribute as designed; planning, unrelated skips and disabled accumulation do not.
-- [ ] Existing single-image outcomes and persisted handoffs remain covered by relevant regressions.
+- [x] Sequential mode completes one image's selected stages and eligible accumulation before the next starts.
+- [x] Rechecks/corrections/exclusions preserve the Phase A tables and existing stage policies; actual results override predictions only in actual reporting.
+- [x] State identity remains correct across collections and all precedence/fallback cases; no optional state error changes otherwise valid primary success.
+- [x] Generated and valid-skipped JSON contribute as designed; planning, unrelated skips and disabled accumulation do not.
+- [x] Existing single-image outcomes and persisted handoffs remain covered by relevant regressions.
+- [x] `transform_started` facts represent actual transformation work, not stage execution attempts.
 
 **Dependencies:** B3; frozen A2/A3/A4 contracts. Phase M implementation is not a dependency.
 

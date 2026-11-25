@@ -3,10 +3,31 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 PROMPT = ROOT / "prompts" / "image-description.txt"
 
+# These tests exercise the distribution channels, so they need the project
+# checkout (packaging metadata, prompt file) and the `uv` launcher. When the
+# suite is run from something that is not that checkout - for example an
+# installed wheel's tests placed in a scratch directory - there is nothing to
+# package and the channel tests are skipped rather than failing.
+REQUIRES_CHECKOUT = pytest.mark.skipif(
+    not (ROOT / "pyproject.toml").is_file() or not PROMPT.is_file(),
+    reason="distribution checks require the project checkout and its prompt file",
+)
+REQUIRES_UV = pytest.mark.skipif(
+    subprocess.run(
+        ["sh", "-c", "command -v uv"], check=False, capture_output=True
+    ).returncode
+    != 0,
+    reason="distribution checks require the uv launcher",
+)
 
+
+@REQUIRES_CHECKOUT
+@REQUIRES_UV
 def test_description_prompt_from_source_checkout():
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT / "src")
@@ -24,6 +45,8 @@ def test_description_prompt_from_source_checkout():
     assert result.stdout == PROMPT.read_bytes()
 
 
+@REQUIRES_CHECKOUT
+@REQUIRES_UV
 def test_description_prompt_from_installed_wheel(tmp_path):
     dist = tmp_path / "dist"
     subprocess.run(
@@ -72,4 +95,6 @@ def test_description_prompt_from_installed_wheel(tmp_path):
         capture_output=True,
         check=True,
     )
-    assert cli.stdout == b"image-clarus 0.3.29\n"
+    from importlib.metadata import version
+
+    assert cli.stdout == f"image-clarus {version('image-clarus')}\n".encode()

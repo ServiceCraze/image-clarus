@@ -1067,3 +1067,47 @@ def test_interrupted_provider_and_publication_are_not_stage_failures(context):
         "skipped",
         "interrupted",
     )
+
+
+def _transform_observer(c):
+    started = []
+    c.services.on_transform_started = lambda: started.append(True)
+    return started
+
+
+def test_transformation_is_announced_only_when_json_is_published(context):
+    from image_clarus.stage_protocol import ProviderResult
+    from image_clarus.stages import structure
+
+    started = _transform_observer(context)
+    work = structure.inspect(context.image, context.config, context.services)
+    request = structure.start_or_resume(work.context, None)
+    assert started == []
+
+    structure.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, content="not json"),
+    )
+    assert started == []
+
+    work = structure.inspect(context.image, context.config, context.services)
+    request = structure.start_or_resume(work.context, None)
+    publication = structure.start_or_resume(
+        request.continuation,
+        ProviderResult(request.request_id, content='{"caption":"synthetic"}'),
+    )
+    assert started == [True]
+    assert publication.validated_bytes
+
+
+@pytest.mark.parametrize("policy,status", [("skip", "skipped"), ("fail", "failed")])
+def test_missing_description_is_not_a_transformation(context, policy, status):
+    from image_clarus.stages import structure
+
+    context.config["pipeline"]["missing_prerequisite"] = policy
+    context.desc.unlink()
+    started = _transform_observer(context)
+    work = structure.inspect(context.image, context.config, context.services)
+    result = structure.start_or_resume(work.context, None)
+    assert result.result.status == status
+    assert started == []

@@ -58,6 +58,37 @@ def sidecars(image):
     )
 
 
+def test_no_change_plan_is_not_a_transformation(tmp_path):
+    image, config, services = setup_stage(tmp_path, metadata={})
+    _, _, output, _ = sidecars(image)
+    output.write_bytes(EMPTY)
+    started = []
+    services.on_transform_started = lambda: started.append(True)
+    result = xmp.run_xmp(image, config, services)
+    assert (result.status, result.reason_code) == ("skipped", "no_change")
+    assert started == []
+
+
+def test_missing_prerequisite_is_not_a_transformation(tmp_path):
+    image, config, services = setup_stage(tmp_path)
+    config["pipeline"]["missing_prerequisite"] = "skip"
+    started = []
+    services.on_transform_started = lambda: started.append(True)
+    result = xmp.run_xmp(image, config, services)
+    assert (result.status, result.reason_code) == ("skipped", "missing_prerequisite")
+    assert started == []
+
+
+def test_successful_publication_reports_a_transformation(tmp_path):
+    if not shutil.which("exiftool"):
+        pytest.skip("real ExifTool not on PATH")
+    image, config, services = setup_stage(tmp_path, metadata={"headline": "Fictional"})
+    started = []
+    services.on_transform_started = lambda: started.append(True)
+    result = xmp.run_xmp(image, config, services)
+    assert (result.status, started) == ("completed", [True])
+
+
 def test_missing_json_reports_configured_prerequisite_policy(tmp_path):
     image, config, services = setup_stage(tmp_path)
     result = xmp.run_xmp(image, config, services)
@@ -222,7 +253,7 @@ def test_backend_failure_is_sanitized_and_preserves_original(
     _, _, output, _ = sidecars(image)
     output.write_bytes(EMPTY)
 
-    def fail(*args):
+    def fail(*args, **_kwargs):
         raise XmpBackendError(error)
 
     monkeypatch.setattr(ExifToolBackend, "transform", fail)
@@ -256,7 +287,7 @@ def test_cooperative_stop_after_transform_prevents_publication(tmp_path, monkeyp
     image, config, services = setup_stage(tmp_path, metadata={"headline": "Fictional"})
     services.stop = StopToken()
 
-    def transform(self, snapshot, updates):
+    def transform(self, snapshot, updates, **_kwargs):
         services.stop.request(15)
         return EMPTY
 
@@ -373,7 +404,7 @@ def test_candidate_is_validated_by_artifact_service_before_publication(
     image, config, services = setup_stage(tmp_path, metadata={"headline": "Fictional"})
     _, _, output, backup = sidecars(image)
     output.write_bytes(EMPTY)
-    monkeypatch.setattr(ExifToolBackend, "transform", lambda *args: b"not xmp")
+    monkeypatch.setattr(ExifToolBackend, "transform", lambda *a, **k: b"not xmp")
     result = xmp.run_xmp(image, config, services)
     assert (result.status, result.error_category) == ("failed", "invalid_artifact")
     assert output.read_bytes() == EMPTY and not backup.exists()

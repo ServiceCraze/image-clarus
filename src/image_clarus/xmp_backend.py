@@ -275,7 +275,7 @@ class ExifToolBackend:
             proc.stdout.close()
             proc.stderr.close()
 
-    def transform(self, snapshot, updates):
+    def transform(self, snapshot, updates, *, on_start=None):
         before = self.read(snapshot)
         if not isinstance(updates, dict) or set(updates) - set(FIELDS):
             raise XmpBackendError("invalid XMP updates")
@@ -303,6 +303,8 @@ class ExifToolBackend:
             raise XmpBackendError("invalid XMP updates") from None
         if not updates:
             return EMPTY if snapshot is None else snapshot
+        if on_start is not None:
+            on_start()
         path = None
         try:
             fd, name = tempfile.mkstemp(

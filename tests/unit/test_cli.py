@@ -131,10 +131,12 @@ def test_search_stub_and_unknown_arguments():
 
 
 def test_version_uses_installed_metadata():
+    from importlib.metadata import version
+
     result = run_cli("--version")
     assert (result.returncode, result.stdout, result.stderr) == (
         0,
-        "image-clarus 0.3.29\n",
+        f"image-clarus {version('image-clarus')}\n",
         "",
     )
 

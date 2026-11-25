@@ -12,6 +12,7 @@ import sys
 import time
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 APPLICATION_ID = 0x49434C52
@@ -352,25 +353,88 @@ class SQLiteStorage:
         self.closed = True
 
 
-class MemoryStorage:
-    def __init__(self, *, stop: Any = None) -> None:
+class _MemoryBacking:
+    def __init__(self) -> None:
         self.paths: set[str] = set()
+        self.lock = RLock()
+
+
+class MemoryStorage:
+    def __init__(
+        self,
+        *,
+        stop: Any = None,
+        _backing: _MemoryBacking | None = None,
+        _on_close: Callable[[], None] | None = None,
+    ) -> None:
+        self._backing = _backing or _MemoryBacking()
+        self.paths = self._backing.paths
         self.stop = stop
         self.closed = False
+        self._on_close = _on_close
 
     def snapshot_categories(self) -> list[str]:
-        if self.closed:
-            raise StateError("repository closed")
         _check_stop(self.stop)
-        return sorted(self.paths)
+        with self._backing.lock:
+            if self.closed:
+                raise StateError("repository closed")
+            _check_stop(self.stop)
+            return sorted(self.paths)
 
     def add_categories(self, paths: Iterable[str]) -> None:
-        if self.closed:
-            raise StateError("repository closed")
         _check_stop(self.stop)
         values = _category_values(paths)
         _check_stop(self.stop)
-        self.paths.update(values)
+        with self._backing.lock:
+            if self.closed:
+                raise StateError("repository closed")
+            _check_stop(self.stop)
+            self.paths.update(values)
 
     def close(self) -> None:
-        self.closed = True
+        with self._backing.lock:
+            if self.closed:
+                return
+            self.closed = True
+            on_close, self._on_close = self._on_close, None
+        if on_close is not None:
+            on_close()
+
+
+class MemoryStoragePool:
+    """Share invocation-local no-store memory across independent service views."""
+
+    def __init__(self, *, stop: Any = None) -> None:
+        self._backing = _MemoryBacking()
+        self._stop = stop
+        self._lock = RLock()
+        self._active_views = 0
+        self._closed = False
+
+    @property
+    def active_views(self) -> int:
+        with self._lock:
+            return self._active_views
+
+    def open(self, *, stop: Any = None) -> MemoryStorage:
+        with self._lock:
+            if self._closed:
+                raise StateError("memory storage pool closed")
+            self._active_views += 1
+        return MemoryStorage(
+            stop=self._stop if stop is None else stop,
+            _backing=self._backing,
+            _on_close=self._release,
+        )
+
+    def _release(self) -> None:
+        with self._lock:
+            if self._active_views <= 0:
+                raise StateError("memory storage reference underflow")
+            self._active_views -= 1
+
+    def close(self) -> None:
+        with self._lock:
+            if self._active_views:
+                raise StateError("memory storage views remain open")
+            self._closed = True

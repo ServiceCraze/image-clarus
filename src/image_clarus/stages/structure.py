@@ -40,6 +40,7 @@ from image_clarus.stage_protocol import (
     Terminal,
     WorkRequired,
     drive,
+    mark_transform_started,
 )
 
 
@@ -379,6 +380,7 @@ def start_or_resume(context, provider_result):
             timeout=schema_worker.SCHEMA_TIMEOUT_SECONDS,
         )
         if validation.get("status") == "ok":
+            mark_transform_started(context.services)
             return _publish(context, metadata)
         if validation.get("status") != "invalid_instance":
             context.phase = "done"

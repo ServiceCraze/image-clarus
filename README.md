@@ -201,4 +201,4 @@ ExifTool synthetic round trips are not digiKam interoperability tests. In manual
 - [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — complete; see the [C5 closeout](docs/slice-1/IMPL-C5-COMPLETED.md)
 - [Slice 2 requirements](docs/slice-2/REQ-slice-2.md), [discovery](docs/slice-2/DISCOVERY-slice-2.md), and [implementation plan](docs/slice-2/IMPL-PLAN-slice-2.md) — complete; see the [C5 closeout](docs/slice-2/IMPL-C5-COMPLETED.md) for the accepted prompt-control gap and evidence boundaries
 - [Slice 3 requirements](docs/slice-3/REQ-slice-3.md) and [implementation plan](docs/slice-3/IMPL-PLAN-slice-3.md)
-- [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — in progress; B1–B3 complete.
+- [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — in progress; B1–B4 complete. The sequential executor is not yet wired into the user-facing batch CLI; see the [B4 completion record](docs/slice-4/IMPL-B4-COMPLETED.md).

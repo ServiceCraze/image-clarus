@@ -534,3 +534,34 @@ def test_optional_prompt_hash_at_xmp_publication_boundary(tmp_path, digest, vali
         assert result.updates == {"title": "Fictional", "tags": ["ai/food/leaf"]}
     else:
         assert (result.status, result.error_category) == ("failed", "invalid_artifact")
+
+
+def _xmp_config(tmp_path):
+    return {
+        "pipeline": {"missing_prerequisite": "skip"},
+        "stages": {"xmp": settings()},
+    }
+
+
+def _xmp_services():
+    from types import SimpleNamespace
+
+    from image_clarus.artifacts import ArtifactService
+
+    return SimpleNamespace(artifacts=ArtifactService())
+
+
+def _announcements(services):
+    started = []
+    services.on_transform_started = lambda: started.append(True)
+    return started
+
+
+def test_missing_json_is_not_a_transformation(tmp_path):
+    image = tmp_path / "synthetic.png"
+    image.write_bytes(b"synthetic")
+    services = _xmp_services()
+    started = _announcements(services)
+    result = xmp.run_xmp(image, _xmp_config(tmp_path), services)
+    assert (result.status, result.reason_code) == ("skipped", "missing_prerequisite")
+    assert started == []
