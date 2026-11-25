@@ -93,6 +93,15 @@ def test_description_prompt_from_installed_wheel(tmp_path):
         capture_output=True,
         check=True,
     )
-    from importlib.metadata import version
-
-    assert cli.stdout == f"image-clarus {version('image-clarus')}\n".encode()
+    installed_version = subprocess.run(
+        [
+            str(environment / "bin/python"),
+            "-c",
+            "from importlib.metadata import version; print(version('image-clarus'))",
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        check=True,
+    )
+    assert cli.stdout == b"image-clarus " + installed_version.stdout

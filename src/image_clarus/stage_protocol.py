@@ -43,6 +43,17 @@ class ProviderResult:
     error_category: str | None = None
 
 
+def _provider_outcome(client: Any, step: Request) -> ProviderResult:
+    """Run one operation through a resolved adapter; never raises."""
+    try:
+        content = getattr(client, step.operation)(**step.private_payload["arguments"])
+        return ProviderResult(step.request_id, content=content)
+    except ProviderError as error:
+        return ProviderResult(step.request_id, error_category=error.category)
+    except Exception:  # noqa: BLE001 - request-local provider fault
+        return ProviderResult(step.request_id, error_category="provider_unavailable")
+
+
 @dataclass(frozen=True)
 class PublicationResult:
     publication_id: str
@@ -63,29 +74,48 @@ def drive(
     services,
     *,
     start_or_resume: Callable | None = None,
+    call_provider: Callable[[Request], ProviderResult] | None = None,
     on_provider_request: Callable[[Request], None] | None = None,
     on_provider_result: Callable[[Request, ProviderResult], None] | None = None,
+    submit_provider: Callable[[Request], Any] | None = None,
+    await_provider: Callable[[Any], ProviderResult] | None = None,
+    defer_transformation: bool = False,
+    resume: Any = None,
 ):
-    """Drive exactly the same stage continuation using the local adapters."""
+    """Drive exactly the same stage continuation using the local adapters.
+
+    When `submit_provider` and `await_provider` are supplied, the provider call
+    is issued as an outstanding request and only joined through
+    `await_provider`. That lets the owning stage actor keep servicing other
+    images between submission and join (A2 §4) without moving any stage decision
+    out of the stage.
+
+    With `defer_transformation`, a `WorkRequired` step is returned untouched
+    instead of being executed. The caller keeps the continuation and runs it
+    when that stage has inference capacity, so a confirmation turn can never
+    start a transformation or a provider request.
+    """
     advance = start_or_resume or stage.start_or_resume
-    step = advance(work.context, None)
+    # A deferred continuation resumes exactly where it left off: no re-run of
+    # the stage's inspection, which could disagree with the earlier decision.
+    step = resume if resume is not None else advance(work.context, None)
     while not isinstance(step, Terminal):
+        if defer_transformation and isinstance(step, WorkRequired):
+            return step
         if isinstance(step, Request):
             payload = step.private_payload
             if on_provider_request is not None:
                 on_provider_request(step)
-            try:
+            if submit_provider is not None and await_provider is not None:
+                pending = submit_provider(step)
+                result = await_provider(pending)
+            elif call_provider is not None:
+                result = call_provider(step)
+            else:
                 client = services.provider_factory(
                     payload["provider"], payload["model"]
                 )
-                content = getattr(client, step.operation)(**payload["arguments"])
-                result = ProviderResult(step.request_id, content=content)
-            except ProviderError as error:
-                result = ProviderResult(step.request_id, error_category=error.category)
-            except Exception:  # noqa: BLE001 - request-local provider fault
-                result = ProviderResult(
-                    step.request_id, error_category="provider_unavailable"
-                )
+                result = _provider_outcome(client, step)
             if on_provider_result is not None:
                 on_provider_result(step, result)
             step = advance(step.continuation, result)

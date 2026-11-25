@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A and B1–B4 are complete; B5 and later steps remain open. The B4 sequential executor is an internal execution seam, not user-facing batch CLI integration; concurrent execution, reporting/CLI integration, and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A and B1–B4 are complete; B5 is open and B6 and later steps remain open. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. Patch 039 corrections now have focused and full-suite evidence, including explicit stage ownership across handoff, retry-safe request-slot release, late-spawn child cancellation/reaping, publication-admission closure linearized with batch abort, and shutdown retention of admitted publications and transport threads until cleanup completes. B5 remains open pending final acceptance reconciliation; no Windows runtime result is claimed. B4's sequential executor and B5's concurrent coordinator are internal execution seams, not user-facing batch CLI integration; reporting/CLI integration and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -84,7 +84,7 @@ Recheck the baseline before executing a step. The paths and symbols in the exist
 
 **Dependency direction:** CLI assembles resolved configuration and services. Discovery produces eligible identities/paths without stage policy. Planning uses generic descriptors and metadata-only predicates. Execution invokes stage-owned authoritative decisions and transformations. Reporting consumes facts/events; it does not change eligibility. State resolution, storage, category extraction, and management remain separate from queue scheduling. Providers remain transport boundaries. Confirm proposed imports and avoid new cycles.
 
-**A5 path handoff:** B1 extends existing `src/image_clarus/cli.py`, `config.py` and `config_errors.py`, with `tests/unit/test_slice4_config.py` and existing CLI/configuration tests. B2 adds `src/image_clarus/discovery.py` and `tests/unit/test_discovery.py`; `tests/integration/test_slice4_selection_cli.py` exercises integrated selection when the CLI is wired in B6 and M2. B3 adds `src/image_clarus/stage_registry.py`, `batch_plan.py` and `tests/unit/test_batch_plan.py`; B4/B5 add `src/image_clarus/batch_execution.py`, `provider_worker.py` and `tests/unit/test_batch_execution.py`, with the child owned by B5. B6 adds `src/image_clarus/batch_reporting.py` and `tests/unit/test_batch_reporting.py`, extending existing CLI tests. M1 adds `src/image_clarus/state/management.py`, `state/readonly.py`, `tests/unit/test_state_management.py` and `tests/unit/test_state_readonly.py`; M2 extends those boundaries and existing `state/accumulation.py`, and M1/M2 use `tests/integration/test_state_management_cli.py` for command evidence. M3 uses `tests/integration/test_state_management_concurrency.py` for independent-process evidence. Existing tests remain extension points; C1–C3 own their respective integrated evidence. These selected additions do not imply an implemented import graph: each implementation step must keep the dependency direction above and verify that its actual imports introduce no cycle.
+**A5 path handoff:** B1 extends existing `src/image_clarus/cli.py`, `config.py` and `config_errors.py`, with `tests/unit/test_slice4_config.py` and existing CLI/configuration tests. B2 adds `src/image_clarus/discovery.py` and `tests/unit/test_discovery.py`; `tests/integration/test_slice4_selection_cli.py` exercises integrated selection when the CLI is wired in B6 and M2. B3 adds `src/image_clarus/stage_registry.py`, `batch_plan.py` and `tests/unit/test_batch_plan.py`; B4/B5 add `src/image_clarus/batch_execution.py`, `provider_worker.py`, `tests/unit/test_batch_execution.py` and `tests/unit/test_batch_concurrency.py`, with the child owned by B5. B6 adds `src/image_clarus/batch_reporting.py` and `tests/unit/test_batch_reporting.py`, extending existing CLI tests. M1 adds `src/image_clarus/state/management.py`, `state/readonly.py`, `tests/unit/test_state_management.py` and `tests/unit/test_state_readonly.py`; M2 extends those boundaries and existing `state/accumulation.py`, and M1/M2 use `tests/integration/test_state_management_cli.py` for command evidence. M3 uses `tests/integration/test_state_management_concurrency.py` for independent-process evidence. Existing tests remain extension points; C1–C3 own their respective integrated evidence. These selected additions do not imply an implemented import graph: each implementation step must keep the dependency direction above and verify that its actual imports introduce no cycle.
 
 ## 3. Phase summary checklist
 
@@ -421,11 +421,14 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Measured stage activity proves real overlap on different images and a maximum of one active worker per selected stage.
+- [x] Measured stage activity proves real overlap on different images and a maximum of one active worker per selected stage.
 - [ ] Bypass candidates make downstream progress before unrelated upstream inference completes, without violating same-image validation/continuation.
-- [ ] Disabling concurrency actually runs image-first, including eligible accumulation timing.
-- [ ] Failures, aborts and signals cannot silently strand queues, start prohibited inference, or report unattempted work as completed.
-- [ ] Held-provider and publication-barrier tests preserve cancellation, safe-write, cleanup and partial-result contracts.
+  - Evidence: `test_actor_serves_queued_candidates_while_its_request_is_outstanding` holds a real provider request and asserts a confirmable candidate reaches its downstream stage during the hold; it fails against the previous blocking actor.
+- [x] Disabling concurrency actually runs image-first, including eligible accumulation timing.
+- [x] Failures, aborts and signals cannot silently strand queues, start prohibited inference, or report unattempted work as completed.
+- [x] Held-provider and publication-barrier tests preserve cancellation, safe-write, cleanup and partial-result contracts.
+
+**Completion record:** [IMPL-B5-COMPLETED.md](IMPL-B5-COMPLETED.md).
 
 **Dependencies:** B4.
 
