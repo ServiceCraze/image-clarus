@@ -127,6 +127,42 @@ def test_prompt_selection_is_exact(context, tmp_path, override):
     assert requests[0]["messages"][0]["content"] == expected
 
 
+def _transform_observer(services):
+    started = []
+    services.on_transform_started = lambda: started.append(True)
+    return started
+
+
+def test_unreadable_prompt_is_not_a_transformation(context, tmp_path):
+    image, config, services, requests, _ = context
+    config["stages"]["desc"]["prompt_file"] = tmp_path / "absent-prompt.txt"
+    started = _transform_observer(services)
+    result = run_description(image, config, services)
+    assert (result.status, result.error_category) == ("failed", "configuration")
+    assert started == []
+    assert requests == []
+    assert not image.with_name(image.name + ".desc.txt").exists()
+
+
+def test_unreadable_image_is_not_a_transformation(context):
+    image, config, services, requests, _ = context
+    started = _transform_observer(services)
+    image.unlink()
+    result = run_description(image, config, services)
+    assert (result.status, result.error_category) == ("failed", "file_io")
+    assert started == []
+    assert requests == []
+
+
+def test_transformation_is_announced_once_request_is_prepared(context):
+    image, config, services, requests, _ = context
+    started = _transform_observer(services)
+    result = run_description(image, config, services)
+    assert result.status == "completed"
+    assert started == [True]
+    assert len(requests) == 1
+
+
 def test_selected_model_provider_and_effort(context):
     image, config, services, requests, _ = context
     config["providers"]["second"] = {"base_url": "http://127.0.0.1/v1"}

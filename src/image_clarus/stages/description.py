@@ -76,7 +76,6 @@ def start_or_resume(context, provider_result):
         if isinstance(checked, Terminal):
             context.phase = "done"
             return checked
-        mark_transform_started(context.services)
         config, services, image = context.config, context.services, context.image
         settings = config["stages"]["desc"]
         model = config["models"][settings["model"]]
@@ -131,6 +130,7 @@ def start_or_resume(context, provider_result):
                     message="Unable to read image",
                 )
             )
+        mark_transform_started(services)
         context.request_id = (str(image), "desc", 0, uuid4().hex)
         context.phase = "request"
         return Request(

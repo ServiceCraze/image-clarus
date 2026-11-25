@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -18,10 +19,7 @@ REQUIRES_CHECKOUT = pytest.mark.skipif(
     reason="distribution checks require the project checkout and its prompt file",
 )
 REQUIRES_UV = pytest.mark.skipif(
-    subprocess.run(
-        ["sh", "-c", "command -v uv"], check=False, capture_output=True
-    ).returncode
-    != 0,
+    shutil.which("uv") is None,
     reason="distribution checks require the uv launcher",
 )
 
