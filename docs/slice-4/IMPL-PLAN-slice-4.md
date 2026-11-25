@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A and B1–B4 are complete; B5 is open and B6 and later steps remain open. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. Patch 039 corrections now have focused and full-suite evidence, including explicit stage ownership across handoff, retry-safe request-slot release, late-spawn child cancellation/reaping, publication-admission closure linearized with batch abort, and shutdown retention of admitted publications and transport threads until cleanup completes. B5 remains open pending final acceptance reconciliation; no Windows runtime result is claimed. B4's sequential executor and B5's concurrent coordinator are internal execution seams, not user-facing batch CLI integration; reporting/CLI integration and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A and B1–B5 are complete; B6 and later steps remain open. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. Patch 039 corrections have focused and full-suite evidence, including explicit stage ownership across handoff, retry-safe request-slot release, late-spawn child cancellation/reaping, publication-admission closure linearized with batch abort, and shutdown retention of admitted publications and transport threads until cleanup completes. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B4's sequential executor and B5's concurrent coordinator are internal execution seams, not user-facing batch CLI integration; reporting/CLI integration and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -104,7 +104,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step B2 - Implement reusable deterministic discovery [CODE]
 - [x] Step B3 - Implement stage capabilities and metadata planning [CODE]
 - [x] Step B4 - Implement per-image execution and state lifecycle [CODE]
-- [ ] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
+- [x] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
 - [ ] Step B6 - Integrate dry-run progress and actual metrics [CODE]
 
 ### Phase M Category management
@@ -422,7 +422,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 **Acceptance**
 
 - [x] Measured stage activity proves real overlap on different images and a maximum of one active worker per selected stage.
-- [ ] Bypass candidates make downstream progress before unrelated upstream inference completes, without violating same-image validation/continuation.
+- [x] Bypass candidates make downstream progress before unrelated upstream inference completes, without violating same-image validation/continuation.
   - Evidence: `test_actor_serves_queued_candidates_while_its_request_is_outstanding` holds a real provider request and asserts a confirmable candidate reaches its downstream stage during the hold; it fails against the previous blocking actor.
 - [x] Disabling concurrency actually runs image-first, including eligible accumulation timing.
 - [x] Failures, aborts and signals cannot silently strand queues, start prohibited inference, or report unattempted work as completed.

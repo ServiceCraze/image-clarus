@@ -1,10 +1,11 @@
 # Step B5 - Implement concurrent stage coordination and shutdown [CODE]
 
-**Status:** Open. Patch 039 corrections are implemented and current focused/full-suite
-regression evidence is recorded below. B5 has not been accepted: final acceptance
-reconciliation remains open.
+**Status:** Complete. All B5 acceptance rows in the Slice 4 plan are checked;
+current focused/full-suite regression evidence is recorded below. Windows runtime
+validation remains an explicit platform-evidence limitation, not an unfulfilled
+B5 acceptance criterion.
 
-**Version:** 0.3.40
+**Version:** 0.3.41
 
 **Scope deviations:** None.
 
@@ -45,7 +46,7 @@ provider mapping travels on private stdin and never in argv, logs or files.
 - `uv run --no-sync --locked pytest -q -p no:cacheprovider` — **1,712 passed, 67 skipped** (0:05:36).
 - `uv run --no-sync --locked ruff check src/image_clarus/batch_execution.py tests/unit/test_batch_concurrency.py tests/unit/test_resources.py` — All checks passed.
 - `uv run --no-sync --locked ruff format --check src/image_clarus/batch_execution.py tests/unit/test_batch_concurrency.py tests/unit/test_resources.py` — 3 files already formatted.
-- `uv sync --locked --extra dev && uv run --no-sync --locked image-clarus --version` — `image-clarus 0.3.40`.
+- Source-change verification used `0.3.40`; after the documentation reconciliation, `uv sync --locked --extra dev && uv lock --check && uv run --no-sync --locked image-clarus --version` reported `image-clarus 0.3.41`.
 
 ### Correction provenance
 
@@ -84,17 +85,20 @@ Direct regressions now cover the reviewed correction seams:
 | Batch abort refuses new publication | `test_abort_refuses_publication_after_another_stage_inference` holds a description request, causes JSON abort, proves the batch does not return while the transport remains live, then releases it and verifies no artifact write is admitted. |
 | Timed-out publication still drains before return | `test_timed_out_publication_is_reported_but_drained_before_return` holds an admitted write past the reporting deadline, proves the batch is still live, then releases and verifies the write completed before return. |
 
-## 2. Why B5 is not accepted
+## 2. Acceptance disposition
 
-The current Patch 039 corrections have focused and full-suite evidence, but this
-record remains open pending final acceptance reconciliation against the complete
-B5 plan. The Windows helper-thread path was exercised only by a forced
-non-portable-pipe unit test on POSIX, not on Windows itself. No live provider or
-user-facing batch CLI integration was run; neither is claimed as evidence here.
+B5 is complete. The focused concurrency suite covers the remaining downstream-
+progress row as well as the shutdown and resource-ownership regressions, and the
+full suite provides the current regression boundary. The Windows helper-thread
+path was exercised only by a forced non-portable-pipe unit test on POSIX, not on
+Windows itself; this remains a documented limitation rather than an unchecked
+B5 acceptance criterion. No live provider or user-facing batch CLI integration
+was run; those are outside B5's internal-executor scope.
 
 The full suite and the direct regressions establish the corrected in-process
-contracts listed above. They do not establish Windows runtime behavior or close
-unreviewed B5 acceptance rows.
+contracts listed above. They do not establish Windows runtime behavior or
+user-facing CLI integration, which are outside B5's accepted internal-executor
+scope.
 
 ## 3. Limits of this evidence
 
