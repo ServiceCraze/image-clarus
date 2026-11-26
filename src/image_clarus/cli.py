@@ -1,6 +1,7 @@
 import argparse
 import sys
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 
 class OnceAction(argparse.Action):
@@ -63,6 +64,231 @@ def main():
     finally:
         for sig, handler in handlers.items():
             signal.signal(sig, handler)
+
+
+def _process(args, state):
+    """Plan every selection before constructing execution-only services."""
+    import os
+    from types import SimpleNamespace
+
+    from image_clarus.batch_execution import (
+        BatchExecutionResult,
+        run_concurrent,
+        run_sequential,
+    )
+    from image_clarus.batch_plan import PlanningInput, build_plan
+    from image_clarus.batch_reporting import BatchReporter
+    from image_clarus.config import ConfigurationError, resolve_config
+    from image_clarus.discovery import DiscoveryError, discover_images
+    from image_clarus.pipeline import STAGE_REGISTRY
+
+    def incomplete_dry_run() -> None:
+        if args.dry_run:
+            print("plan incomplete", file=sys.stderr)
+            print("estimate unavailable: incomplete plan", file=sys.stderr)
+
+    selected = (
+        tuple(item.strip() for item in args.stages.split(","))
+        if args.stages is not None
+        else STAGE_REGISTRY
+    )
+    if (
+        not selected
+        or len(set(selected)) != len(selected)
+        or not set(selected) <= set(STAGE_REGISTRY)
+    ):
+        print("image-clarus: invalid stage selection", file=sys.stderr)
+        incomplete_dry_run()
+        return 2
+    selected = tuple(stage for stage in STAGE_REGISTRY if stage in selected)
+
+    raw_selection = args.IMAGE[0]
+    first_selection = Path(raw_selection).expanduser()
+    try:
+        single_batch_selection = first_selection.is_dir() or (
+            not first_selection.exists()
+            and any(char in raw_selection for char in "*?[")
+        )
+    except OSError:
+        single_batch_selection = any(char in raw_selection for char in "*?[")
+    batch_context = len(args.IMAGE) != 1 or single_batch_selection
+
+    def resolve(*, runtime_preflight):
+        return resolve_config(
+            stages=selected,
+            config_file=args.config,
+            json_schema=args.json_schema,
+            desc_prompt=args.desc_prompt,
+            json_prompt=args.json_prompt,
+            overrides=args.set or (),
+            missing_prerequisite=args.missing_prerequisite,
+            regenerate=args.regenerate,
+            state_dir=args.state_dir,
+            max_depth=args.max_depth,
+            max_depth_unlimited=args.max_depth_unlimited,
+            extensions=args.extensions,
+            max_work_files=args.max_work_files,
+            no_max_work_files=args.no_max_work_files,
+            inter_stage_concurrency=args.concurrency,
+            on_stage_failure=args.on_stage_failure,
+            batch_context=batch_context,
+            runtime_preflight=runtime_preflight,
+        )
+
+    try:
+        config = resolve(runtime_preflight=False)
+    except ConfigurationError as error:
+        print(f"image-clarus: {error}", file=sys.stderr)
+        incomplete_dry_run()
+        return 1 if error.category == "authentication" else 2
+
+    secrets = {
+        value
+        for provider in config.get("providers", {}).values()
+        for value in (
+            provider.get("api_key"),
+            os.environ.get(provider.get("api_key_env", "")),
+        )
+        if value
+    }
+
+    def redact(value):
+        for secret in sorted(secrets, key=len, reverse=True):
+            value = value.replace(secret, "[REDACTED]")
+        return value
+
+    def report_error(message):
+        print(message, file=sys.stderr)
+
+    try:
+        discovery = discover_images(
+            args.IMAGE,
+            max_depth=config["selection"]["max_depth"],
+            extensions=config["selection"]["extensions"],
+            ignore_case=bool(args.ignore_case),
+        )
+    except DiscoveryError:
+        print("image-clarus: selection error: input unavailable", file=sys.stderr)
+        incomplete_dry_run()
+        return 2
+
+    inputs = (
+        PlanningInput.from_candidate(candidate) for candidate in discovery.candidates
+    )
+    if args.dry_run:
+        provisional = BatchReporter(
+            build_plan((), config, selected=selected, aggregate_only=True),
+            emit_error=report_error,
+            redact=redact,
+        )
+        provisional.set_budget_limit(config["pipeline"]["max_work_files"])
+        try:
+            plan = build_plan(
+                inputs,
+                config,
+                selected=selected,
+                limit=config["pipeline"]["max_work_files"],
+                aggregate_only=True,
+                stream=provisional.render_dry_run_row,
+            )
+        except (ValueError, RuntimeError):
+            print("image-clarus: selection error: planning failed", file=sys.stderr)
+            incomplete_dry_run()
+            return 2
+        provisional.plan = plan
+        provisional.render_complete_plan()
+        return 0
+
+    # A valid empty selection requires static validation but no runtime probe or
+    # execution service. It still returns the ordinary concise summary.
+    if not discovery.candidates:
+        plan = build_plan((), config, selected=selected)
+        reporter = BatchReporter(plan, emit_error=report_error, redact=redact)
+        return 0 if reporter.render_summary(BatchExecutionResult(())) else 1
+    try:
+        config = resolve(runtime_preflight=True)
+    except ConfigurationError as error:
+        print(f"image-clarus: {error}", file=sys.stderr)
+        return 1 if error.category == "authentication" else 2
+    plan = build_plan(
+        (PlanningInput.from_candidate(candidate) for candidate in discovery.candidates),
+        config,
+        selected=selected,
+        limit=config["pipeline"]["max_work_files"],
+    )
+
+    from image_clarus.artifacts import ArtifactService
+    from image_clarus.providers.openai_compatible import OpenAICompatible, ProviderError
+
+    class InterruptibleProvider:
+        def __init__(self, provider, model):
+            self.client = OpenAICompatible(provider, model)
+
+        def _call(self, method, **kwargs):
+            if state.stop.signum is not None:
+                raise ProviderError("interrupted")
+            try:
+                state.interruptible = True
+                return getattr(self.client, method)(**kwargs)
+            except _SignalInterrupt:
+                raise ProviderError("interrupted") from None
+            finally:
+                state.interruptible = False
+
+        def image(self, **kwargs):
+            return self._call("image", **kwargs)
+
+        def structured(self, **kwargs):
+            return self._call("structured", **kwargs)
+
+    services = SimpleNamespace(
+        artifacts=ArtifactService(config["pipeline"]["backup_retention"]),
+        provider_factory=InterruptibleProvider,
+        stop=state.stop,
+    )
+    reporter = BatchReporter(
+        plan,
+        emit_error=report_error,
+        redact=redact,
+        verbose=bool(args.verbose),
+    )
+    runner = (
+        run_concurrent
+        if config["pipeline"]["inter_stage_concurrency"]
+        else run_sequential
+    )
+    result = runner(
+        plan,
+        config,
+        services,
+        cwd=Path.cwd(),
+        stop=state.stop,
+        on_event=reporter.consume,
+    )
+    # Explicit literal-file invocations retain the concise Slice 1 lines.
+    if len(plan.rows) == 1 and not discovery.batch and not args.verbose:
+        if not reporter.reconcile(result):
+            report_error("image-clarus: internal accounting error; summary incomplete")
+            return 1
+        for outcome in result.images[0].stages:
+            stage = outcome.result
+            if outcome.disposition == "completed" and stage is not None:
+                print(
+                    f"{outcome.stage}: completed — output={__import__('json').dumps(redact(str(stage.output_path)))}"
+                )
+            elif outcome.disposition == "failed" and stage is not None:
+                message = " ".join(redact(stage.message).splitlines())
+                print(
+                    f"{outcome.stage}: failed — category={redact(stage.error_category or '')}; message={message}"
+                )
+            else:
+                print(
+                    f"{outcome.stage}: skipped — reason={redact(outcome.reason_code or '')}"
+                )
+    else:
+        if not reporter.render_summary(result):
+            return 1
+    return result.exit_code
 
 
 def _main(state):
@@ -149,6 +375,16 @@ def _main(state):
         tokens = sys.argv[1:]
         if "--" in tokens and len(selections) != len(tokens) - tokens.index("--") - 1:
             parser.error("-- cannot split the selection group")
+    if args.command == "process" and (
+        len(args.IMAGE) != 1
+        or not Path(args.IMAGE[0]).expanduser().is_file()
+        or args.dry_run
+        or args.verbose
+        or args.ignore_case
+        or args.concurrency is not None
+        or args.on_stage_failure == "abort"
+    ):
+        return _process(args, state)
     if args.command == "state":
         from image_clarus.config import ConfigurationError, resolve_config
 
@@ -168,8 +404,6 @@ def _main(state):
         print("image-clarus: category management is not implemented", file=sys.stderr)
         return 2
     if args.command == "init":
-        from pathlib import Path
-
         from image_clarus.state.storage import StateError, StateStopped, initialize
 
         try:
@@ -185,7 +419,6 @@ def _main(state):
         print("search is not implemented in Slice 1", file=sys.stderr)
     else:
         import os
-        from pathlib import Path
 
         try:
             raw_image = args.IMAGE[0]

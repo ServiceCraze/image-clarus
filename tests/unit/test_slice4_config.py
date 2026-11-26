@@ -170,8 +170,10 @@ def test_dry_run_does_not_open_state_or_probe_xmp(tmp_path, monkeypatch, capsys)
             "--dry-run",
         ],
     )
-    assert cli.main() == 2
-    assert "not implemented" in capsys.readouterr().err
+    assert cli.main() == 0
+    output = capsys.readouterr()
+    assert "runtime_dependencies=not_checked" in output.out
+    assert output.err == ""
 
 
 @pytest.mark.parametrize(
@@ -203,11 +205,12 @@ def test_selection_grammar_rejections(monkeypatch, capsys, args):
         ["state", "categories", "rebuild", "--", "-a", "b"],
     ],
 )
-def test_contiguous_selections_reach_stub(monkeypatch, capsys, args):
+def test_contiguous_selections_reach_selection_validation(monkeypatch, capsys, args):
     monkeypatch.setattr(sys, "argv", ["image-clarus", *args])
     monkeypatch.setattr("image_clarus.config.discovery_locations", lambda: ())
     assert cli.main() == 2
-    assert "not implemented" in capsys.readouterr().err
+    expected = "selection error" if args[0] == "process" else "category management"
+    assert expected in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("rebuild", [False, True])
@@ -281,9 +284,10 @@ def test_dry_run_stub_never_reads_input_or_runs_services(
             "--dry-run",
         ],
     )
-    assert cli.main() == 2
+    assert cli.main() == (2 if bad_config else 0)
+    output = capsys.readouterr()
     assert (
-        "selection.max_depth" if bad_config else "not implemented"
-    ) in capsys.readouterr().err
+        "selection.max_depth" if bad_config else "runtime_dependencies=not_checked"
+    ) in (output.err + output.out)
     monkeypatch.setattr(Path, "open", original_open)
     assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before

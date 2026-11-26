@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A and B1–B5 are complete; B6 and later steps remain open. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. Patch 039 corrections have focused and full-suite evidence, including explicit stage ownership across handoff, retry-safe request-slot release, late-spawn child cancellation/reaping, publication-admission closure linearized with batch abort, and shutdown retention of admitted publications and transport threads until cleanup completes. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B4's sequential executor and B5's concurrent coordinator are internal execution seams, not user-facing batch CLI integration; reporting/CLI integration and category-management execution remain open. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A and B1–B6 are complete; Phase M and Phase C remain open. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. Category-management execution remains open. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -105,7 +105,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step B3 - Implement stage capabilities and metadata planning [CODE]
 - [x] Step B4 - Implement per-image execution and state lifecycle [CODE]
 - [x] Step B5 - Implement concurrent stage coordination and shutdown [CODE]
-- [ ] Step B6 - Integrate dry-run progress and actual metrics [CODE]
+- [x] Step B6 - Integrate dry-run progress and actual metrics [CODE]
 
 ### Phase M Category management
 
@@ -452,12 +452,12 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Single-image compatibility and default concurrent batch behavior are reachable through the actual CLI.
-- [ ] Dry-run obeys content/execution/mutation boundaries even during startup/failure; each completed plan reports the required labeled estimate, and an incomplete plan reports that the estimate is unavailable.
-- [ ] Actual CLI dry-run identifies admitted, initially no-work, and known budget-excluded file paths in deterministic order and marks precisely where N is reached; aggregate totals alone cannot satisfy this check.
-- [ ] Initial and actual image/stage metrics reconcile for successes, skips, failures, corrections, interruption and no-work cases.
-- [ ] Progress and exits follow A4 without claiming success from 100% accounted progress.
-- [ ] Diagnostics are useful, sanitized, channel-correct and compatible with existing concise output.
+- [x] Single-image compatibility and default concurrent batch behavior are reachable through the actual CLI.
+- [x] Dry-run obeys content/execution/mutation boundaries even during startup/failure; each completed plan reports the required labeled estimate, and an incomplete plan reports that the estimate is unavailable.
+- [x] Actual CLI dry-run identifies admitted, initially no-work, and known budget-excluded file paths in deterministic order and marks precisely where N is reached; aggregate totals alone cannot satisfy this check.
+- [x] Initial and actual image/stage metrics reconcile for successes, skips, failures, corrections, interruption and no-work cases.
+- [x] Progress and exits follow A4 without claiming success from 100% accounted progress.
+- [x] Diagnostics are useful, sanitized, channel-correct and compatible with existing concise output.
 
 **Dependencies:** B5; B1–B4 delivered contracts.
 
