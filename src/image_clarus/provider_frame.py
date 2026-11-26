@@ -33,9 +33,15 @@ class FrameError(Exception):
     """Malformed, oversized or truncated frame; always sanitized by callers."""
 
 
-def _pack_length(count: int) -> bytes:
-    if count > MAX_FRAME_BYTES:
+def validate_frame_size(size: int) -> int:
+    """Reject a declared wire-frame body before any caller reads it."""
+    if size < 0 or size > MAX_FRAME_BYTES:
         raise FrameError("oversized frame")
+    return size
+
+
+def _pack_length(count: int) -> bytes:
+    validate_frame_size(count)
     return _LEN.pack(count)
 
 
@@ -87,9 +93,7 @@ class _Reader:
 
     def length(self) -> int:
         (count,) = _LEN.unpack(self.take(_LEN.size))
-        if count > MAX_FRAME_BYTES:
-            raise FrameError("oversized frame")
-        return count
+        return validate_frame_size(count)
 
     def value(self, depth: int):
         if depth > MAX_DEPTH:
@@ -140,6 +144,7 @@ def decode_frame(data: bytes):
     if len(data) < _HEADER.size:
         raise FrameError("missing frame header")
     (size,) = _HEADER.unpack(data[: _HEADER.size])
+    size = validate_frame_size(size)
     body = data[_HEADER.size :]
     if size != len(body):
         raise FrameError("truncated frame")

@@ -12,7 +12,12 @@ parent. This is a local termination boundary, not a memory or network sandbox.
 
 import sys
 
-from image_clarus.provider_frame import FrameError, decode_frame, encode_frame
+from image_clarus.provider_frame import (
+    FrameError,
+    decode_frame,
+    encode_frame,
+    validate_frame_size,
+)
 
 _READ_CHUNK = 1 << 20
 
@@ -34,7 +39,7 @@ def read_request(stream):
     header = _read_exact(stream, 4)
     if header is None:
         return None
-    size = int.from_bytes(header, "big")
+    size = validate_frame_size(int.from_bytes(header, "big"))
     body = _read_exact(stream, size) if size else b""
     if body is None:
         return None

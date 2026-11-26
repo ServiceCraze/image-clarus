@@ -5,7 +5,7 @@ current focused/full-suite regression evidence is recorded below. Windows runtim
 validation remains an explicit platform-evidence limitation, not an unfulfilled
 B5 acceptance criterion.
 
-**Version:** 0.3.41
+**Version:** 0.3.43
 
 **Scope deviations:** None.
 
@@ -35,18 +35,19 @@ provider mapping travels on private stdin and never in argv, logs or files.
 | Binary requests cross the child boundary intact | `test_vision_request_crosses_the_child_boundary` |
 | Malformed child replies are sanitized, never fatal | `test_malformed_child_reply_is_sanitized_not_fatal` |
 | Child conversations are deadline-bounded in both directions | `test_held_child_is_timed_out_and_reaped`, `test_child_that_never_reads_its_request_is_a_timeout`, `test_real_full_pipe_bounds_a_large_request` (a genuine capacity-filled OS pipe, no mocked selector) |
-| Abort, interruption and refused publication stay distinct | `test_aborted_queued_work_is_not_attempted_not_interrupted`, `test_stop_before_execution_marks_selected_stages_not_attempted`, `test_refused_publication_is_reported_not_hidden` |
+| Abort, interruption and refused publication stay distinct | `test_aborted_queued_work_is_not_attempted_not_interrupted`, `test_stop_before_execution_marks_selected_stages_not_attempted`, `test_publication_refused_after_stop_is_not_completed` |
 | Events are ordered under concurrency | `test_events_are_unique_and_ordered_under_concurrency` |
 | Active work is never settled by dispatch closure | `_close_dispatch` settles queued work only; an actor marks its own operation when its real result arrives or when it abandons it |
 | Publication drains for a real bounded time | `run()` drains `PublicationGate` with a deadline fixed at run start; a refused or undrained publication makes the batch unsuccessful |
 
 ### Verification performed
 
-- `uv run --no-sync --locked pytest tests/unit/test_batch_concurrency.py tests/unit/test_batch_execution.py -q` — **70 passed** (0:01:26).
-- `uv run --no-sync --locked pytest -q -p no:cacheprovider` — **1,712 passed, 67 skipped** (0:05:36).
-- `uv run --no-sync --locked ruff check src/image_clarus/batch_execution.py tests/unit/test_batch_concurrency.py tests/unit/test_resources.py` — All checks passed.
-- `uv run --no-sync --locked ruff format --check src/image_clarus/batch_execution.py tests/unit/test_batch_concurrency.py tests/unit/test_resources.py` — 3 files already formatted.
-- Source-change verification used `0.3.40`; after the documentation reconciliation, `uv sync --locked --extra dev && uv lock --check && uv run --no-sync --locked image-clarus --version` reported `image-clarus 0.3.41`.
+- `uv run --no-sync --locked pytest tests/unit/test_batch_concurrency.py tests/unit/test_batch_execution.py -q` — **73 passed** (0:01:17).
+- `uv run --no-sync --locked pytest -q -p no:cacheprovider` — **1,715 passed, 67 skipped** (0:05:30).
+- `uv lock --check` — lockfile matches the `0.3.43` package metadata.
+- `uv run --no-sync --locked ruff check src/image_clarus/batch_execution.py src/image_clarus/provider_frame.py src/image_clarus/provider_worker.py tests/unit/test_batch_concurrency.py` — All checks passed.
+- `uv run --no-sync --locked ruff format --check src/image_clarus/batch_execution.py src/image_clarus/provider_frame.py src/image_clarus/provider_worker.py tests/unit/test_batch_concurrency.py` — 4 files already formatted.
+- `uv run --no-sync --locked image-clarus --version` — `image-clarus 0.3.43`.
 
 ### Correction provenance
 
@@ -63,6 +64,11 @@ Each correction was re-checked by reverting it and confirming its test fails:
 | A confirmation cannot reach provider transport | fails (`2 inferences were outstanding for one stage`) |
 | Pending accounting is per stage | fails (`two stages never held requests at once`) |
 | Unpollable pipes never block the actor | fails (`KeyError: 'v'` — the caller never returned) |
+| Oversized frame header is rejected before a body read | fails (`oversized body was read`) |
+| Child/helper cleanup failure cannot produce a successful result | fails (a valid transport reply is returned after reap timeout) |
+| Failure-policy scenario has an active downstream actor | fails (`JSON never became active`) |
+| Interrupted unstarted image is never reported complete | fails (the second image is invoked or receives a completed disposition) |
+| Helper registration/start cannot race cleanup | fails (`RuntimeError: cannot join thread before it is started`) |
 
 The Patch 036 review identified a test-fixture exception rather than normal
 coordinator shutdown as the reason a two-stage overlap probe closed dispatch.
@@ -84,6 +90,11 @@ Direct regressions now cover the reviewed correction seams:
 | Batch abort reaps a late provider spawn | `test_child_reaps_late_spawn_after_batch_cancellation` aborts while `Popen` is blocked before registration, then verifies the late child is killed and reaped. |
 | Batch abort refuses new publication | `test_abort_refuses_publication_after_another_stage_inference` holds a description request, causes JSON abort, proves the batch does not return while the transport remains live, then releases it and verifies no artifact write is admitted. |
 | Timed-out publication still drains before return | `test_timed_out_publication_is_reported_but_drained_before_return` holds an admitted write past the reporting deadline, proves the batch is still live, then releases and verifies the write completed before return. |
+| Oversized child frames fail before body allocation/read | `test_oversized_frame_header_is_rejected_before_body_read` supplies only an oversized four-byte header to both the child reader and parent exchange and asserts neither attempts a body read. |
+| Reap and pipe-helper cleanup failure is observable | `test_unreaped_child_is_reported_as_transport_failure` rejects a valid reply after bounded reap failure; `test_unpollable_pipe_path_never_blocks_the_actor` asserts a helper still alive after its bounded cleanup window returns `provider_unavailable`, never a successful transport result. |
+| Failure policy runs while another stage is active | `test_failure_policy_while_another_stage_is_active` holds JSON for one image until the description actor fails another image, then asserts the configured continuation effect. |
+| Signal leaves unstarted work interrupted and uninvoked | `test_stop_closes_dispatch_and_reports_not_attempted` asserts only the first image enters the stage and the second is reported `interrupted`. |
+| Helper registration/start is atomic with cleanup | `test_helper_start_registration_is_atomic_against_termination` holds helper startup at the registration boundary, invokes `terminate()` from another thread, then proves cleanup cannot observe an unstarted helper or raise `RuntimeError`. |
 
 ## 2. Acceptance disposition
 
@@ -103,8 +114,10 @@ scope.
 ## 3. Limits of this evidence
 
 - No Windows runtime was exercised. Pipe readiness uses `select` on POSIX;
-  Windows uses a helper thread bounded by the deadline, implemented but only
-  reasoned about, not run.
+  Windows uses a child-owned helper thread. It is tracked through the bounded
+  cleanup window, and a failure to reap the child or finish the helper is
+  surfaced as `provider_unavailable`; this behavior was forced on POSIX, not
+  run on Windows.
 - No live provider service was called; all provider-boundary evidence uses the
   framed child with synthetic payloads.
 - B5 has no CLI integration, so no user-facing batch path, real OS signal, or

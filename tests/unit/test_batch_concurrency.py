@@ -783,7 +783,7 @@ def test_unpollable_pipe_path_never_blocks_the_actor(tmp_path, monkeypatch):
 
     def run_call():
         started = time.monotonic()
-        child.call(_child_request(tmp_path, timeout_seconds=0.05))
+        elapsed["result"] = child.call(_child_request(tmp_path, timeout_seconds=0.05))
         elapsed["v"] = time.monotonic() - started
 
     # The request deadline includes the startup allowance; shorten it so the
@@ -797,12 +797,97 @@ def test_unpollable_pipe_path_never_blocks_the_actor(tmp_path, monkeypatch):
         assert not caller.is_alive(), (
             "the actor thread was still inside the exchange after its deadline"
         )
-        # Bounded by the deadline, not by the read ever returning.
-        assert elapsed["v"] < allowance + 5.0
+        # The actor returns only after the bounded child/helper cleanup window;
+        # a helper that the OS cannot unblock becomes a visible transport failure.
+        assert elapsed["v"] < allowance + batch.CHILD_REAP_ALLOWANCE_SECONDS + 1.0
+        assert elapsed["result"].error_category == "provider_unavailable"
+        assert child._unreaped is True
         assert holder["process"].killed is True
         assert holder["process"].reaped is True
     finally:
         stop_reader.set()
+
+
+def test_helper_start_registration_is_atomic_against_termination(monkeypatch):
+    """Termination cannot join a registered helper before its thread starts."""
+    import image_clarus.batch_execution as batch
+
+    reader_started = threading.Event()
+    release_reader = threading.Event()
+    termination_entered = threading.Event()
+    termination_returned = threading.Event()
+    termination_errors = []
+
+    class Input:
+        closed = False
+
+        def write(self, data):
+            return len(data)
+
+        def flush(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    class Output:
+        closed = False
+
+        def read(self, _size=-1):
+            reader_started.set()
+            release_reader.wait(5)
+            return b""
+
+        def close(self):
+            self.closed = True
+            release_reader.set()
+
+    class Process:
+        def __init__(self):
+            self.stdin = Input()
+            self.stdout = Output()
+
+        def poll(self):
+            return None
+
+        def kill(self):
+            return None
+
+        def wait(self, timeout=None):
+            return 0
+
+    child = ChildProvider(None)
+    child._process = Process()
+    child._deadline = time.monotonic() + 5
+    original_start = threading.Thread.start
+
+    def terminate_from_other_thread():
+        termination_entered.set()
+        try:
+            child.terminate()
+        except BaseException as error:  # noqa: BLE001 - regression records join failure
+            termination_errors.append(error)
+        finally:
+            termination_returned.set()
+
+    terminator = threading.Thread(target=terminate_from_other_thread)
+
+    def controlled_start(thread):
+        if thread.name != "image-clarus-pipe-exchange":
+            return original_start(thread)
+        original_start(terminator)
+        assert termination_entered.wait(1)
+        # While registration/start are protected by the child lock, termination
+        # cannot snapshot and join this not-yet-started helper.
+        assert not termination_returned.wait(0.1)
+        return original_start(thread)
+
+    monkeypatch.setattr(batch.threading.Thread, "start", controlled_start)
+
+    assert child._exchange_threaded(child._process, b"request") is None
+    assert reader_started.wait(1)
+    assert termination_returned.wait(1)
+    assert termination_errors == []
 
 
 def test_disabled_concurrency_runs_image_first(tmp_path):
@@ -859,20 +944,25 @@ def test_sequential_accumulation_visible_to_next_image(tmp_path):
 def test_failure_policy_while_another_stage_is_active(
     tmp_path, policy, expect_second_stage, expect_exit
 ):
-    images = _images(tmp_path, ["failing.jpg", "other.jpg"])
-    other_started = threading.Event()
+    images = _images(tmp_path, ["other.jpg", "failing.jpg"])
+    json_started = threading.Event()
+    release_json = threading.Event()
 
     def desc(image, *_args, **_kwargs):
         if Path(image).name == "failing.jpg":
-            other_started.wait(5)
+            assert json_started.wait(5), "JSON never became active"
+            release_json.set()
             return Terminal(
                 StageResult("desc", "failed", error_category="invalid_artifact")
             )
-        other_started.set()
-        time.sleep(0.02)
         return Terminal(StageResult("desc", "completed"))
 
     def json_stage(image, *_args, **_kwargs):
+        if Path(image).name == "other.jpg":
+            json_started.set()
+            assert release_json.wait(5), (
+                "description never failed while JSON was active"
+            )
         return Terminal(StageResult("json", "completed"))
 
     stages = (_stage("desc", desc), _stage("json", json_stage))
@@ -881,7 +971,8 @@ def test_failure_policy_while_another_stage_is_active(
 
     result = run_concurrent(plan, config, _services(), cwd=tmp_path / "cwd")
 
-    failing = result.images[0]
+    failing = result.images[1]
+    assert json_started.is_set()
     assert failing.stages[0].disposition == "failed"
     assert (failing.stages[1].disposition == "completed") is expect_second_stage
     assert result.exit_code == expect_exit
@@ -910,8 +1001,10 @@ def test_stop_closes_dispatch_and_reports_not_attempted(tmp_path):
     images = _images(tmp_path, ["first.jpg", "second.jpg"])
     stop = SimpleNamespace(signum=None, request=lambda signum: None)
     entered = threading.Event()
+    invoked = []
 
     def desc(image, *_args, **_kwargs):
+        invoked.append(Path(image).name)
         entered.set()
         stop.signum = 15
         return Terminal(StageResult("desc", "completed"))
@@ -931,12 +1024,12 @@ def test_stop_closes_dispatch_and_reports_not_attempted(tmp_path):
     )
 
     assert entered.is_set()
+    assert invoked == ["first.jpg"]
     assert result.interrupted_by == 15
     assert result.exit_code == 128 + 15
-    dispositions = [
-        outcome.disposition for image in result.images for outcome in image.stages
-    ]
-    assert "completed" not in [d for d in dispositions if d == "failed"]
+    second = result.images[1]
+    assert [outcome.disposition for outcome in second.stages] == ["interrupted"]
+    assert second.stages[0].reason_code == "interrupted"
 
 
 def test_stop_before_execution_marks_selected_stages_not_attempted(tmp_path):
@@ -1593,6 +1686,69 @@ def test_child_start_failure_is_sanitized(tmp_path, monkeypatch):
     assert result.error_category == "provider_unavailable"
 
 
+def test_oversized_frame_header_is_rejected_before_body_read(tmp_path, monkeypatch):
+    """Both pipe endpoints reject a declared over-limit body without reading it."""
+    from image_clarus import provider_worker
+    from image_clarus.provider_frame import MAX_FRAME_BYTES, FrameError
+
+    header = (MAX_FRAME_BYTES + 1).to_bytes(4, "big")
+
+    class HeaderOnly:
+        def __init__(self):
+            self.calls = []
+            self.closed = False
+
+        def read(self, size=-1):
+            self.calls.append(size)
+            if len(self.calls) == 1:
+                assert size == 4
+                return header
+            raise AssertionError("oversized body was read")
+
+        def close(self):
+            self.closed = True
+
+    worker_stream = HeaderOnly()
+    with pytest.raises(FrameError):
+        provider_worker.read_request(worker_stream)
+    assert worker_stream.calls == [4]
+
+    class Input:
+        closed = False
+
+        def write(self, data):
+            return len(data)
+
+        def flush(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    class Process:
+        def __init__(self):
+            self.stdin = Input()
+            self.stdout = HeaderOnly()
+            self.returncode = 0
+
+        def poll(self):
+            return 0
+
+        def wait(self, timeout=None):
+            return 0
+
+        def kill(self):
+            return None
+
+    process = Process()
+    monkeypatch.setattr(batch_execution.subprocess, "Popen", lambda *_a, **_k: process)
+    monkeypatch.setattr(ChildProvider, "_portable_io", lambda _self: False)
+    result = ChildProvider(None).call(_child_request(tmp_path, timeout_seconds=1))
+
+    assert result.error_category == "provider_unavailable"
+    assert process.stdout.calls == [4]
+
+
 def test_child_malformed_frame_is_sanitized(tmp_path, monkeypatch):
     class FakeStream:
         """A pipe whose only content is one unreadable byte."""
@@ -1640,6 +1796,45 @@ def test_child_malformed_frame_is_sanitized(tmp_path, monkeypatch):
     child = ChildProvider(None)
     result = child.call(_child_request(tmp_path, timeout_seconds=1))
     assert result.error_category == "provider_unavailable"
+
+
+def test_unreaped_child_is_reported_as_transport_failure(tmp_path, monkeypatch):
+    """A bounded reap failure cannot be returned as a successful provider result."""
+    from image_clarus.provider_frame import encode_frame
+
+    killed = []
+
+    class UnreapableProcess:
+        stdin = None
+        stdout = None
+
+        def poll(self):
+            return None
+
+        def kill(self):
+            killed.append(True)
+
+        def wait(self, timeout=None):
+            raise batch_execution.subprocess.TimeoutExpired(
+                "provider", float(timeout or 0)
+            )
+
+    monkeypatch.setattr(
+        batch_execution.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: UnreapableProcess(),
+    )
+    monkeypatch.setattr(
+        ChildProvider,
+        "_exchange",
+        lambda _self, _frame: encode_frame({"category": None, "content": "valid"}),
+    )
+
+    result = ChildProvider(None).call(_child_request(tmp_path, timeout_seconds=1))
+
+    assert killed == [True]
+    assert result.error_category == "provider_unavailable"
+    assert result.content is None
 
 
 def test_child_credentials_never_appear_in_argv(tmp_path, monkeypatch):

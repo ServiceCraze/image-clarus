@@ -90,7 +90,7 @@ wheels = [
 
 [[package]]
 name = "image-clarus"
-version = "0.3.41"
+version = "0.3.43"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

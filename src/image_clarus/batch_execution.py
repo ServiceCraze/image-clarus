@@ -17,7 +17,12 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from image_clarus.batch_plan import Admission, Plan, Row, route
-from image_clarus.provider_frame import FrameError, decode_frame, encode_frame
+from image_clarus.provider_frame import (
+    FrameError,
+    decode_frame,
+    encode_frame,
+    validate_frame_size,
+)
 from image_clarus.results import PipelineResult, StageResult
 from image_clarus.stage_protocol import (
     ProviderResult,
@@ -719,6 +724,7 @@ class ChildProvider:
         self._deadline: float | None = None
         self._exhausted = False
         self._unreaped = False
+        self._helper_threads: set[threading.Thread] = set()
         self._startup_allowance = CHILD_STARTUP_ALLOWANCE_SECONDS
 
     def _is_cancelled(self) -> bool:
@@ -833,7 +839,10 @@ class ChildProvider:
         header = self._read_exact(process.stdout, 4)
         if header is None:
             return None
-        size = int.from_bytes(header, "big")
+        try:
+            size = validate_frame_size(int.from_bytes(header, "big"))
+        except FrameError:
+            return None
         body = self._read_exact(process.stdout, size) if size else b""
         if body is None:
             return None
@@ -857,7 +866,10 @@ class ChildProvider:
                 header = process.stdout.read(4)
                 if not header or len(header) != 4:
                     return
-                size = int.from_bytes(header, "big")
+                try:
+                    size = validate_frame_size(int.from_bytes(header, "big"))
+                except FrameError:
+                    return
                 body = process.stdout.read(size) if size else b""
                 if body is None or len(body) != size:
                     return
@@ -866,11 +878,18 @@ class ChildProvider:
                 return
             finally:
                 finished.set()
+                with self._lock:
+                    self._helper_threads.discard(threading.current_thread())
 
         worker = threading.Thread(
             target=exchange, name="image-clarus-pipe-exchange", daemon=True
         )
-        worker.start()
+        # Register and start while holding the same lock `terminate()` uses for
+        # its helper snapshot. A shutdown cannot join a thread in the interval
+        # after registration but before `start()` makes it joinable.
+        with self._lock:
+            self._helper_threads.add(worker)
+            worker.start()
         while True:
             if finished.wait(0.01):
                 return outcome.get("frame")
@@ -895,6 +914,7 @@ class ChildProvider:
         if self._is_cancelled():
             return ProviderResult(request.request_id, error_category="interrupted")
         self._exhausted = False
+        self._unreaped = False
         try:
             frame = encode_frame(
                 {
@@ -927,15 +947,22 @@ class ChildProvider:
         # Register-then-recheck: cancellation that won the spawn race reaps this child.
         if self._is_cancelled():
             self.terminate()
-            return ProviderResult(request.request_id, error_category="interrupted")
+            category = "provider_unavailable" if self._unreaped else "interrupted"
+            return ProviderResult(request.request_id, error_category=category)
+        cleanup_failed = False
         try:
             raw = self._exchange(frame)
             timed_out = raw is None and (self._timed_out() or self._exhausted)
             stopped = self._is_cancelled()
         finally:
             self.terminate()
+            cleanup_failed = self._unreaped
             with self._lock:
                 self._deadline = None
+        if cleanup_failed:
+            return ProviderResult(
+                request.request_id, error_category="provider_unavailable"
+            )
         if raw is None:
             if stopped:
                 return ProviderResult(request.request_id, error_category="interrupted")
@@ -988,13 +1015,22 @@ class ChildProvider:
         except subprocess.TimeoutExpired:
             self._unreaped = True
         except OSError:
-            pass
+            self._unreaped = True
         for stream in (process.stdin, process.stdout):
             try:
                 if stream is not None and not stream.closed:
                     stream.close()
             except (OSError, ValueError):
                 pass
+        # Windows exchange helpers are child-owned I/O too. Once the child is
+        # terminated and its streams are closed they must finish before the
+        # transport result is accepted; a bounded failure is surfaced above.
+        with self._lock:
+            helpers = tuple(self._helper_threads)
+        for helper in helpers:
+            helper.join(timeout=CHILD_REAP_ALLOWANCE_SECONDS)
+            if helper.is_alive():
+                self._unreaped = True
 
 
 class _PendingRequest:
