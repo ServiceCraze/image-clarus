@@ -307,48 +307,150 @@ def _process(args, state):
 
 
 def _main(state):
-    parser = ProcessArgumentParser(prog="image-clarus", allow_abbrev=False)
-    parser.add_argument("--version", action=VersionAction, nargs=0)
+    parser = ProcessArgumentParser(
+        prog="image-clarus",
+        allow_abbrev=False,
+        description="Describe images, generate structured metadata, and publish metadata to XMP sidecars.",
+        epilog="Use 'image-clarus COMMAND --help' for command details and examples.",
+    )
+    parser.add_argument(
+        "--version",
+        action=VersionAction,
+        nargs=0,
+        help="Show the installed version and exit",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
     process = subparsers.add_parser(
         "process",
-        help="Process one image",
-        description="Description and JSON outputs are create-only by default; XMP uses configured policies; search is a help-only stub.",
+        help="Process images from files, directories or native patterns",
+        description="Process files, directories or native patterns through description, JSON and XMP\nstages. Description and JSON outputs are create-only by default; XMP uses\nconfigured policies. Built-in search is not implemented.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n  image-clarus process photo.jpg --stages desc,json\n  image-clarus process ./collection --dry-run\n  image-clarus process './collection/**/*.jpg' -i --max-depth 2\n\nQuote native patterns to prevent shell expansion. Model stages send data to\nthe configured provider; XMP requires ExifTool. Configuration can change\nthe defaults shown above.",
         allow_abbrev=False,
     )
-    process.add_argument("IMAGE", nargs="+")
+    process.add_argument(
+        "IMAGE", nargs="+", help="Image files, directories, or quoted native patterns"
+    )
     depth = process.add_mutually_exclusive_group()
-    depth.add_argument("--max-depth", type=int, action=OnceAction)
-    depth.add_argument("--max-depth-unlimited", action=OnceFlag, const=True)
+    depth.add_argument(
+        "--max-depth",
+        type=int,
+        action=OnceAction,
+        help="Maximum traversal depth; 0 includes root files only (default: unlimited)",
+    )
+    depth.add_argument(
+        "--max-depth-unlimited",
+        action=OnceFlag,
+        const=True,
+        help="Traverse without a depth limit, overriding configuration",
+    )
     work = process.add_mutually_exclusive_group()
-    work.add_argument("--max-work-files", type=int, action=OnceAction)
-    work.add_argument("--no-max-work-files", action=OnceFlag, const=True)
+    work.add_argument(
+        "--max-work-files",
+        type=int,
+        action=OnceAction,
+        help="Maximum images initially admitted for predicted model work; does not limit total files processed or provider requests (default: unlimited)",
+    )
+    work.add_argument(
+        "--no-max-work-files",
+        action=OnceFlag,
+        const=True,
+        help="Remove the configured initial model-work allowance",
+    )
     concurrency = process.add_mutually_exclusive_group()
     concurrency.add_argument(
-        "--inter-stage-concurrency", dest="concurrency", action=OnceFlag, const=True
+        "--inter-stage-concurrency",
+        dest="concurrency",
+        action=OnceFlag,
+        const=True,
+        help="Enable concurrent stage workers (default)",
     )
     concurrency.add_argument(
-        "--no-inter-stage-concurrency", dest="concurrency", action=OnceFlag, const=False
+        "--no-inter-stage-concurrency",
+        dest="concurrency",
+        action=OnceFlag,
+        const=False,
+        help="Process images sequentially across stages",
     )
-    process.add_argument("--extensions", action=OnceAction)
     process.add_argument(
-        "--on-stage-failure", choices=("stop", "continue", "abort"), action=OnceAction
+        "--extensions",
+        action=OnceAction,
+        help="Replace discovery extensions with a comma-separated list (default: jpg,jpeg,png,webp,tif,tiff)",
     )
-    for names in (("--dry-run",), ("--verbose",), ("-i", "--ignore-case")):
-        process.add_argument(*names, action=OnceFlag, const=True)
+    process.add_argument(
+        "--on-stage-failure",
+        choices=("stop", "continue", "abort"),
+        action=OnceAction,
+        help="On failure stop this image (default), continue its stages, or abort the batch",
+    )
+    process.add_argument(
+        "--dry-run",
+        action=OnceFlag,
+        const=True,
+        help="Plan without reading image or sidecar contents or calling providers",
+    )
+    process.add_argument(
+        "--verbose",
+        action=OnceFlag,
+        const=True,
+        help="Show per-stage events and progress",
+    )
+    process.add_argument(
+        "-i",
+        "--ignore-case",
+        action=OnceFlag,
+        const=True,
+        help="Match native patterns without case sensitivity; quote patterns",
+    )
 
-    process.add_argument("--config", metavar="FILE", action=OnceAction)
+    process.add_argument(
+        "--config",
+        metavar="FILE",
+        action=OnceAction,
+        help="Use this YAML configuration file instead of automatic configuration-file discovery",
+    )
     process.add_argument(
         "--stages",
         metavar="STAGES",
         action=OnceAction,
         help="Default: desc,json,xmp; explicit subsets do not add prerequisites",
     )
-    process.add_argument("--set", metavar="PATH=VALUE", action="append")
-    process.add_argument("--state-dir", metavar="DIR", action=OnceAction)
-    for option in ("--desc-prompt", "--json-prompt", "--json-schema"):
-        process.add_argument(option, metavar="FILE", action=OnceAction)
-    process.add_argument("--regenerate", action=OnceFlag, const=True)
+    process.add_argument(
+        "--set",
+        metavar="PATH=VALUE",
+        action="append",
+        help="Override a configuration path with a YAML value; repeatable",
+    )
+    process.add_argument(
+        "--state-dir",
+        metavar="DIR",
+        action=OnceAction,
+        help="Select an existing .image-clarus repository for optional state",
+    )
+    process.add_argument(
+        "--desc-prompt",
+        metavar="FILE",
+        action=OnceAction,
+        help="Replace the description-stage prompt",
+    )
+    process.add_argument(
+        "--json-prompt",
+        metavar="FILE",
+        action=OnceAction,
+        help="Replace the JSON-stage prompt",
+    )
+    process.add_argument(
+        "--json-schema",
+        metavar="FILE",
+        action=OnceAction,
+        help="Replace the JSON payload schema",
+    )
+    process.add_argument(
+        "--regenerate",
+        action=OnceFlag,
+        const=True,
+        help="Replace selected description and JSON outputs; XMP policies still apply",
+    )
     process.add_argument(
         "--missing-prerequisite",
         choices=("fail", "skip"),
@@ -356,26 +458,104 @@ def _main(state):
         help="Default: fail for a single literal file; skip for batch selections",
     )
     subparsers.add_parser(
-        "search", help="Search (not implemented in Slice 1)", allow_abbrev=False
+        "search",
+        help="Search (not implemented)",
+        description="Built-in search is not implemented.",
+        allow_abbrev=False,
     )
     subparsers.add_parser(
-        "init", help="Initialize state in the current directory", allow_abbrev=False
+        "init",
+        help="Initialize state in the current directory",
+        description="Initialize .image-clarus state in the current directory; existing valid state is preserved.",
+        allow_abbrev=False,
     )
-    state_parser = subparsers.add_parser("state", allow_abbrev=False)
+    state_parser = subparsers.add_parser(
+        "state",
+        help="Manage persistent application state",
+        description="Manage persistent application state, including stored categories.",
+        allow_abbrev=False,
+    )
     state_sub = state_parser.add_subparsers(dest="state_command", required=True)
-    categories = state_sub.add_parser("categories", allow_abbrev=False)
+    repository_help = "Repository selection: --state-dir, configured state.directory, or the nearest\ninitialized repository in the current directory ancestry. Source directories\ndo not select the repository."
+    categories = state_sub.add_parser(
+        "categories",
+        help="List, clear or rebuild stored categories",
+        description="Manage categories in an initialized repository.\n\n"
+        + repository_help,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Use 'image-clarus state categories COMMAND --help' for details.",
+        allow_abbrev=False,
+    )
     category_sub = categories.add_subparsers(dest="operation", required=True)
+    category_help = {
+        "list": (
+            "Display categories without modifying state",
+            "List categories in logically read-only mode, one JSON string per line.",
+        ),
+        "clear": (
+            "Delete stored categories",
+            "Delete all stored categories while preserving other state.\nClear followed by rebuild is not atomic.",
+        ),
+        "rebuild": (
+            "Add categories from JSON sidecars",
+            "Rebuild is additive: add categories from .desc.json files, directories, or\nnative patterns without deleting existing categories. Invalid discovery aborts;\ninvalid sidecars are reported and other inputs continue. Storage errors stop\nfurther updates; earlier commits remain. Clear followed by rebuild is not atomic.",
+        ),
+    }
     for name in ("list", "clear", "rebuild"):
-        command = category_sub.add_parser(name, allow_abbrev=False)
+        summary, description = category_help[name]
+        command = category_sub.add_parser(
+            name,
+            help=summary,
+            description=description + "\n\n" + repository_help,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog=(
+                "Examples:\n  image-clarus state categories rebuild ./collection\n  image-clarus state categories rebuild './collection/**/*.desc.json' -i --max-depth 2"
+                if name == "rebuild"
+                else None
+            ),
+            allow_abbrev=False,
+        )
         if name == "rebuild":
-            command.add_argument("SOURCE", nargs="+")
+            command.add_argument(
+                "SOURCE",
+                nargs="+",
+                help=".desc.json files, directories or quoted native patterns",
+            )
             depth = command.add_mutually_exclusive_group()
-            depth.add_argument("--max-depth", type=int, action=OnceAction)
-            depth.add_argument("--max-depth-unlimited", action=OnceFlag, const=True)
-            command.add_argument("-i", "--ignore-case", action=OnceFlag, const=True)
-        command.add_argument("--config", action=OnceAction)
-        command.add_argument("--set", action="append")
-        command.add_argument("--state-dir", action=OnceAction)
+            depth.add_argument(
+                "--max-depth",
+                type=int,
+                action=OnceAction,
+                help="Maximum traversal depth; 0 includes root files only (default: unlimited)",
+            )
+            depth.add_argument(
+                "--max-depth-unlimited",
+                action=OnceFlag,
+                const=True,
+                help="Traverse without a depth limit, overriding configuration",
+            )
+            command.add_argument(
+                "-i",
+                "--ignore-case",
+                action=OnceFlag,
+                const=True,
+                help="Match native patterns without case sensitivity; quote patterns",
+            )
+        command.add_argument(
+            "--config",
+            action=OnceAction,
+            help="Use this YAML configuration file instead of automatic configuration-file discovery",
+        )
+        command.add_argument(
+            "--set",
+            action="append",
+            help="Override a configuration path with a YAML value; repeatable",
+        )
+        command.add_argument(
+            "--state-dir",
+            action=OnceAction,
+            help="Select an existing .image-clarus repository",
+        )
     args = parser.parse_args()
     selections = (
         args.IMAGE
