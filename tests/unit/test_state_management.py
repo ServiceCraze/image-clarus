@@ -14,6 +14,182 @@ from image_clarus.state.storage import (
 )
 
 
+def test_union_counts_and_migration_are_atomic(tmp_path, monkeypatch):
+    directory = tmp_path / "state"
+    initialize(directory)
+    SQLiteStorage(directory).add_categories(["existing"])
+    target = management.select_target(directory, tmp_path)
+    monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+
+    def migrate(conn):
+        conn.execute("CREATE TABLE migrated (value TEXT)")
+        conn.execute("UPDATE domain_versions SET version=2 WHERE domain='categories'")
+
+    migrations = {(1, 1): migrate}
+    assert (
+        management.union_categories(target, [], migrations=migrations).status
+        == "skipped"
+    )
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT version FROM domain_versions").fetchone() == (1,)
+    result = management.union_categories(
+        target, ["existing", "new", "new", "second"], migrations=migrations
+    )
+    assert result == management.UnionResult("committed", True, 2)
+    assert management.union_categories(target, ["new"]).inserted == 0
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT version FROM domain_versions").fetchone() == (2,)
+        assert conn.execute(
+            "SELECT path FROM known_categories ORDER BY path"
+        ).fetchall() == [("existing",), ("new",), ("second",)]
+        assert conn.execute(
+            "SELECT name FROM sqlite_master WHERE name='migrated'"
+        ).fetchone()
+
+
+@pytest.mark.parametrize("failure", ["migration", "insert", "stop", "replacement"])
+def test_union_rolls_back_migration_and_insert(tmp_path, monkeypatch, failure):
+    directory = tmp_path / "state"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+    monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+    token = SimpleNamespace(signum=None)
+
+    def migrate(conn):
+        conn.execute("CREATE TABLE migrated (value TEXT)")
+        conn.execute("UPDATE domain_versions SET version=2 WHERE domain='categories'")
+        if failure == "migration":
+            raise ValueError("fictional private detail")
+        if failure == "insert":
+            conn.execute("DROP TABLE known_categories")
+
+    original_busy = storage._busy
+
+    def busy(conn, deadline):
+        original_busy(conn, deadline)
+        if failure == "stop" and conn.in_transaction:
+            token.signum = 15
+
+    monkeypatch.setattr(storage, "_busy", busy)
+    original_check = management.check_target
+    checks = 0
+
+    def check(value):
+        nonlocal checks
+        checks += 1
+        if failure == "replacement" and checks == 3:
+            raise StateError("repository target changed")
+        original_check(value)
+
+    monkeypatch.setattr(management, "check_target", check)
+    result = management.union_categories(
+        target, ["new"], stop=token, migrations={(1, 1): migrate}
+    )
+    assert result.status == ("interrupted" if failure == "stop" else "failed")
+    assert result.attempted
+    assert result.inserted == 0
+    assert "fictional" not in (result.diagnostic or "")
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT version FROM domain_versions").fetchone() == (1,)
+        assert conn.execute("SELECT * FROM known_categories").fetchall() == []
+        assert not conn.execute(
+            "SELECT name FROM sqlite_master WHERE name='migrated'"
+        ).fetchone()
+
+
+@pytest.mark.parametrize("fault", ["begin", "commit", "commit_after", "close"])
+def test_union_failure_outcomes(tmp_path, monkeypatch, fault):
+    directory = tmp_path / "state"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+
+    class FaultConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=()):
+            if fault == "begin" and sql == "BEGIN IMMEDIATE":
+                raise sqlite3.OperationalError("synthetic")
+            return super().execute(sql, parameters)
+
+        def commit(self):
+            if fault == "commit_after":
+                super().commit()
+            if fault in ("commit", "commit_after"):
+                raise sqlite3.OperationalError("synthetic")
+            return super().commit()
+
+        def close(self):
+            super().close()
+            if fault == "close":
+                raise sqlite3.OperationalError("synthetic")
+
+    def connect(path, deadline):
+        return sqlite3.connect(
+            path.as_uri() + "?mode=rw",
+            uri=True,
+            isolation_level=None,
+            factory=FaultConnection,
+        )
+
+    monkeypatch.setattr(storage, "_connect", connect)
+    result = management.union_categories(target, ["new"])
+    assert (
+        result.status
+        == {
+            "begin": "failed",
+            "commit": "unknown",
+            "commit_after": "unknown",
+            "close": "committed",
+        }[fault]
+    )
+    assert result.attempted == (fault != "begin")
+    assert result.inserted == (1 if fault == "close" else 0)
+    assert result.close_failed == (fault == "close")
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT * FROM known_categories").fetchall() == (
+            [("new",)] if fault in ("close", "commit_after") else []
+        )
+
+
+def test_union_rollback_failure_is_unknown(tmp_path, monkeypatch):
+    directory = tmp_path / "state"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+
+    class FaultConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=()):
+            if sql.startswith("INSERT OR IGNORE"):
+                raise sqlite3.OperationalError("synthetic")
+            return super().execute(sql, parameters)
+
+        def rollback(self):
+            raise sqlite3.OperationalError("synthetic")
+
+    def connect(path, deadline):
+        return sqlite3.connect(
+            path.as_uri() + "?mode=rw",
+            uri=True,
+            isolation_level=None,
+            factory=FaultConnection,
+        )
+
+    monkeypatch.setattr(storage, "_connect", connect)
+    result = management.union_categories(target, ["new"])
+    assert result.status == "unknown"
+    assert result.attempted and result.inserted == 0
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT * FROM known_categories").fetchall() == []
+
+
+def test_union_rejects_bad_input_before_open(tmp_path, monkeypatch):
+    directory = tmp_path / "state"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+    monkeypatch.setattr(
+        storage, "_connect", lambda *_: pytest.fail("unexpected write open")
+    )
+    assert management.union_categories(target, "scalar").status == "failed"
+    assert management.union_categories(target, []).status == "skipped"
+
+
 def test_clear_preserves_unrelated_state(tmp_path):
     directory = tmp_path / ".image-clarus"
     initialize(directory)

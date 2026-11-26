@@ -8,26 +8,13 @@ import pytest
 from image_clarus.pipeline import StopToken
 from image_clarus.results import PipelineResult, StageResult
 from image_clarus.stages.structure import _read_envelope
-from image_clarus.state.accumulation import accumulate_categories
+from image_clarus.state.accumulation import (
+    SidecarExtractionError,
+    accumulate_categories,
+    extract_sidecar,
+)
 from image_clarus.state.service import StateService
 from image_clarus.state.storage import MemoryStorage
-
-
-def test_state_accumulation_import_does_not_depend_on_stages():
-    probe = """
-import builtins
-original = builtins.__import__
-def guarded(name, *args, **kwargs):
-    if name == 'image_clarus.stages' or name.startswith('image_clarus.stages.'):
-        raise ImportError('stage imports forbidden')
-    return original(name, *args, **kwargs)
-builtins.__import__ = guarded
-import image_clarus.state.accumulation
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", probe], capture_output=True, text=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
 
 
 def envelope(
@@ -49,6 +36,115 @@ def envelope(
             "metadata": metadata,
         }
     ).encode()
+
+
+@pytest.mark.parametrize(
+    "data,expected",
+    [
+        (envelope([["B"], ["A", "leaf"], ["B"]]), ["A/leaf", "B"]),
+        (
+            envelope(
+                [["A"]],
+                schema_id="urn:image-clarus:metadata-schema:1.0.0",
+                version="1.0.0",
+            ),
+            [],
+        ),
+        (
+            envelope(
+                [["A"]],
+                schema_id="urn:image-clarus:custom-metadata-schema",
+                version="custom-sha256:" + "a" * 64,
+            ),
+            ["A"],
+        ),
+        (envelope(), []),
+        (envelope([]), []),
+    ],
+)
+def test_extract_sidecar_returns_categories_or_valid_empty(tmp_path, data, expected):
+    path = tmp_path / "sample.desc.json"
+    path.write_bytes(data)
+    assert extract_sidecar(path, _read_envelope) == expected
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"not json",
+        envelope([["A"], []]),
+        envelope([["bad/segment"]]),
+        envelope("bad"),
+        envelope([["A"]], schema_id="unknown"),
+        envelope(
+            [["A"]],
+            schema_id="urn:image-clarus:custom-metadata-schema",
+            version="custom-sha256:" + "A" * 64,
+        ),
+    ],
+)
+def test_extract_sidecar_rejects_invalid_data(tmp_path, data):
+    path = tmp_path / "sample.desc.json"
+    path.write_bytes(data)
+    with pytest.raises(SidecarExtractionError, match="^sidecar extraction failed$"):
+        extract_sidecar(path, _read_envelope)
+
+
+def test_extract_sidecar_reads_once_and_passes_exact_snapshot(tmp_path, monkeypatch):
+    path = tmp_path / "sample.desc.json"
+    data = envelope([["A"]])
+    path.write_bytes(data)
+    original = Path.read_bytes
+    reads = []
+    received = []
+
+    def read_once(self):
+        reads.append(self)
+        return original(self)
+
+    def reader(snapshot):
+        received.append(snapshot)
+        return _read_envelope(snapshot)
+
+    monkeypatch.setattr(Path, "read_bytes", read_once)
+    assert extract_sidecar(path, reader) == ["A"]
+    assert reads == [path]
+    assert received == [data]
+
+
+def test_extract_sidecar_sanitizes_read_and_reader_failures(tmp_path):
+    import traceback
+
+    path = tmp_path / "private-sentinel.desc.json"
+    with pytest.raises(SidecarExtractionError) as missing:
+        extract_sidecar(path, _read_envelope)
+    assert "private-sentinel" not in "".join(traceback.format_exception(missing.value))
+
+    path.write_bytes(b"snapshot")
+
+    def broken_reader(data):
+        raise RuntimeError("private-sentinel")
+
+    with pytest.raises(SidecarExtractionError) as invalid:
+        extract_sidecar(path, broken_reader)
+    assert "private-sentinel" not in "".join(traceback.format_exception(invalid.value))
+
+
+def test_state_accumulation_import_does_not_depend_on_stages():
+    probe = """
+import builtins
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name == 'image_clarus.stages' or name.startswith('image_clarus.stages.'):
+        raise ImportError('stage imports forbidden')
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+import image_clarus.state.accumulation
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def invoke(tmp_path, data, stage=None, *, enabled=True, stop=None):

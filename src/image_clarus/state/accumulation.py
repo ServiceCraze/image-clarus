@@ -36,6 +36,23 @@ def _extract(data, read_envelope):
     return sorted(paths)
 
 
+class SidecarExtractionError(ValueError):
+    """A sidecar could not be read or its categories could not be extracted."""
+
+
+def extract_sidecar(path, read_envelope):
+    """Read one sidecar snapshot and return its sorted, distinct category paths.
+
+    A valid sidecar without categories returns an empty list. Read and validation
+    failures raise a sanitized SidecarExtractionError instead of looking empty.
+    """
+    try:
+        data = Path(path).read_bytes()
+        return _extract(data, read_envelope)
+    except Exception:  # noqa: BLE001 - the reader may raise arbitrary exceptions
+        raise SidecarExtractionError("sidecar extraction failed") from None
+
+
 def _diagnostic(operation, on_diagnostic=None):
     print(f"image-clarus: state error: {operation}", file=sys.stderr)
     if on_diagnostic is not None:

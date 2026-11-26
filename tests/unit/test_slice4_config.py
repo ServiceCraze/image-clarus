@@ -208,12 +208,17 @@ def test_selection_grammar_rejections(monkeypatch, capsys, args):
         ["state", "categories", "rebuild", "--", "-a", "b"],
     ],
 )
-def test_contiguous_selections_reach_selection_validation(monkeypatch, capsys, args):
+def test_contiguous_selections_reach_selection_validation(
+    tmp_path, monkeypatch, capsys, args
+):
+    from image_clarus.state.storage import initialize
+
+    monkeypatch.chdir(tmp_path)
+    initialize(tmp_path / ".image-clarus")
     monkeypatch.setattr(sys, "argv", ["image-clarus", *args])
     monkeypatch.setattr("image_clarus.config.discovery_locations", lambda: ())
     assert cli.main() == 2
-    expected = "selection error" if args[0] == "process" else "category management"
-    assert expected in capsys.readouterr().err
+    assert "selection error" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("rebuild", [False, True])

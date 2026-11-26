@@ -12,6 +12,43 @@ def connect(directory):
     return sqlite3.connect(directory / DATABASE_NAME, isolation_level=None)
 
 
+def test_recognition_old_registered_is_read_only(tmp_path, monkeypatch):
+    from image_clarus.state import management
+
+    directory = tmp_path / "repo"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+    before = contents(directory)
+    monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+
+    def forbidden(_conn):
+        pytest.fail("recognition must not migrate")
+
+    result = readonly.recognize_target(target, migrations={(1, 1): forbidden})
+    assert result.version == (1, 1)
+    assert result.migration_required
+    assert contents(directory) == before
+    with pytest.raises(StateError, match="migration required"):
+        readonly.recognize_target(target)
+    assert contents(directory) == before
+
+
+def test_recognition_detects_replacement(tmp_path):
+    from image_clarus.state import management
+
+    directory = tmp_path / "repo"
+    initialize(directory)
+    target = management.select_target(directory, tmp_path)
+    other = tmp_path / "other"
+    initialize(other)
+    target.path.rename(tmp_path / "original")
+    (other / DATABASE_NAME).replace(target.path)
+    if target.identity is None:
+        pytest.skip("filesystem identity unavailable")
+    with pytest.raises(StateError, match="target changed"):
+        readonly.recognize_target(target)
+
+
 @pytest.fixture
 def repository(tmp_path):
     directory = tmp_path / "repo ? # ü"

@@ -416,12 +416,6 @@ def _main(state):
         except ConfigurationError:
             print("image-clarus: invalid management configuration", file=sys.stderr)
             return 2
-        if args.operation == "rebuild":
-            print(
-                "image-clarus: category management is not implemented", file=sys.stderr
-            )
-            return 2
-
         import json
 
         from image_clarus.state.management import (
@@ -434,6 +428,40 @@ def _main(state):
 
         try:
             target = select_target(config["state"]["directory"], Path.cwd())
+            if args.operation == "rebuild":
+                from image_clarus.discovery import DiscoveryError
+                from image_clarus.stages.structure import _read_envelope
+                from image_clarus.state.rebuild import rebuild
+
+                try:
+                    result = rebuild(
+                        target,
+                        args.SOURCE,
+                        max_depth=config["category_rebuild"]["max_depth"],
+                        ignore_case=bool(args.ignore_case),
+                        read_envelope=_read_envelope,
+                        stop=state.stop,
+                        report_target=lambda origin: print(
+                            f"rebuild target={origin}", flush=True
+                        ),
+                        report_error=lambda message: print(
+                            f"image-clarus: {message}", file=sys.stderr
+                        ),
+                    )
+                except DiscoveryError:
+                    print(
+                        "image-clarus: selection error: input unavailable",
+                        file=sys.stderr,
+                    )
+                    return 2
+                print(result.render())
+                if state.stop.signum is not None:
+                    print(
+                        "image-clarus: interrupted; committed updates retained",
+                        file=sys.stderr,
+                    )
+                    return 128 + state.stop.signum
+                return result.exit_code
             if args.operation == "list":
                 check_target(target)
                 values = list_categories(target.directory)

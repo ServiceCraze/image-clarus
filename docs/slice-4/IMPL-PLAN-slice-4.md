@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6 and M1 are complete; M2–M4 and Phase C remain unstarted. M1 provides strict category list and clear; rebuild belongs to M2. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6 and M1–M2 are complete; M3–M4 and Phase C remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -110,7 +110,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 ### Phase M Category management
 
 - [x] Step M1 - Implement strict category list and clear [CODE]
-- [ ] Step M2 - Implement additive category rebuild [CODE]
+- [x] Step M2 - Implement additive category rebuild [CODE]
 - [ ] Step M3 - Verify category command boundaries and concurrency [TEST]
 
 - [ ] Step M4 - Document Slice 4 usage and compatibility [DOCS]
@@ -510,10 +510,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Rebuild retains existing categories and adds recognized full paths under current extraction rules, with no XMP/model/artifact mutation.
-- [ ] Independent traversal and deduplication behave as A1/A3 specify; an empty result makes no changes.
-- [ ] Invalid/unreadable inputs do not prevent eligible later inputs; valid partial additions remain and failures are visible.
-- [ ] Interrupted/failed storage operations and counts are truthful; ordinary accumulation semantics and dependency direction remain intact.
+- [x] Rebuild retains existing categories and adds recognized full paths under current extraction rules, with no XMP/model/artifact mutation.
+- [x] Independent traversal and deduplication behave as A1/A3 specify; an empty result makes no changes.
+- [x] Invalid/unreadable inputs do not prevent eligible later inputs; valid partial additions remain and failures are visible.
+- [x] Interrupted/failed storage operations and counts are truthful; ordinary accumulation semantics and dependency direction remain intact.
 
 **Dependencies:** M1, B2; completed A3/A4 contracts.
 
