@@ -270,9 +270,13 @@ def test_negative_macro_depth_rejected_before_request(local, namespace):
     "depth,expected",
     [(None, '["fiction","fiction/forest/trees"]'), (1, '["fiction"]'), (0, "[]")],
 )
-def test_builtin_json_guidance_depth(local, depth, expected):
+def test_authored_json_guidance_depth(local, tmp_path, depth, expected):
     requests, image, config, state, run = local
     Path(str(image) + ".desc.txt").write_text("Fictional persisted description.")
+    prompt = tmp_path / "guidance.txt"
+    prompt.write_text(
+        "Fictional guidance: {{config.stages.json.preferred_categories}}.\n"
+    )
     args = [
         "process",
         image,
@@ -282,6 +286,8 @@ def test_builtin_json_guidance_depth(local, depth, expected):
         state,
         "--stages",
         "json",
+        "--json-prompt",
+        prompt,
     ]
     if depth is not None:
         args += [
@@ -293,6 +299,4 @@ def test_builtin_json_guidance_depth(local, depth, expected):
     assert not result.stderr
     assert len(requests) == 1
     system = requests[0][0]["messages"][0]["content"]
-    assert expected in system
-    if depth is not None:
-        assert "fiction/forest/trees" not in system
+    assert system == f"Fictional guidance: {expected}.\n"

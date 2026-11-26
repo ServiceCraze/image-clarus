@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6, M1–M4 and C1–C2 are complete; C3–C4 remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6, M1–M4 and C1–C3 are complete; C4 remains unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -119,7 +119,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 - [x] Step C1 - Verify batch behavior through the CLI [TEST]
 - [x] Step C2 - Verify failure interruption and resume boundaries [TEST]
-- [ ] Step C3 - Run regression packaging and quality checks [TEST]
+- [x] Step C3 - Run regression packaging and quality checks [TEST]
 - [ ] Step C4 - Reconcile evidence and close Slice 4 [DOCS]
 
 | Handoff | Dependencies |
@@ -646,11 +646,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Required full/focused suites, lint/format, lock and build checks have recorded outcomes at stated versions.
-- [ ] Installed-wheel CLI/resources/batch/category smoke checks pass outside the checkout, including the provider-free search stub's not-implemented diagnostic and exit `3`, or have an explicit approved exception.
-- [ ] Existing prompts/schema/stages/state/XMP/source/safety contracts remain supported by regression evidence.
-- [ ] Reachability/import/privacy audits have explicit scope, findings and disposition; no unrecorded orphan exception remains.
-- [ ] Documentation/status/version references match actual evidence, including limitations and unperformed checks.
+- [x] Required full/focused suites, lint/format, lock and build checks have recorded outcomes at stated versions.
+- [x] Installed-wheel CLI/resources/batch/category smoke checks pass outside the checkout, including the provider-free search stub's not-implemented diagnostic and exit `3`, or have an explicit approved exception.
+- [x] Existing prompts/schema/stages/state/XMP/source/safety contracts remain supported by regression evidence.
+- [x] Reachability/import/privacy audits have explicit scope, findings and disposition; no unrecorded orphan exception remains.
+- [x] Documentation/status/version references match actual evidence, including limitations and unperformed checks.
 
 **Dependencies:** M4, M3, C1, C2.
 
