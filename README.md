@@ -6,7 +6,7 @@ You can use local, remote, or a combination of AI models.  Description requires 
 
 XMP is an XML file commonly used by image apps to hold metadata outside your image file.  This works well with [digiKam](https://www.digikam.org/), an open source digital asset manager and image editor.  Once your XMP is populated, you can immediately use digiKam to search your images and view images matching hierarchical tags (e.g., "food/desserts").
 
-Built-in search and batch commands are not implemented yet, though you can run batch jobs today with standard shell tools (like find or xargs) and search your tagged library directly in digiKam.
+The `process` command accepts individual files, directories and native patterns for batch processing. Built-in search is not implemented; you can search your tagged library directly in digiKam.
 
 ## Install
 
@@ -28,6 +28,9 @@ image-clarus --help
 image-clarus process --help
 image-clarus init --help
 image-clarus search --help
+image-clarus state categories list --help
+image-clarus state categories clear --help
+image-clarus state categories rebuild --help
 ```
 
 If the shell cannot find `image-clarus`, use `uv tool dir --bin` to locate its executable directory and add it to `PATH`; alternatively `uv tool update-shell` can configure your shell, after which open a new shell. Installing from `.` is not editable. After changing the checkout, reinstall from the checkout:
@@ -49,6 +52,9 @@ uv run --locked image-clarus --help
 uv run --locked image-clarus process --help
 uv run --locked image-clarus init --help
 uv run --locked image-clarus search --help
+uv run --locked image-clarus state categories list --help
+uv run --locked image-clarus state categories clear --help
+uv run --locked image-clarus state categories rebuild --help
 ```
 
 `uv sync` creates the project environment and installs the CLI without administrator privileges. The bare command is available when that environment is activated. Without activation, prefix processing examples with `uv run --locked` and run them from the checkout.
@@ -99,7 +105,7 @@ image-clarus process ./photo.jpg --config ./examples/config.yaml --stages json \
 
 Run `image-clarus init` in the desired collection directory to initialize `.image-clarus/state.sqlite3`; repeat initialization of a valid repository is a no-op. An existing incomplete or invalid directory is not replaced: initialization fails, preserving its contents. Normal processing never creates a persistent repository. State supplements rather than replaces sidecars, and absent persistent state is temporary memory for that invocation only.
 
-Selection is, in order: dedicated `--state-dir DIR`, `--set state.directory=...`, YAML `state.directory`, nearest initialized CWD ancestor, nearest initialized image-directory ancestor, then memory. The explicit directory is `.image-clarus` itself, not its parent. `state.directory` defaults to `null`; `--set state.directory=null` clears a YAML selection and permits discovery. YAML relative paths use the config file directory; CLI paths use CWD; `~` is expanded. The dedicated flag wins over `--set` regardless of argument order.
+Selection is resolved per image, in order: dedicated `--state-dir DIR`, `--set state.directory=...`, YAML `state.directory`, nearest initialized CWD ancestor, nearest initialized image-directory ancestor, then memory. The explicit directory is `.image-clarus` itself, not its parent. `state.directory` defaults to `null`; `--set state.directory=null` clears a YAML selection and permits discovery. YAML relative paths use the config file directory; CLI paths use CWD; `~` is expanded. The dedicated flag wins over `--set` regardless of argument order.
 
 For example, with initialized `collection/.image-clarus` and `collection/nested/.image-clarus`, processing from `collection/nested` selects the nested repository. From `collection`, it selects the collection repository even when the image is in an unrelated initialized `other` collection: CWD ancestry wins. To share one repository across unrelated collections, select it explicitly:
 
@@ -137,11 +143,61 @@ For a **provider-free XMP invocation**, install ExifTool first and supply an exi
 image-clarus process ./photo.jpg --config ./examples/config.yaml --stages xmp
 ```
 
-Without `--stages`, all three run in fixed `desc,json,xmp` order; selected subsets run in that order regardless of argument order and never implicitly add prerequisites. The image is not modified. Sidecars use the full image filename: `photo.jpg.desc.txt`, `photo.jpg.desc.json`, and `photo.jpg.xmp`. JSON reads the persisted description; XMP reads persisted JSON and may update an existing XMP sidecar. Missing prerequisites fail by default; `--missing-prerequisite skip` skips the affected stage instead. Invalid or unreadable artifacts are not treated as missing.
+Without `--stages`, all three run in fixed `desc,json,xmp` order; selected subsets run in that order regardless of argument order and never implicitly add prerequisites. The image is not modified. Sidecars use the full image filename: `photo.jpg.desc.txt`, `photo.jpg.desc.json`, and `photo.jpg.xmp`. JSON reads the persisted description; XMP reads persisted JSON and may update an existing XMP sidecar. Missing prerequisites fail by default for a single literal image; `--missing-prerequisite skip` skips the affected stage instead. Batch defaults differ as described below. Invalid or unreadable artifacts are not treated as missing.
 
 Description and JSON outputs are create-only by default. Existing valid outputs are skipped; `--regenerate` permits full replacement of selected `desc` and `json` outputs, not a JSON field merge. It does not override XMP policies. Changes to inputs, model, prompt, schema or category guidance do not automatically trigger regeneration. An existing JSON with a valid fixed envelope can be skipped even if its description is missing or the current payload schema changed; skip does not validate the payload against that schema. Selected-stage configuration and credentials are checked before a skip. Failed or invalid output is not published as complete.
 
-Each stage prints a completed, skipped or failed summary on stdout; diagnostics go to stderr. Exit codes are `0` for success/skips, `1` for stage or authentication failure, `2` for usage/configuration errors, `3` for the search stub, and `130`/`143` for SIGINT/SIGTERM. A missing or unusable ExifTool during selected-stage preflight is a configuration error (exit `2`), before stage summaries.
+Each stage prints a completed, skipped or failed summary on stdout for a single literal file; batch reporting is described below. Diagnostics go to stderr. Exit codes are `0` for success/skips, `1` for stage or authentication failure, `2` for usage/configuration errors, `3` for the search stub, and `130`/`143` for SIGINT/SIGTERM. A missing or unusable ExifTool during selected-stage preflight is a configuration error (exit `2`), before stage summaries.
+
+## Batch selection and planning
+
+```sh
+# Provider-free plans; no image contents or sidecars are read.
+# From the checkout, with collection/other fixtures and a configured credential
+# environment variable (a synthetic value is sufficient for dry-run):
+image-clarus process ./collection --config ./examples/config.yaml --stages desc,json,xmp --dry-run
+image-clarus process './collection/**/*.JPG' --config ./examples/config.yaml -i --max-depth 2 --dry-run
+image-clarus process ./collection ./other --config ./examples/config.yaml --extensions jpg,png --max-work-files 1000 --dry-run --verbose
+# Manual provider call, only with authorized data, endpoint and costs:
+image-clarus process ./collection --config ./examples/config.yaml --stages desc,json --no-inter-stage-concurrency
+```
+
+Each input is checked as an existing literal path first, even if its name contains metacharacters. Otherwise native patterns support `*`, `?`, bracket classes and a whole-component `**` for recursive matching; these are not regular expressions or an exact shell implementation. Quote patterns so the application receives them. Shell expansion happens first, and `-i` cannot rematch already-expanded arguments. Native matching is case-sensitive by default; `-i`/`--ignore-case` applies only to pattern matching for this invocation, not identity or extension eligibility. Dotfiles are included. Invalid patterns, missing literal paths or unreadable roots abort the entire selection before writes; a valid pattern with no matches is an empty selection.
+
+Directories recurse without limit by default. `--max-depth 0` includes files directly in the root, `1` includes one subdirectory level, and `--max-depth-unlimited` restores unlimited traversal. For a pattern, depth is measured from the literal prefix before its first wildcard. An explicitly selected symlink is resolved; symlinks encountered during traversal are not followed. Entries are processed deterministically in selection order, with files before subdirectories and sorted names within each directory. Overlap is deduplicated by exact resolved-path spelling, preserving first selection; distinct resolved spellings and hard links can count separately, so this is not physical-file deduplication.
+
+Directory and pattern discovery accepts extensions `jpg,jpeg,png,webp,tif,tiff` by default, case-insensitively. `--extensions jpg,png` replaces that list; `selection.extensions` configures it. An explicit file bypasses this extension filter, but actual processing can still fail to decode it. `selection.max_depth` and `category_rebuild.max_depth` are independent; their defaults are `null` (unlimited). Dedicated flags override `--set` and YAML. A directory or pattern is batch context even if it matches one file; multiple inputs are also batch context. Missing prerequisites default to `fail` for one literal file and `skip` for batch context, unless explicitly configured or overridden with `--missing-prerequisite`.
+
+`--dry-run` validates configuration and discovers paths, then reports provisional per-image predictions, a completed plan and estimated initial plan/queue memory. It does not probe ExifTool, call a provider, open state, recover sidecars, or read image or sidecar contents. Existing-output predictions use metadata and must be confirmed during execution; invalid artifacts, recovery and concurrent changes can alter outcomes. A valid empty batch still gets static validation but skips runtime-only provider/ExifTool preflight. An early failure before a complete plan reports the estimate unavailable. The byte estimate is a runtime-specific shallow estimate of retained initial identities, provenance, rows, queues and tracking containers, not a measurement of peak memory or a bound; it excludes discovery/sort structures, stage execution, provider payloads and other runtime objects.
+
+### Work allowance and progress
+
+`--max-work-files N` (positive integer; default unlimited, reset with `--no-max-work-files`) limits distinct images initially admitted for predicted selected LLM work, not total files, requests, runtime or memory. `pipeline.max_work_files` is its config key. Planning classifies images as admitted, no predicted LLM work, or known excluded. Slots are not replenished if an admitted image later skips or fails. Known excluded images never run LLM inference, but selected non-LLM stages remain eligible under normal prerequisite and failure policies. A predicted existing artifact is validated at execution; invalid JSON is a stage failure even for an excluded image, not an assumed skip. `--regenerate` makes selected LLM outputs potential work.
+
+If an initially no-work image loses a predicted output, execution may perform corrective inference when normal recovery, prerequisite and stage policies allow it, without another admission slot. A valid backup may instead recover and skip; an invalid existing primary can fail. Correction can exceed both N and twice N: for N=1, one admitted image plus three initially no-work images whose descriptions disappear can produce LLM work for four images. Known exclusions never become corrective admissions.
+
+For example, select `desc,json,xmp` for 10,000 images: 6,000 have both outputs, 1,000 only descriptions, and 3,000 neither. Unlimited initial routes are 3,000 to desc, 1,000 to JSON and 6,000 to XMP. With N=1,000 and the first admitted images all from the neither-output group, initial routes are 1,000 to desc, zero to JSON and 9,000 to XMP; 3,000 needy images are excluded from inference. If validations and admitted stages succeed, policy does not stop any image, and there is no abort or interruption, all 10,000 eventually reach XMP evaluation. This is not 10,000 writes: missing JSON can skip or fail by policy, and XMP can report no change. A different discovery order changes the admitted mix.
+
+By default one worker per selected stage permits inter-stage concurrency; `--no-inter-stage-concurrency` selects sequential image-first processing. `--on-stage-failure stop` stops the current image (default), `continue` attempts later stages, and `abort` stops the batch. `--verbose` adds per-stage events and accounted progress. Batch summaries distinguish planned predictions from actual evaluated, transformed, completed, skipped, failed, interrupted and not-attempted stages; request/retry and distinct LLM/corrective-image counts are separate. XMP evaluations are not writes. Progress accounts for selected image-stage pairs, not success.
+
+After SIGINT or SIGTERM, new work stops and admitted safe writes may finish; rerun the command to rescan existing artifacts and resume under the current configuration. There is no persistent batch checkpoint. Concurrent processes do not lock sidecars; edits can race and last replacement can win. Authorize all inputs and provider calls, and protect sidecars, backups and state as sensitive data.
+
+## Manage category state
+
+```sh
+# Run in an initialized collection; clear is destructive to stored categories.
+image-clarus state categories list
+image-clarus state categories rebuild './collection/**/*.desc.json' -i --max-depth 2
+# Explicitly replace the category set in two separate operations:
+image-clarus state categories clear
+image-clarus state categories rebuild ./collection
+```
+
+Management targets one existing persistent repository: `--state-dir`, then configured `state.directory`, otherwise the nearest initialized CWD ancestor. Source directories do not choose the target; use `--state-dir` for another collection. Unlike ordinary processing, management errors are strict: missing, corrupt, inaccessible or incompatible state fails without memory or alternate-store fallback. List is logically read-only: it does not initialize, migrate or change application data/schema, though normal SQLite journal/WAL handling and OS access-time updates may occur. Clear removes only categories; registered migrations can occur transactionally with clear.
+
+Rebuild is additive, not replacement: it reads explicit `.desc.json` sidecars, directories or quoted native patterns, including orphan sidecars, and unions recognized complete paths without model or XMP calls. Its depth and `-i` options follow the selection rules above but use `category_rebuild.max_depth`, independently of processing. Empty or category-free rebuilds do not clear or migrate state; an eligible first update and any registered migration share a transaction. Invalid sources abort discovery before mutation; after discovery, bad sidecars are reported individually and other inputs continue. Storage failures stop further updates; prior commits remain. Output distinguishes confirmed commits and inserts from unknown commit outcomes; do not retry an uncertain commit blindly. Clear then rebuild is two separate operations, not an atomic replacement, and concurrent additions/clears follow transaction order. Management exits `0` on complete success including empty results, `1` on state/input/partial failure, `2` on syntax/configuration or fatal discovery failure, and `130`/`143` on interruption. Diagnostics go to stderr.
+
+Sequential processing finalizes each image's eligible state update before the next image; concurrent processing may observe category snapshots at different times, with no global barrier. Ordinary processing state failures remain visible but nonblocking, unlike management failures.
 
 ## Structured JSON and recommendations
 
@@ -190,7 +246,7 @@ Writes use the shared artifact service's staged validation, backup and recovery 
 
 ## Current limits
 
-Only one image path is accepted; directories, globs, traversal and batches are not implemented. `search --help` works, but `search` reports not implemented and exits `3`. There is no internal scheduler; external schedulers may invoke the CLI. Linux is the required test platform; other operating systems are not claimed as fully tested.
+`search --help` works, but `search` reports not implemented and exits `3`. There is no internal scheduler; external schedulers may invoke the CLI. Linux is the required test platform; other operating systems are not claimed as fully tested.
 
 ExifTool synthetic round trips are not digiKam interoperability tests. In manual digiKam 9.1.0 testing, the Product Owner reported successful import, hierarchy filtering, title/caption and author display, and tag edit/readback; **Reread Metadata** was used to refresh the edited sidecar. See the [C3 evidence](docs/slice-2/IMPL-C3-COMPLETED.md) for the observed XMP incompatibility, correction, retest and limitations. External sidecar changes may require a metadata reread or database refresh; do not assume an automatic refresh.
 
@@ -201,4 +257,4 @@ ExifTool synthetic round trips are not digiKam interoperability tests. In manual
 - [Slice 1 implementation plan](docs/slice-1/IMPL-PLAN-slice-1.md) — complete; see the [C5 closeout](docs/slice-1/IMPL-C5-COMPLETED.md)
 - [Slice 2 requirements](docs/slice-2/REQ-slice-2.md), [discovery](docs/slice-2/DISCOVERY-slice-2.md), and [implementation plan](docs/slice-2/IMPL-PLAN-slice-2.md) — complete; see the [C5 closeout](docs/slice-2/IMPL-C5-COMPLETED.md) for the accepted prompt-control gap and evidence boundaries
 - [Slice 3 requirements](docs/slice-3/REQ-slice-3.md) and [implementation plan](docs/slice-3/IMPL-PLAN-slice-3.md)
-- [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — in progress; B1–B5 complete. The concurrent executor is not yet wired into the user-facing batch CLI; see the [B5 completion record](docs/slice-4/IMPL-B5-COMPLETED.md).
+- [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — in progress; native batch processing and category management are implemented. Integrated acceptance and closeout remain pending.

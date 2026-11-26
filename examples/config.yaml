@@ -48,8 +48,17 @@ prompt_expansion:
     config.stages.json.preferred_categories:
       delimiter: "/"
       max_depth: null
+selection:
+  max_depth: null
+  extensions: [jpg, jpeg, png, webp, tif, tiff]
+# Rebuild traversal depth is independent of process selection depth.
+category_rebuild:
+  max_depth: null
 pipeline:
-  missing_prerequisite: fail
+  # Omit missing_prerequisite to use fail for an explicit file and skip
+  # for directories, native patterns, or multiple input tokens.
+  max_work_files: null
+  inter_stage_concurrency: true
   on_stage_failure: stop
   backup_retention: remove
 logging:

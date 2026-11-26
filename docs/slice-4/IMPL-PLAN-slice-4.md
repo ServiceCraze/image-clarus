@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6 and M1–M3 are complete; M4 and Phase C remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6 and M1–M4 are complete; Phase C remains unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -113,7 +113,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step M2 - Implement additive category rebuild [CODE]
 - [x] Step M3 - Verify category command boundaries and concurrency [TEST]
 
-- [ ] Step M4 - Document Slice 4 usage and compatibility [DOCS]
+- [x] Step M4 - Document Slice 4 usage and compatibility [DOCS]
 
 ### Phase C Verification and closeout
 
@@ -562,10 +562,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Documented options and examples match implemented behavior and current defaults.
-- [ ] Admission, correction, non-LLM routing, memory-estimate and category-rebuild semantics are explicit and accurate.
-- [ ] Current parent docs distinguish implementation progress from acceptance; historical Slice 1–3 records remain intact.
-- [ ] Public examples contain fictitious data and no sensitive infrastructure identifiers or credentials.
+- [x] Documented options and examples match implemented behavior and current defaults.
+- [x] Admission, correction, non-LLM routing, memory-estimate and category-rebuild semantics are explicit and accurate.
+- [x] Current parent docs distinguish implementation progress from acceptance; historical Slice 1–3 records remain intact.
+- [x] Public examples contain fictitious data and no sensitive infrastructure identifiers or credentials.
 
 **Correction:** This documentation step was formerly B7 and was moved after M3 to eliminate its forward dependency on M2. It is now M4, keeping its scope and position while aligning its identifier with Phase M. M3 completes before documentation of the verified behavior; B6 and M2 remain structural inputs. Final acceptance evidence is reconciled in C4.
 
