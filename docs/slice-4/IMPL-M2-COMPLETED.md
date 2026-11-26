@@ -4,6 +4,8 @@
 
 **Version:** 0.3.51
 
+**Subsequent progress:** [M3](IMPL-M3-COMPLETED.md) adds independent-process concurrency and POSIX signal evidence; the M2 verification below remains tied to its original version.
+
 **Scope deviations:** None.
 
 ## Implementation and decisions

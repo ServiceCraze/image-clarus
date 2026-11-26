@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6 and M1–M2 are complete; M3–M4 and Phase C remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6 and M1–M3 are complete; M4 and Phase C remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -111,7 +111,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 - [x] Step M1 - Implement strict category list and clear [CODE]
 - [x] Step M2 - Implement additive category rebuild [CODE]
-- [ ] Step M3 - Verify category command boundaries and concurrency [TEST]
+- [x] Step M3 - Verify category command boundaries and concurrency [TEST]
 
 - [ ] Step M4 - Document Slice 4 usage and compatibility [DOCS]
 
@@ -535,10 +535,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Actual CLI evidence covers list read-only/open failures, category-only clear, additive/empty/partial rebuild and selection contexts.
-- [ ] Independent-process tests establish required sharing/transaction behavior and interruption retention without stronger whole-run guarantees.
-- [ ] Command counts/exits and persistence match observable outcomes; failed state access never masquerades as success.
-- [ ] Ordinary processing's nonblocking state and post-primary timing contracts remain covered.
+- [x] Actual CLI evidence covers list read-only/open failures, category-only clear, additive/empty/partial rebuild and selection contexts.
+- [x] Independent-process tests establish required sharing/transaction behavior and interruption retention without stronger whole-run guarantees.
+- [x] Command counts/exits and persistence match observable outcomes; failed state access never masquerades as success.
+- [x] Ordinary processing's nonblocking state and post-primary timing contracts remain covered.
 
 **Dependencies:** M2; B1/B2 interfaces used by the commands.
 
