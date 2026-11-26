@@ -1,4 +1,32 @@
 import json
+from types import SimpleNamespace
+
+import pytest
+
+
+@pytest.mark.parametrize(
+    ("platform", "expected"),
+    [("posix", {"start_new_session": True}), ("nt", {"creationflags": 512})],
+)
+def test_worker_spawn_uses_platform_process_group(monkeypatch, platform, expected):
+    from image_clarus import schema_worker
+
+    captured = {}
+
+    def spawn(*args, **kwargs):
+        captured.update(kwargs)
+        raise OSError("simulated spawn failure")
+
+    monkeypatch.setattr(schema_worker, "os", SimpleNamespace(name=platform))
+    monkeypatch.setattr(
+        schema_worker.subprocess, "CREATE_NEW_PROCESS_GROUP", 512, raising=False
+    )
+    monkeypatch.setattr(schema_worker.subprocess, "Popen", spawn)
+    assert schema_worker.preflight("{}", timeout=5) == {"status": "worker_error"}
+    assert {key: captured[key] for key in expected} == expected
+    assert "preexec_fn" not in captured
+    assert captured["start_new_session"] is (platform == "posix")
+    assert captured["creationflags"] == (512 if platform == "nt" else 0)
 
 
 def test_signal_during_worker_spawn_reaps_child(monkeypatch):

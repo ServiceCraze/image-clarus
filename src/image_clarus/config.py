@@ -632,6 +632,8 @@ def _probe_exiftool(executable):
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         bufsize=0,
+        start_new_session=os.name == "posix",
+        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
     )
     assert process.stdout is not None
     stdout = process.stdout

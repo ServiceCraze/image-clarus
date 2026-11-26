@@ -7,6 +7,7 @@ final kill/reap are not themselves interruptible. This is not a memory sandbox.
 
 import json
 import math
+import os
 import signal
 import subprocess
 import sys
@@ -45,8 +46,15 @@ def _run(request, timeout):
                 old_mask = signal.pthread_sigmask(
                     signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM}
                 )
+            # Isolate the child from terminal group signals, including while a
+            # protected artifact validation is draining. Avoid preexec_fn in
+            # this multithreaded process.
             process = subprocess.Popen(
                 [sys.executable, "-m", "image_clarus.schema_worker"],
+                start_new_session=os.name == "posix",
+                creationflags=(
+                    subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+                ),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,

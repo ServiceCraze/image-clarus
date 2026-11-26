@@ -236,6 +236,8 @@ class ExifToolBackend:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=False,
+                start_new_session=os.name == "posix",
+                creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
             )
         except (OSError, ValueError):
             raise XmpBackendError("ExifTool executable unavailable") from None
