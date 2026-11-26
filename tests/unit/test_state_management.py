@@ -173,3 +173,85 @@ def test_inaccessible_target_is_sanitized(tmp_path, monkeypatch):
     with pytest.raises(StateError) as error:
         management.select_target(directory, tmp_path)
     assert str(error.value) == "repository unavailable"
+
+
+def test_clear_reports_migration_required_after_rollback(tmp_path, monkeypatch):
+    directory = tmp_path / "state"
+    initialize(directory)
+    SQLiteStorage(directory).add_categories(["A/B"])
+    target = management.select_target(directory, tmp_path)
+    monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+    with pytest.raises(StateError, match="^repository migration required$"):
+        management.clear_categories(target)
+    with sqlite3.connect(target.path) as conn:
+        assert conn.execute("SELECT path FROM known_categories").fetchall() == [
+            ("A/B",)
+        ]
+
+
+def test_clear_reports_replacement_at_precommit_and_rolls_back(tmp_path, monkeypatch):
+    directory = tmp_path / "state"
+    initialize(directory)
+    SQLiteStorage(directory).add_categories(["A/B"])
+    target = management.select_target(directory, tmp_path)
+    original = management.check_target
+    calls = 0
+
+    def check(value):
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise StateError("repository target changed")
+        original(value)
+
+    monkeypatch.setattr(management, "check_target", check)
+    with pytest.raises(StateError, match="^repository target changed$"):
+        management.clear_categories(target)
+    assert calls == 3
+    assert SQLiteStorage(directory).snapshot_categories() == ["A/B"]
+
+
+@pytest.mark.parametrize(
+    "failure,diagnostic",
+    [
+        ("migration", "repository migration required"),
+        ("replacement", "repository target changed"),
+    ],
+)
+def test_clear_cli_reports_specific_safe_error(
+    tmp_path, monkeypatch, capsys, failure, diagnostic
+):
+    import sys
+
+    from image_clarus import cli
+
+    directory = tmp_path / "state"
+    initialize(directory)
+    SQLiteStorage(directory).add_categories(["A/B"])
+    if failure == "migration":
+        monkeypatch.setattr(storage, "DOMAIN_VERSION", 2)
+    else:
+        original = management.check_target
+        calls = 0
+
+        def check(target):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise StateError("repository target changed")
+            original(target)
+
+        monkeypatch.setattr(management, "check_target", check)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["image-clarus", "state", "categories", "clear", "--state-dir", str(directory)],
+    )
+    assert cli.main() == 1
+    output = capsys.readouterr()
+    assert output.err == f"image-clarus: {diagnostic}\n"
+    assert "deleted=" not in output.out
+    with sqlite3.connect(directory / storage.DATABASE_NAME) as conn:
+        assert conn.execute("SELECT path FROM known_categories").fetchall() == [
+            ("A/B",)
+        ]

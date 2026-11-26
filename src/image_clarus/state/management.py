@@ -103,9 +103,9 @@ def clear_categories(target: Target, *, stop: Any = None, migrations=None) -> in
                 raise StateError("clear outcome unknown") from None
         if committed or commit_started:
             raise StateError("clear outcome unknown") from None
-        if isinstance(error, StateStopped):
+        if isinstance(error, StateError):
             raise
-        if isinstance(error, (StateError, sqlite3.Error, OSError)):
+        if isinstance(error, (sqlite3.Error, OSError)):
             raise StateError("category clear failed") from None
         raise
     finally:

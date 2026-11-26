@@ -2,7 +2,7 @@
 
 **Status:** Implementation complete and ready for review. This status does not indicate review acceptance; M2 and later steps have not been started.
 
-**Version:** 0.3.49
+**Version:** 0.3.50
 
 **Scope deviations:** None.
 
@@ -14,14 +14,16 @@
 - Added `state/readonly.py`: a standard-library SQLite `mode=ro` connection establishes a snapshot before authoritative repository recognition and category enumeration. It does not initialize or migrate the store. Normal SQLite and operating-system read-related filesystem effects remain allowed.
 - Added `state/management.py`: clear revalidates the selected target under `BEGIN IMMEDIATE`, applies a registered migration and category deletion in the same transaction, checks interruption before commit, and reports uncertain commits without claiming deletion. Other domains remain intact.
 - Wired list and clear into the actual CLI. List emits one JSON-quoted category per line; clear reports target origin before mutation and a count after confirmed commit. Strict state errors use sanitized stderr and nonzero status; rebuild remains a stub for M2.
+- The Patch 050 correction preserves sanitized precommit state-error categories after rollback, including migration-required and target-replacement errors. Commit-started and failed-rollback outcomes remain classified as unknown; the CLI's fixed allowlist controls displayed messages.
 
 ## Verification
 
-- `uv run --no-sync --locked pytest tests/unit/test_state_management.py tests/unit/test_state_readonly.py tests/integration/test_state_management_cli.py tests/unit/test_slice4_config.py tests/integration/test_state_cli.py -q` — **69 passed**.
-- `uv run --no-sync --locked pytest -q -p no:cacheprovider` — **1,759 passed, 67 skipped**.
-- `uv lock --check`, `ruff check .`, and `ruff format --check .` — passed; 194 files formatted.
-- `image-clarus --version` under the locked environment — `image-clarus 0.3.49`.
-- Built the wheel, installed it with dependencies into a separate environment, and ran its CLI outside the checkout with `PYTHONPATH` unset against a synthetic store: list returned the expected JSON-quoted category. The wheel was a pure-Python wheel; no custom SQLite package was built.
+- `uv run --no-sync --locked pytest tests/unit/test_state_management.py tests/unit/test_state_readonly.py tests/integration/test_state_management_cli.py tests/unit/test_slice4_config.py tests/integration/test_state_cli.py -q` — **73 passed**.
+- `uv run --no-sync --locked pytest -q -p no:cacheprovider` — **1,763 passed, 67 skipped**.
+- `uv lock --check`, `ruff check .`, and `ruff format --check .` — passed; 195 files formatted.
+- `image-clarus --version` under the locked environment — `image-clarus 0.3.50`.
+- At 0.3.49, built the wheel, installed it with dependencies into a separate environment, and ran its CLI outside the checkout with `PYTHONPATH` unset against a synthetic store: list returned the expected JSON-quoted category. The wheel was a pure-Python wheel; no custom SQLite package was built. The wheel was not retested at 0.3.50.
+- Before the correction, focused migration-required and precommit-replacement tests both failed on the generic message. After the correction those tests and actual CLI-dispatch regressions passed, including assertions that no deletion is reported and stored categories are unchanged. Replacement is injected at the precommit identity-check boundary.
 - Tests cover data/schema preservation, migration-required and corrupt stores, rollback-journal and WAL reads, concurrent writer snapshots, exclusive-lock failure, strict target failure, category-only clear, empty clear, migration and rollback, precommit stop, injected begin/delete/commit failures, target replacement and unavailable identity capability. Permission denial is an injected failure, not an OS permissions test.
 - Existing ordinary-processing state CLI tests passed in the focused run; they exercise its separate nonblocking state behavior. No live provider or personal data was used.
 
