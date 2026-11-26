@@ -169,6 +169,48 @@ def test_directory_six_extensions_depth_and_literal_first(tmp_path, cli):
     assert snapshot(root) == before and calls == []
 
 
+@pytest.mark.parametrize(
+    ("depth_options", "expected"),
+    [
+        (("--max-depth", "0"), ["a.jpg", "z.png"]),
+        (
+            ("--max-depth-unlimited",),
+            ["a.jpg", "z.png", "nest/b.jpg", "nest/deep/c.png"],
+        ),
+    ],
+)
+def test_cli_depth_overrides_restrictive_configuration(
+    tmp_path, cli, depth_options, expected
+):
+    run, calls = cli
+    root = tmp_path / "images"
+    for name in ("z.png", "nest/deep/c.png", "a.jpg", "nest/b.jpg"):
+        create(root, name)
+    config = tmp_path / "config.yaml"
+    with config.open("a") as stream:
+        configured_depth = 2 if depth_options[0] == "--max-depth" else 0
+        stream.write(f"selection:\n  max_depth: {configured_depth}\n")
+    before = snapshot(root)
+    planned = rows(run(root, options=("--stages", "desc", *depth_options)))
+    assert [Path(p).relative_to(root).as_posix() for p, _ in planned] == expected
+    assert snapshot(root) == before and calls == []
+
+
+def test_cli_extensions_replace_default_allowlist(tmp_path, cli):
+    run, calls = cli
+    root = tmp_path / "images"
+    for name in ("a.jpg", "b.RAW", "nested/c.png", "nested/d.raw", "e.webp"):
+        create(root, name)
+    before = snapshot(root)
+    planned = rows(run(root, options=("--stages", "desc", "--extensions", "raw,png")))
+    assert [Path(p).relative_to(root).as_posix() for p, _ in planned] == [
+        "b.RAW",
+        "nested/c.png",
+        "nested/d.raw",
+    ]
+    assert snapshot(root) == before and calls == []
+
+
 def test_pattern_overlap_symlinks_and_depth(tmp_path, cli):
     run, calls = cli
     root = tmp_path / "images"
