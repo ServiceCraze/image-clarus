@@ -33,6 +33,21 @@ class VersionAction(argparse.Action):
         parser.exit()
 
 
+class ProcessArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        diagnostic = f"{self.prog}: error: {message}\n"
+        tokens = sys.argv[1:]
+        option_tokens = tokens[: tokens.index("--")] if "--" in tokens else tokens
+        if (
+            option_tokens
+            and option_tokens[0] == "process"
+            and "--dry-run" in option_tokens
+        ):
+            diagnostic += "plan incomplete\nestimate unavailable: incomplete plan\n"
+        self.exit(2, diagnostic)
+
+
 class _SignalInterrupt(BaseException):
     pass
 
@@ -292,7 +307,7 @@ def _process(args, state):
 
 
 def _main(state):
-    parser = argparse.ArgumentParser(prog="image-clarus", allow_abbrev=False)
+    parser = ProcessArgumentParser(prog="image-clarus", allow_abbrev=False)
     parser.add_argument("--version", action=VersionAction, nargs=0)
     subparsers = parser.add_subparsers(dest="command", required=True)
     process = subparsers.add_parser(
@@ -482,6 +497,9 @@ def _main(state):
             return 1 if error.category == "authentication" else 2
         finally:
             state.interruptible = False
+
+        if config["pipeline"].get("on_stage_failure") == "abort":
+            return _process(args, state)
 
         if (
             args.dry_run
