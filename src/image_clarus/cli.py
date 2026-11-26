@@ -404,7 +404,7 @@ def _main(state):
         from image_clarus.config import ConfigurationError, resolve_config
 
         try:
-            resolve_config(
+            config = resolve_config(
                 config_file=args.config,
                 overrides=args.set or (),
                 state_dir=args.state_dir,
@@ -413,11 +413,57 @@ def _main(state):
                 max_depth=getattr(args, "max_depth", None),
                 max_depth_unlimited=getattr(args, "max_depth_unlimited", False),
             )
-        except ConfigurationError as error:
-            print(f"image-clarus: {error}", file=sys.stderr)
+        except ConfigurationError:
+            print("image-clarus: invalid management configuration", file=sys.stderr)
             return 2
-        print("image-clarus: category management is not implemented", file=sys.stderr)
-        return 2
+        if args.operation == "rebuild":
+            print(
+                "image-clarus: category management is not implemented", file=sys.stderr
+            )
+            return 2
+
+        import json
+
+        from image_clarus.state.management import (
+            check_target,
+            clear_categories,
+            select_target,
+        )
+        from image_clarus.state.readonly import list_categories
+        from image_clarus.state.storage import StateError, StateStopped
+
+        try:
+            target = select_target(config["state"]["directory"], Path.cwd())
+            if args.operation == "list":
+                check_target(target)
+                values = list_categories(target.directory)
+                check_target(target)
+                if state.stop.signum is not None:
+                    raise StateStopped("state operation interrupted")
+                for value in values:
+                    print(json.dumps(value, ensure_ascii=True))
+            else:
+                print(f"clear target={target.origin}", flush=True)
+                count = clear_categories(target, stop=state.stop)
+                print(f"clear deleted={count}")
+        except StateStopped:
+            print(
+                "image-clarus: interrupted; committed updates retained", file=sys.stderr
+            )
+            return 128 + state.stop.signum if state.stop.signum is not None else 1
+        except StateError as error:
+            messages = {
+                "repository migration required": "repository migration required",
+                "clear outcome unknown": "clear outcome unknown",
+                "clear committed; repository close failed": "clear committed; repository close failed",
+                "repository target changed": "repository target changed",
+            }
+            print(
+                f"image-clarus: {messages.get(str(error), 'state operation failed')}",
+                file=sys.stderr,
+            )
+            return 1
+        return 0
     if args.command == "init":
         from image_clarus.state.storage import StateError, StateStopped, initialize
 

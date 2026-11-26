@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A and B1–B6 are complete; Phase M and Phase C remain open. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. Category-management execution remains open. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6 and M1 are complete; M2–M4 and Phase C remain unstarted. M1 provides strict category list and clear; rebuild belongs to M2. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -109,7 +109,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 ### Phase M Category management
 
-- [ ] Step M1 - Implement strict category list and clear [CODE]
+- [x] Step M1 - Implement strict category list and clear [CODE]
 - [ ] Step M2 - Implement additive category rebuild [CODE]
 - [ ] Step M3 - Verify category command boundaries and concurrency [TEST]
 
@@ -484,10 +484,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] List is logically data/schema read-only throughout opening/validation/reporting, including migration-needed and inaccessible-store cases; normal SQLite and OS read effects are allowed.
-- [ ] Missing or invalid persistent state cannot appear as an empty successful persistent listing.
-- [ ] Clear removes categories only, with any registered migration in the same transaction, and reports transaction/access failures accurately without another persistent destination or memory substitution.
-- [ ] Dedicated command behavior and ordinary optional-processing state behavior remain distinct and tested.
+- [x] List is logically data/schema read-only throughout opening/validation/reporting, including migration-needed and inaccessible-store cases; normal SQLite and OS read effects are allowed.
+- [x] Missing or invalid persistent state cannot appear as an empty successful persistent listing.
+- [x] Clear removes categories only, with any registered migration in the same transaction, and reports transaction/access failures accurately without another persistent destination or memory substitution.
+- [x] Dedicated command behavior and ordinary optional-processing state behavior remain distinct and tested.
 
 **Dependencies:** A5, B1. M1 does not depend on B3–B6.
 

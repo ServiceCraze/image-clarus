@@ -138,10 +138,13 @@ def test_repeated_or_conflicting_flags_are_usage_errors(monkeypatch, capsys, arg
     assert "error:" in capsys.readouterr().err
 
 
-def test_management_is_not_reported_as_success(monkeypatch, capsys):
+def test_management_missing_store_is_not_reported_as_success(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", ["image-clarus", "state", "categories", "list"])
-    assert cli.main() == 2
-    assert "not implemented" in capsys.readouterr().err
+    assert cli.main() == 1
+    assert "state operation failed" in capsys.readouterr().err
 
 
 def test_dry_run_does_not_open_state_or_probe_xmp(tmp_path, monkeypatch, capsys):
