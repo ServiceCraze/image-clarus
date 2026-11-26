@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6 and M1–M4 are complete; Phase C remains unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** In progress. Phase A, B1–B6, M1–M4 and C1 are complete; C2–C4 remain unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -117,7 +117,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 ### Phase C Verification and closeout
 
-- [ ] Step C1 - Verify batch behavior through the CLI [TEST]
+- [x] Step C1 - Verify batch behavior through the CLI [TEST]
 - [ ] Step C2 - Verify failure interruption and resume boundaries [TEST]
 - [ ] Step C3 - Run regression packaging and quality checks [TEST]
 - [ ] Step C4 - Reconcile evidence and close Slice 4 [DOCS]
@@ -594,10 +594,10 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] Real CLI evidence establishes native selection/planning/execution, actual overlap/sequential behavior and stage subsets.
-- [ ] Budget/correction/routing examples reconcile distinct image and stage counts without treating XMP evaluation as guaranteed publication.
-- [ ] State identity, accumulation timing, dry-run boundaries, verbose output and estimates have observable evidence.
-- [ ] Every covered acceptance row identifies commands, assertions, versions and limitations rather than inferring success from unit mocks.
+- [x] Real CLI evidence establishes native selection/planning/execution, actual overlap/sequential behavior and stage subsets.
+- [x] Budget/correction/routing examples reconcile distinct image and stage counts without treating XMP evaluation as guaranteed publication.
+- [x] State identity, accumulation timing, dry-run boundaries, verbose output and estimates have observable evidence.
+- [x] Every covered acceptance row identifies commands, assertions, versions and limitations rather than inferring success from unit mocks.
 
 **Dependencies:** B6, M3.
 
