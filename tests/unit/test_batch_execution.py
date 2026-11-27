@@ -162,6 +162,7 @@ def test_known_exclusion_confirms_predicted_bypass_without_inference(tmp_path):
 def test_budget_excluded_json_created_after_planning_does_not_accumulate(tmp_path):
     image = tmp_path / "sample.jpg"
     image.write_bytes(b"image")
+    image.with_name(image.name + ".desc.txt").write_text("fictional description")
     state_dir = tmp_path / "state"
     initialize(state_dir)
     SQLiteStorage(state_dir).add_categories(["Existing/Keep"])

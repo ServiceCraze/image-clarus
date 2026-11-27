@@ -17,6 +17,45 @@ def item(path):
     return PlanningInput(str(path), ("fictional", str(path.parent), "directory"))
 
 
+@pytest.mark.parametrize("selected", [("json",), ("json", "xmp")])
+def test_json_missing_description_does_not_consume_allowance(
+    tmp_path, config, selected
+):
+    missing, ready = (tmp_path / name for name in ("a.jpg", "b.jpg"))
+    Path(str(ready) + ".desc.txt").write_text("fictional description")
+    plan = build_plan(map(item, (missing, ready)), config, selected=selected, limit=1)
+    assert [row[4] for row in plan.rows] == [Admission.NO_LLM_WORK, Admission.ADMITTED]
+    assert all(row[2] & 1 for row in plan.rows)
+
+
+@pytest.mark.parametrize("suffix", [".desc.txt", ".desc.txt.bak"])
+def test_json_description_or_backup_remains_eligible(tmp_path, config, suffix):
+    path = tmp_path / "a.jpg"
+    Path(str(path) + suffix).touch()
+    plan = build_plan([item(path)], config, selected=("json",), limit=1)
+    assert plan.rows[0][4] is Admission.ADMITTED
+
+
+def test_selected_description_stage_can_supply_json_prerequisite(tmp_path, config):
+    path = tmp_path / "a.jpg"
+    plan = build_plan([item(path)], config, selected=("desc", "json"), limit=1)
+    assert plan.rows[0][4] is Admission.ADMITTED
+
+
+def test_unknown_description_metadata_remains_eligible(tmp_path, config, monkeypatch):
+    path = tmp_path / "a.jpg"
+    lstat = Path.lstat
+
+    def uncertain(candidate, *args, **kwargs):
+        if str(candidate).endswith(".desc.txt"):
+            raise PermissionError("fictional metadata error")
+        return lstat(candidate, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", uncertain)
+    plan = build_plan([item(path)], config, selected=("json",), limit=1)
+    assert plan.rows[0][4] is Admission.ADMITTED
+
+
 def test_admission_routes_and_dedup(tmp_path, config):
     a, b, c = (tmp_path / f"{n}.jpg" for n in range(3))
     Path(str(a) + ".desc.txt").touch()
@@ -408,7 +447,10 @@ def test_metadata_matrix(
     assert plan.rows[0][2] == work
     assert plan.rows[0][3] == bypass
     needs_llm = any(
-        not bypassed[stage.name] and stage.uses_llm for stage in plan.stages
+        not bypassed[stage.name]
+        and stage.uses_llm
+        and (stage.name != "json" or "desc" in selected or desc_exists)
+        for stage in plan.stages
     )
     admission = (
         Admission.NO_LLM_WORK

@@ -91,6 +91,23 @@ def _estimate(identities, origins, rows, queues, lifecycle, tracking):
     return size
 
 
+def _description_may_exist(image: Path) -> bool:
+    """Only classify the prerequisite as absent when both paths are absent.
+
+    A backup, symlink, or metadata error is uncertain: execution owns recovery,
+    validation, and diagnostics. No sidecar content is read during planning.
+    """
+    for suffix in (".desc.txt", ".desc.txt.bak"):
+        try:
+            Path(str(image) + suffix).lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return True
+        return True
+    return False
+
+
 def build_plan(
     inputs: Iterable[PlanningInput],
     config: Mapping[str, Any],
@@ -149,7 +166,12 @@ def build_plan(
                 bypass |= 1 << i
             else:
                 work |= 1 << i
-                llm_work |= stage.uses_llm
+                potentially_executable = (
+                    stage.name != "json"
+                    or "desc" in (selected or names)
+                    or _description_may_exist(Path(path))
+                )
+                llm_work |= stage.uses_llm and potentially_executable
         if not llm_work:
             admission = Admission.NO_LLM_WORK
         elif limit is None or admitted < limit:
