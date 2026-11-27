@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-27
 
-**Status:** Proposed; implementation has not started. All steps and acceptance criteria below are pending.
+**Status:** Phase A in progress. A1 is complete and ready for review at `0.4.5`; see the [A1 contract and evidence](IMPL-A1-COMPLETED.md). A2 and all Phase B/C steps are unstarted. Feature implementation has not started; Phase A remains incomplete.
 
 **Goal:** Add configurable concurrent LLM requests per stage while retaining one stage actor, serial stage decisions/publication, and existing batch, artifact, state and CLI behavior.
 
@@ -51,7 +51,7 @@ Paths in this table already exist. Unimplemented helper names and new test files
 
 | Question | Owner | Required artifact before implementation |
 | --- | --- | --- |
-| Nonblocking driver API, saved callbacks/transform state, exact continuation/request keys, generic config validation scope and defaulting | A1 | Concrete API signatures, affected symbols/paths, transition/validation tables, example sequences and tests in A1 record |
+| Nonblocking driver API, saved callbacks/transform state, exact continuation/request keys, generic config validation scope and defaulting | A1 — complete | [A1 record](IMPL-A1-COMPLETED.md) freezes `StageDriver`, `perform_publication()`, synchronous adapter compatibility, common defaults/selected-stage validation, identity/state tables and exact B1/B2 handoffs |
 | Capacity acquire/release, retry arbitration, ready-response fairness, transport cleanup and stop/result/publication races | A2 using A1 | Complete lifecycle/ownership and fault matrices, evidence ownership, exact B2–B5 interfaces and code-ready handoff |
 
 A1/A2 compare viable local refactoring choices against the existing seams and select a concrete approach. Do not start a general scheduler/transport investigation. Significant questions above must have outcomes, rationales and acceptance scenarios at Phase A exit. Only a genuinely new product choice needs Product Owner disposition. A2 must not be required to complete an A1 acceptance criterion; it consumes and reconciles A1's already-completed contract.
@@ -60,7 +60,7 @@ A1/A2 compare viable local refactoring choices against the existing seams and se
 
 ### Phase A — Design
 
-- [ ] Step A1 — Freeze configuration and resumable actor contracts [DESIGN]
+- [x] Step A1 — Freeze configuration and resumable actor contracts [DESIGN]
 - [ ] Step A2 — Freeze lifecycle safety and implementation readiness [DESIGN]
 - [ ] Phase A complete — contracts and exact implementation/test handoffs are ready; no significant TBD remains.
 
@@ -105,12 +105,14 @@ All steps execute in the order shown, including across phases. Each is estimated
 
 **Outputs:** [IMPL-A1-COMPLETED.md](IMPL-A1-COMPLETED.md) containing the chosen contracts, alternatives/rationale, transition/config tables, exact interfaces/paths and acceptance scenarios; bounded updates to this plan if the handoff changes.
 
+**Completed handoff:** The [A1 record](IMPL-A1-COMPLETED.md) freezes additions in `src/image_clarus/stage_protocol.py`: `StageDriver` with `current`, `advance()` and `request_started()`, plus `perform_publication()`, while preserving the synchronous `drive()` signature/adapter precedence and stage-owned contexts. B1 adds `COMMON_STAGE_DEFAULTS` and `_validate_max_concurrent_requests()` in `config.py`, with selected-stage common-leaf validation before stage-specific branches. Exact signatures, callback lifetime, identity/state and layering tables, and B1/B2 tests are in that record. A2 owns capacity/cleanup/arbitration mechanics, not an unresolved part of this completed driver/configuration contract.
+
 **Acceptance:**
 
-- [ ] Driver and per-image ownership contracts specify exact APIs, callbacks, snapshots, requests, retries, publication acknowledgements and terminal handling without provider-thread stage execution.
-- [ ] Configuration table covers default/valid/invalid inputs, existing precedence and selected-stage validation, generic applicability, non-LLM ignore and sequential behavior without broadening unrelated validation.
-- [ ] Existing synchronous consumers and tests are traced; B1/B2 handoffs are code-ready with no unresolved decision owned by a later step.
-- [ ] `IMPL-A1-COMPLETED.md` is created, linked in Outputs, and records decisions, file inventory, evidence limits and scope disposition; no feature implementation is claimed.
+- [x] Driver and per-image ownership contracts specify exact APIs, callbacks, snapshots, requests, retries, publication acknowledgements and terminal handling without provider-thread stage execution.
+- [x] Configuration table covers default/valid/invalid inputs, existing precedence and selected-stage validation, generic applicability, non-LLM ignore and sequential behavior without broadening unrelated validation.
+- [x] Existing synchronous consumers and tests are traced; B1/B2 handoffs are code-ready with no unresolved decision owned by a later step.
+- [x] `IMPL-A1-COMPLETED.md` is created, linked in Outputs, and records decisions, file inventory, evidence limits and scope disposition; no feature implementation is claimed.
 
 #### Step A2 — Freeze lifecycle safety and implementation readiness [DESIGN]
 
@@ -510,9 +512,9 @@ This carries forward the parent's remaining capabilities without assigning new s
 
 **In-scope deferrals:** None.
 
-**Open design items:** The bounded A1/A2 questions in §2; they must be resolved before B1. No unresolved product choice is invented by this plan, and completed Slice 4 choices are not reopened.
+**Open design items:** A1's configuration/driver decisions are complete in its [record](IMPL-A1-COMPLETED.md). A2's bounded capacity, cleanup, arbitration, failure and accounting questions in §2 remain unstarted and must be resolved before B1. No unresolved product choice is invented by this plan, and completed Slice 4 choices are not reopened.
 
-**Remaining execution:** All A/B/C steps are unstarted. Proposed test additions and driver/capacity contracts are not implemented. Completion records must not be pre-created. No application version change or test result is produced by plan authoring.
+**Remaining execution:** A1 design is complete at `0.4.5`; its record distinguishes disposable contract-probe and existing focused-regression evidence from feature acceptance. A2 and all B/C steps are unstarted. Selected driver/configuration APIs and future test additions are not implemented. Remaining completion records must not be pre-created. Original plan authoring did not change the application version or run feature tests; the later A1 delivery has its own version-attributed checks.
 
 Any approved exception must name the requirement, exact change, reason, approval reference, owner and carry-forward milestone in this ledger and the relevant completion record. A failed or unavailable mandatory test stays unsatisfied unless explicitly dispositioned; a new issue outside a step's authority is reported, not silently repaired or deferred.
 

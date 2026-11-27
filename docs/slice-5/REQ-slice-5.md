@@ -9,7 +9,7 @@
 **Previous slice:** [`../slice-4/REQ-slice-4.md`](../slice-4/REQ-slice-4.md)  
 **Previous implementation:** [`../slice-4/IMPL-PLAN-slice-4.md`](../slice-4/IMPL-PLAN-slice-4.md)
 
-**Implementation plan:** [IMPL-PLAN-slice-5.md](IMPL-PLAN-slice-5.md) — proposed; implementation has not started.
+**Implementation plan:** [IMPL-PLAN-slice-5.md](IMPL-PLAN-slice-5.md) — A1 design complete and ready for review; feature implementation has not started.
 
 ## 1. Purpose and authority
 
