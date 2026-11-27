@@ -20,15 +20,19 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.parametrize("failure", [False, True])
 def test_verbose_execution_reconciles_outcomes(tmp_path, concurrency, failure):
     requests = []
+    authorization = []
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             requests.append(body)
+            authorization.append(self.headers.get("Authorization"))
             if failure:
+                data = b'{"error":{"message":"fictional-private-provider-detail"}}'
                 self.send_response(400)
-                self.send_header("Content-Length", "0")
+                self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
+                self.wfile.write(data)
                 return
             content = (
                 json.dumps(METADATA)
@@ -66,7 +70,7 @@ def test_verbose_execution_reconciles_outcomes(tmp_path, concurrency, failure):
         (images / "a.jpg.desc.txt").write_text("Fictional existing description.")
         config = tmp_path / "config.yaml"
         config.write_text(
-            f"providers:\n  local:\n    base_url: http://127.0.0.1:{server.server_port}/v1\n"
+            f"providers:\n  local:\n    api_key: fictional-private-credential\n    base_url: http://127.0.0.1:{server.server_port}/v1\n"
             "models:\n  sample: {provider: local, model_id: fictional}\n"
             "stages:\n  desc: {model: sample}\n  json: {model: sample}\n"
         )
@@ -172,7 +176,9 @@ def test_verbose_execution_reconciles_outcomes(tmp_path, concurrency, failure):
         assert starts.keys() == {("a.jpg", "desc"), ("a.jpg", "json")}
         assert ends == {
             ("a.jpg", "desc"): ("skipped", "output_exists"),
-            ("a.jpg", "json"): ("failed" if failure else "completed", "-"),
+            ("a.jpg", "json"): ("failed", "configuration")
+            if failure
+            else ("completed", "-"),
             **{
                 (name, stage): ("skipped", "budget_excluded")
                 for name in ("b.jpg", "c.jpg")
@@ -191,7 +197,10 @@ def test_verbose_execution_reconciles_outcomes(tmp_path, concurrency, failure):
             in lines
         )
         assert len(requests) == 1 and "response_format" in requests[0]
+        assert authorization == ["Bearer fictional-private-credential"]
         assert result.stderr == ""
+        assert "fictional-private-provider-detail" not in result.stdout + result.stderr
+        assert "fictional-private-credential" not in result.stdout + result.stderr
         assert (
             images / "a.jpg.desc.txt"
         ).read_text() == "Fictional existing description."

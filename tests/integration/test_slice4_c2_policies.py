@@ -79,7 +79,7 @@ def test_two_image_failure_policy(rig, tmp_path, policy):  # noqa: F811
     continuing = policy == "continue"
     aborted = policy == "abort"
     assert ends == {
-        (str(first), "desc"): ("failed", "-"),
+        (str(first), "desc"): ("failed", "unsupported_image"),
         (str(first), "json"): ("completed", "-")
         if continuing
         else ("not_attempted", "stage_not_run_after_failure"),

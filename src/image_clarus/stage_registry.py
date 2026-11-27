@@ -21,6 +21,9 @@ class StageDescriptor:
     module: str | None = None
     run_name: str | None = None
     resumable: bool = False
+    # False means definitely unavailable; True includes uncertain metadata.
+    # Upstream names are selected stages preceding this descriptor in order.
+    predicted_prerequisites: Callable[[Path, tuple[str, ...]], bool] | None = None
 
     @property
     def inspect(self) -> Callable | None:
@@ -55,6 +58,21 @@ def _never(_image: Path) -> bool:
     return False
 
 
+def _structure_prerequisites(image: Path, upstream: tuple[str, ...]) -> bool:
+    """Predict without validating, recovering, or reading sidecar content."""
+    if "desc" in upstream:
+        return True
+    for suffix in (".desc.txt", ".desc.txt.bak"):
+        try:
+            Path(str(image) + suffix).lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return True
+        return True
+    return False
+
+
 STAGES = (
     StageDescriptor(
         "desc",
@@ -73,6 +91,7 @@ STAGES = (
         "image_clarus.stages.structure",
         "run_structure",
         True,
+        _structure_prerequisites,
     ),
     StageDescriptor(
         "xmp",

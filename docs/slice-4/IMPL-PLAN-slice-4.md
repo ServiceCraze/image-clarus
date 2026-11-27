@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-23
 
-**Status:** In progress. Phase A, B1–B6, M1–M4 and C1–C3 are complete; C4 remains unstarted. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
+**Status:** Complete and ready for review. Phase A, B1–B6, M1–M4 and C1–C4 are complete. The [C4 record](IMPL-C4-COMPLETED.md) reconciles evidence and documents the two Product Owner-authorized corrections. M1 provides strict category list and clear; M2 implements additive rebuild; M3 verifies command boundaries and process concurrency; M4 documents current usage. B6 wires deterministic discovery, planning, metadata-only dry runs, concurrent batch execution and A4 reporting through `process`, while retaining explicit-file concise output. B5's actor refactor is implemented: provider requests are outstanding while the actor services confirmations for other images (A2 §4 early forwarding), pending requests are counted per stage, and a confirmation cannot start a transformation. The Windows helper-thread path has not been run on Windows; this is a documented platform-evidence limitation, not an unchecked B5 acceptance criterion. B2's Windows wildcard-classification defect has been corrected.
 
 **Goal:** Deliver native unattended batch processing with metadata-only planning, an initial LLM-work image allowance, optional inter-stage concurrency, dry-run and useful progress reporting, plus separate category-state management commands, while preserving accepted single-image behavior.
 
@@ -120,7 +120,7 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 - [x] Step C1 - Verify batch behavior through the CLI [TEST]
 - [x] Step C2 - Verify failure interruption and resume boundaries [TEST]
 - [x] Step C3 - Run regression packaging and quality checks [TEST]
-- [ ] Step C4 - Reconcile evidence and close Slice 4 [DOCS]
+- [x] Step C4 - Reconcile evidence and close Slice 4 [DOCS]
 
 | Handoff | Dependencies |
 | --- | --- |
@@ -672,11 +672,11 @@ Phase M is the separate category-management phase required by S4-15–17. It is 
 
 **Acceptance**
 
-- [ ] S4-01–18 and all required acceptance outcomes have supporting evidence or an explicit approved disposition.
-- [ ] Phase/overall status and deviations reflect observed results; no significant design decision or acceptance gap is silently carried forward.
-- [ ] Current documentation and remaining parent allocation are accurate; prior-slice records retain their historical meaning.
-- [ ] Final C4 version/lock/CLI and affected version-assertion checks have actual post-change outcomes; C3's earlier packaging and regression results retain their tested version without attribution to C4's later delivery.
-- [ ] Orchestration can close Slice 4 based on the recorded outcome without an extra REQ acceptance or test-order gate.
+- [x] S4-01–18 and all required acceptance outcomes have supporting evidence or an explicit approved disposition.
+- [x] Phase/overall status and deviations reflect observed results; no significant design decision or acceptance gap is silently carried forward.
+- [x] Current documentation and remaining parent allocation are accurate; prior-slice records retain their historical meaning.
+- [x] Final C4 version/lock/CLI and affected version-assertion checks have actual post-change outcomes; C3's earlier packaging and regression results retain their tested version without attribution to C4's later delivery.
+- [x] Orchestration can close Slice 4 based on the recorded outcome without an extra REQ acceptance or test-order gate.
 
 **Dependencies:** C3 and all preceding required step evidence.
 
@@ -707,7 +707,7 @@ Each S4 requirement has a design owner, delivery owner and observable evidence. 
 
 ## 6. Acceptance to evidence
 
-E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E17–E20 make cross-cutting edge cases explicit. All evidence is **Not run** at plan drafting; replace status only with observed step evidence.
+E01–E16 map in order to the 16 required acceptance rows in the Slice 4 REQ. E17–E20 make cross-cutting edge cases explicit. The table's **Not run** entries are the historical plan-drafting baseline, not current results. The [C4 reconciliation](IMPL-C4-COMPLETED.md) maps observed evidence and the two authorized corrections with their verification.
 
 | ID | REQ acceptance area | Required observable evidence | Evidence owners | Initial status |
 | --- | --- | --- | --- | --- |
@@ -803,7 +803,7 @@ If predicted existing outputs validate, admitted stages succeed, no earlier stag
 | --- | --- |
 | `xmp` only with 10,000 eligible images and N=1,000 | Zero initial LLM admission; all eligible XMP evaluations remain available under normal policies. |
 | Both LLM stages selected for one admitted image | One slot, potentially two LLM stage executions and additional configured provider attempts. |
-| Only `json` selected, description absent | No implicit `desc`; ordinary prerequisite result. Planning may still admit the image based on missing JSON. |
+| Only `json` selected, description and backup absent | No implicit `desc`; no initial admission slot is consumed; ordinary prerequisite result if generation remains needed. A later-appearing description may permit corrective inference. |
 | An admitted image gains both outputs before execution | Authoritative skips; initial admission remains unchanged and no replacement image is admitted. |
 | `--regenerate` with existing selected LLM outputs | Initially count as potential work; apply admission/exclusion normally. |
 | Overlapping paths select one identity repeatedly | One plan identity/admission under A1, with no duplicate stage scheduling. |

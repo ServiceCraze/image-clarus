@@ -14,6 +14,26 @@ from image_clarus.batch_execution import (
 )
 from image_clarus.batch_plan import Admission, Plan, Row, route
 
+# Categories are internal codes, not provider messages. Unknown values must not
+# be echoed: worker responses can cross a process boundary.
+_FAILURE_CATEGORIES = frozenset(
+    {
+        "authentication",
+        "configuration",
+        "corrupt_image",
+        "file_io",
+        "internal",
+        "interrupted",
+        "invalid_artifact",
+        "missing_prerequisite",
+        "network_timeout",
+        "provider_unavailable",
+        "schema_validation",
+        "unknown_model",
+        "unsupported_image",
+    }
+)
+
 
 class BatchReporter:
     """Reduce coordinator facts into bounded, deterministic terminal output."""
@@ -155,9 +175,17 @@ class BatchReporter:
                 )
                 total = len(self.plan.rows) * len(self.plan.stages)
                 progress = "0/0 (no work)" if total == 0 else f"{accounted}/{total}"
+                reason = event.reason_code or "-"
+                if event.disposition == "failed":
+                    reason = (
+                        event.error_category
+                        if event.error_category in _FAILURE_CATEGORIES
+                        else "unknown"
+                    )
+                    reason = self.redact(reason)
                 self.emit(
                     f"stage end image={self._quote(path)} stage={stage} "
-                    f"status={event.disposition} reason={event.reason_code or '-'} "
+                    f"status={event.disposition} reason={reason} "
                     f"progress={progress} accounted elapsed={elapsed:.3f}s"
                 )
 

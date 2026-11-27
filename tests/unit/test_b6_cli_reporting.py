@@ -418,3 +418,68 @@ def test_invalid_stage_dry_run_marks_plan_incomplete(tmp_path, monkeypatch, caps
     output = capsys.readouterr()
     assert "plan incomplete" in output.err
     assert "estimate unavailable: incomplete plan" in output.err
+
+
+def test_verbose_failed_terminal_uses_category_without_mutating_reconciliation():
+    plan = _one_stage_plan()
+    lines = []
+    reporter = BatchReporter(plan, emit=lines.append, verbose=True)
+    stage = StageResult(
+        "desc", "failed", error_category="network_timeout", message="private details"
+    )
+    result = BatchExecutionResult(
+        (
+            ImageExecutionResult(
+                Path("synthetic.jpg"),
+                Admission.ADMITTED,
+                (StageOutcome("desc", "failed", stage, None),),
+                PipelineResult(Path("synthetic.jpg"), (stage,)),
+                "not_required",
+            ),
+        )
+    )
+    event = ExecutionEvent(
+        0,
+        0,
+        "test",
+        "stage_terminal",
+        0,
+        stage="desc",
+        generation=0,
+        admission=Admission.ADMITTED,
+        disposition="failed",
+        error_category="network_timeout",
+    )
+    reporter.consume(event)
+    assert "status=failed reason=network_timeout " in lines[0]
+    assert "private details" not in lines[0]
+    assert reporter.reconcile(result)
+    assert event.reason_code is None
+    conflicting = BatchReporter(plan, emit=lambda _: None)
+    from dataclasses import replace
+
+    conflicting.consume(replace(event, error_category="configuration"))
+    assert not conflicting.reconcile(result)
+
+
+def test_verbose_failed_terminal_does_not_expose_untrusted_category():
+    lines = []
+    reporter = BatchReporter(_one_stage_plan(), emit=lines.append, verbose=True)
+    reporter.consume(
+        ExecutionEvent(
+            0,
+            0,
+            "test",
+            "stage_terminal",
+            0,
+            stage="desc",
+            generation=0,
+            admission=Admission.ADMITTED,
+            disposition="failed",
+            error_category="private-token\nforged output",
+        )
+    )
+    assert "reason=unknown" in lines[0]
+    assert "private-token" not in lines[0]
+    assert "forged output" not in lines[0]
+    assert len(lines) == 1 and "\n" not in lines[0]

@@ -93,7 +93,7 @@ def test_json_only_missing_description_does_not_consume_budget(
     assert ends == {
         first.name: (
             "skipped" if policy == "skip" else "failed",
-            "missing_prerequisite" if policy == "skip" else "-",
+            "missing_prerequisite",
         ),
         second.name: ("completed", "-"),
     }, (result.stdout, result.stderr)

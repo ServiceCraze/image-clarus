@@ -56,6 +56,44 @@ def test_unknown_description_metadata_remains_eligible(tmp_path, config, monkeyp
     assert plan.rows[0][4] is Admission.ADMITTED
 
 
+def test_fictional_stage_prerequisite_is_generic_and_only_upstream_counts(tmp_path):
+    image = tmp_path / "fictional.jpg"
+    prerequisite = Path(str(image) + ".fictional")
+
+    def may_execute(path, upstream):
+        return "source" in upstream or Path(str(path) + ".fictional").exists()
+
+    source = StageDescriptor("source", False, False, lambda _: False)
+    consumer = StageDescriptor(
+        "consumer", True, False, lambda _: False, predicted_prerequisites=may_execute
+    )
+    stages = (source, consumer)
+    missing = build_plan([item(image)], {}, stages=stages, selected=("consumer",))
+    assert missing.rows[0][2:5] == (1, 0, Admission.NO_LLM_WORK)
+    assert route(missing.rows[0], missing.stages) == (0, 0)
+    upstream = build_plan([item(image)], {}, stages=stages)
+    assert upstream.rows[0][4] is Admission.ADMITTED
+    downstream = build_plan([item(image)], {}, stages=(consumer, source))
+    assert downstream.rows[0][4] is Admission.NO_LLM_WORK
+    prerequisite.touch()
+    ready = build_plan([item(image)], {}, stages=stages, selected=("consumer",))
+    assert ready.rows[0][4] is Admission.ADMITTED
+    excluded = build_plan(
+        [item(image)], {}, stages=stages, selected=("consumer",), limit=0
+    )
+    assert excluded.rows[0][4] is Admission.KNOWN_EXCLUDED
+
+
+def test_legacy_stage_without_prerequisite_capability_remains_eligible(tmp_path):
+    from types import SimpleNamespace
+
+    stage = SimpleNamespace(
+        name="legacy", uses_llm=True, skip_if_valid_output_exists=False
+    )
+    plan = build_plan([item(tmp_path / "image.jpg")], {}, stages=(stage,))  # type: ignore[arg-type]
+    assert plan.rows[0][4] is Admission.ADMITTED
+
+
 def test_admission_routes_and_dedup(tmp_path, config):
     a, b, c = (tmp_path / f"{n}.jpg" for n in range(3))
     Path(str(a) + ".desc.txt").touch()

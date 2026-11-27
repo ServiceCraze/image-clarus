@@ -3,6 +3,7 @@
 import subprocess
 import sys
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -102,6 +103,40 @@ def test_generic_descriptor_needs_no_execution_or_name_special_case(tmp_path):
     assert not predicted_bypass(
         stage, tmp_path, {"stages": {"other": {"regenerate": True}}}
     )
+
+
+@pytest.mark.parametrize("suffix", [".desc.txt", ".desc.txt.bak"])
+def test_structure_prerequisite_capability_is_metadata_only(
+    tmp_path, monkeypatch, suffix
+):
+    image = tmp_path / "fictional.jpg"
+    predict = STAGES[1].predicted_prerequisites
+    assert predict is not None
+    assert not predict(image, ())
+    assert predict(image, ("desc",))
+    assert not predict(image, ("xmp",))
+    sidecar = Path(str(image) + suffix)
+    sidecar.symlink_to(tmp_path / "missing-target")
+    monkeypatch.setattr(Path, "read_bytes", lambda *_: pytest.fail("content read"))
+    monkeypatch.setattr(Path, "read_text", lambda *_: pytest.fail("content read"))
+    assert predict(image, ())  # A dangling symlink is uncertain, not absent.
+
+
+@pytest.mark.parametrize("suffix", [".desc.txt", ".desc.txt.bak"])
+def test_structure_prerequisite_metadata_error_is_uncertain(
+    tmp_path, monkeypatch, suffix
+):
+    image = tmp_path / "fictional.jpg"
+    original = Path.lstat
+
+    def lstat(path, *args, **kwargs):
+        if str(path).endswith(suffix):
+            raise PermissionError("synthetic metadata error")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    predict = STAGES[1].predicted_prerequisites
+    assert predict is not None and predict(image, ())
 
 
 def test_planning_import_does_not_load_stages():
