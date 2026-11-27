@@ -260,3 +260,4 @@ ExifTool synthetic round trips are not digiKam interoperability tests. In manual
 - [Slice 2 requirements](docs/slice-2/REQ-slice-2.md), [discovery](docs/slice-2/DISCOVERY-slice-2.md), and [implementation plan](docs/slice-2/IMPL-PLAN-slice-2.md) — complete; see the [C5 closeout](docs/slice-2/IMPL-C5-COMPLETED.md) for the accepted prompt-control gap and evidence boundaries
 - [Slice 3 requirements](docs/slice-3/REQ-slice-3.md) and [implementation plan](docs/slice-3/IMPL-PLAN-slice-3.md)
 - [Slice 4 requirements](docs/slice-4/REQ-slice-4.md) and [implementation plan](docs/slice-4/IMPL-PLAN-slice-4.md) — complete and ready for review; see the [C4 evidence](docs/slice-4/IMPL-C4-COMPLETED.md).
+- [Slice 5 requirements](docs/slice-5/REQ-slice-5.md) and [implementation plan](docs/slice-5/IMPL-PLAN-slice-5.md) — proposed per-stage concurrent LLM requests; implementation has not started.

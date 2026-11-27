@@ -9,6 +9,8 @@
 **Previous slice:** [`../slice-4/REQ-slice-4.md`](../slice-4/REQ-slice-4.md)  
 **Previous implementation:** [`../slice-4/IMPL-PLAN-slice-4.md`](../slice-4/IMPL-PLAN-slice-4.md)
 
+**Implementation plan:** [IMPL-PLAN-slice-5.md](IMPL-PLAN-slice-5.md) — proposed; implementation has not started.
+
 ## 1. Purpose and authority
 
 Slice 5 adds **configurable concurrent LLM requests per processing stage** to increase the throughput available from models and providers that can serve multiple requests simultaneously. It builds on Slice 4's native batch execution, stage actor coordination, resumable inference, work admission, and interruption handling.
