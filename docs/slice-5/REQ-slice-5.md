@@ -70,7 +70,8 @@ This slice has one functional objective. Its remaining requirements preserve est
 
 - SIGINT, SIGTERM, or a configured batch abort must prevent new inference dispatch, request cancellation of **all** outstanding cancellable requests, and settle each affected image exactly once with truthful results.
 - Preserve protection and draining of already-admitted artifact publications, cleanup/reaping of owned provider children, and safe-write recovery semantics. No pending request, image token, or worker resource may be silently abandoned or leave the batch hung.
-- Provider failures, timeouts, invalid results, validation retries, and worker failures retain their current categorization and `continue`, `stop`, or `abort` policies. A failure of one image does not implicitly fail other images or change the configured concurrency limit.
+- Provider-call failures, timeouts, invalid results, and validation retries retain their existing categorization and failure policies. Request-local failures follow the configured `continue`, `stop`, or `abort` policy while the stage actor and coordinator remain functional.
+- For request-local failures, `continue` or `stop` preserves eligibility of unrelated images; configured `abort` stops new dispatch and settles already-active work according to existing cancellation and publication guarantees. Stage-actor death or coordinator invariant failure always triggers fatal batch abort and cleanup, regardless of the configured failure policy.
 - Preserve fresh-invocation resumption by rescanning existing sidecars. Do not add a durable job database or claim cancellation of remote computation after local termination.
 
 ### S5-06 - Preserve observable accounting
